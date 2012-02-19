@@ -90,7 +90,7 @@ templateCompiler = (function() {
               if (n[0] === 'o' && n[1] === 'n') {
                 ev = n.substr(2);
                 this.escapesReplace(v, function(t) {
-                  return js.addExpr("this.runEvent(#" + jsCur + "#, '" + ev + "', function(ev){ return data." + t + "(ev, data, ev, #" + jsCur + "#); })");
+                  return js.addExpr("this.runEvent(#" + jsCur + "#, '" + ev + "', function(ev){ return data." + t + "(ev, '" + ev + "', #" + jsCur + "#); })");
                 });
               } else {
                 n2 = this.assigners[n] ? n : '#default';

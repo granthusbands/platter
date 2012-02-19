@@ -60,7 +60,7 @@ class templateCompiler
 								# Event handler!
 								ev = n.substr(2)
 								@escapesReplace v, (t) ->
-									js.addExpr "this.runEvent(##{jsCur}#, '#{ev}', function(ev){ return data.#{t}(ev, data, ev, ##{jsCur}#); })"
+									js.addExpr "this.runEvent(##{jsCur}#, '#{ev}', function(ev){ return data.#{t}(ev, '#{ev}', ##{jsCur}#); })"
 							else
 								n2 = if @assigners[n] then n else '#default'
 								@doSimple ret, js, jsCur, n, v, @assigners[n2]
