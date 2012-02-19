@@ -7,18 +7,18 @@ class dynamicRunner extends platter.internal.templateRunner
 		undo = null
 		$undo.add -> undo() if undo
 		onchange = =>
-		  show = !!fn();
-		  if shown==show
-			  return
-		  shown = show
-		  if (show)
-		    $undo.start()
-		    end.parentNode.insertBefore tmpl.run(data), end
-		    undo = $undo.claim()
-		  else
-		    @removeBetween start, end
-		    undo()
-		    undo = null
+			show = !!fn();
+			if shown==show
+				return
+			shown = show
+			if (show)
+				$undo.start()
+				end.parentNode.insertBefore tmpl.run(data), end
+				undo = $undo.claim()
+			else
+				@removeBetween start, end
+				undo()
+				undo = null
 		@runGet onchange, data, ev
 
 	# Runtime: A collection of models, automatically expanded/collapsed as members get added/removed
