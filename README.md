@@ -2,6 +2,8 @@
 
 A compiled-template engine that supports backbone and should eventually support many reactive frameworks. It supports reactivity while still using natural HTML syntax.
 
+__This is not suitable for production use.__ There's a distinct lack of filtering/care on the code-generation, right now, and there's no test suite.
+
 There's a usage example in example.html, but here's a template and a couple of example usages:
 
 ```html
