@@ -102,7 +102,7 @@
         } else if (cur.nodeType === 8) {
           ct = cur.nodeValue;
           if (/^\{\{.*\}\}$/.exec(ct)) {
-            txt = document.createTextNode();
+            txt = document.createTextNode("");
             cur.parentNode.insertBefore(txt, cur);
             cur.parentNode.removeChild(cur);
             cur = txt;
