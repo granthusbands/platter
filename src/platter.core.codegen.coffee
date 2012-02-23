@@ -3,6 +3,9 @@
 #   If a variable is used only once, move its initialisation value to the usage location (ignoring all intermediate code)
 #   If a variable is not used at all, remove it altogether (even if the initialisation has side effects).
 # The optimisations make codegen easier elsewhere, as we generate a large number of variables that only actually exist if used more than once.
+clean = (n) ->
+	n.replace /#/g, ""
+
 exprvar = /#(\w+)#/g
 class codegen
 	constructor: () ->
@@ -11,17 +14,28 @@ class codegen
 
 	# Since the codegen doesn't understand functions (it really should), we use existingVar for parameters.
 	existingVar: (name) ->
+		name = clean name
 		@_vars[name] = {_name: name, _count:1000}
+		@getVar name
 
 	# Claim a variable is used 1000 times, so that it won't get optimised away. Used somewhere to optimise a loop.
 	forceVar: (name) ->
-		@_vars[name]._count = 1000
+		@_vars[name.n||name]._count = 1000
 
-	addVar: (name, expr) ->
+	addVar: (name, expr, compVal) ->
+		name = clean name
 		name = @_uniqName name
-		@_vars[name] = {_name: name, _count: -1, _expr: expr}
+		@_vars[name] = {_name: name, _count: -1, _expr: expr, _compVal:compVal}
 		@addOp {_expr:"var ##{name}# = #{expr}", _type:'var', _src:expr, _name:name}
-		name
+		@getVar name
+
+	getVar: (name) ->
+		v = @_vars[name]
+		{
+			n: name
+			v: v._compVal
+			toString: ->"##{@n}#"
+		}
 	
 	addExpr: (expr) ->
 		@addOp {_expr:expr}

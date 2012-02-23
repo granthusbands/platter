@@ -23,31 +23,29 @@ class templateCompiler
 	
 	compileFrag: (frag) ->
 		js = new platter.internal.codegen
-		jsData = 'data'
-		js.existingVar jsData
-		jsEl = js.addVar 'el', 'this.node.cloneNode(true)'
+		jsData = js.existingVar 'data'
+		jsEl = js.addVar 'el', 'this.node.cloneNode(true)', frag
 		ret = @makeRet(frag)
-		@compileInner ret, frag, js, jsEl, jsData
-		js.addExpr "return ##{jsEl}#"
+		@compileInner ret, js, jsEl, jsData
+		js.addExpr "return #{jsEl}"
 		#alert js
 		ret.run = new Function('data', ""+js)
 		ret
 	
-	compileInner: (ret, cur, js, jsEl, jsData) ->
-		jsCur = js.addVar jsEl+"_ch", "##{jsEl}#.firstChild"
-		cur = cur.firstChild
-		while (cur)
-			if cur.nodeType==1  # ELEMENT_NODE
+	compileInner: (ret, js, jsEl, jsData) ->
+		jsCur = js.addVar jsEl+"_ch", "#{jsEl}.firstChild", jsEl.v.firstChild
+		while (jsCur.v)
+			if jsCur.v.nodeType==1  # Element
 				isSpecial = false
-				[attrs...] = cur.attributes
+				[attrs...] = jsCur.v.attributes
 				for att in attrs
 					n = att.nodeName
 					realn = unhideAttrName n
 					if (realn&&this["special_#{realn}"])
 						isSpecial = true
 						v = uncommentEscapes unhideAttr att.nodeValue
-						cur.removeAttribute n
-						[cur, jsCur] = this["special_#{realn}"](ret, js, cur, jsCur, jsEl, jsData, v)
+						jsCur.v.removeAttribute n
+						jsCur = this["special_#{realn}"](ret, js, jsCur, jsData, v)
 						break
 				if !isSpecial
 					for att in attrs
@@ -55,59 +53,49 @@ class templateCompiler
 						n = att.nodeName
 						realn = unhideAttrName n
 						if (realn!=n)
-							cur.removeAttribute n
+							jsCur.v.removeAttribute n
 						if !(hasEscape v)
-							cur.setAttribute realn, v
+							jsCur.v.setAttribute realn, v
 						else
 							if (realn[0]=='o'&&realn[1]=='n')
 								# Event handler!
 								ev = realn.substr(2)
 								@escapesReplace v, (t) ->
-									js.addExpr "this.runEvent(##{jsCur}#, '#{ev}', function(ev){ return data.#{t}(ev, '#{ev}', ##{jsCur}#); })"
+									js.addExpr "this.runEvent(#{jsCur}, '#{ev}', function(ev){ return data.#{t}(ev, '#{ev}', #{jsCur}); })"
 							else
 								n2 = if @assigners[realn] then realn else '#default'
 								@doSimple ret, js, jsCur, realn, v, @assigners[n2]
-					@compileInner ret, cur, js, jsCur
-			else if cur.nodeType==8  # COMMENT_NODE
-				ct = cur.nodeValue
+					@compileInner ret, js, jsCur, jsData
+			else if jsCur.v.nodeType==8  # Comment
+				ct = jsCur.v.nodeValue
 				ct = unhideAttr ct
 				# We know comment nodes can only contain one {{...}}
 				if /^\{\{.*\}\}$/.exec(ct)
 					# We actually need a text node rather than a comment node
 					txt = document.createTextNode ""
-					cur.parentNode.insertBefore txt, cur
-					cur.parentNode.removeChild cur
-					cur = txt
+					jsCur.v.parentNode.insertBefore txt, jsCur.v
+					jsCur.v.parentNode.removeChild jsCur.v
+					jsCur.v = txt
 					@doSimple ret, js, jsCur, 'text', ct, @assigners['#text']
-			else if cur.nodeType==3 || cur.nodeType==4
-				cur.nodeValue = unhideAttr cur.nodeValue
-			jsCur = js.addVar "#{jsEl}_ch", "##{jsCur}#.nextSibling";
-			cur = cur.nextSibling
+			else if jsCur.v.nodeType==3 || jsCur.v.nodeType==4  # Text/CData
+				jsCur.v.nodeValue = unhideAttr jsCur.v.nodeValue
+			jsCur = js.addVar "#{jsEl}_ch", "#{jsCur}.nextSibling", jsCur.v.nextSibling;
+
 
 	# TODO: Put these special things somewhere better
-	special_if: (ret, js, cur, jsCur, jsEl, jsData, val) ->
-		pre = document.createComment ""
-		post = document.createComment ""
-		cur.parentNode.insertBefore pre, cur
-		cur.parentNode.insertBefore post, cur
-		frag = document.createDocumentFragment()
-		frag.appendChild cur
+	special_if: (ret, js, jsCur, jsData, val) ->
+		[jsCur.v, post, frag] = pullNode jsCur.v
 		inner = @compileFrag frag
-		jsPost = js.addVar "#{jsCur}_end", "##{jsCur}#.nextSibling"
-		@doIf ret, js, pre, jsCur, post, jsPost, jsEl, jsData, val, inner
-		return [post, jsPost]
+		jsPost = js.addVar "#{jsCur}_end", "#{jsCur}.nextSibling", post
+		@doIf ret, js, jsCur, jsPost, jsData, val, inner
+		jsPost
 
-	special_foreach: (ret, js, cur, jsCur, jsEl, jsData, val) ->
-		pre = document.createComment ""
-		post = document.createComment ""
-		cur.parentNode.insertBefore pre, cur
-		cur.parentNode.insertBefore post, cur
-		frag = document.createDocumentFragment()
-		frag.appendChild cur
+	special_foreach: (ret, js, jsCur, jsData, val) ->
+		[jsCur.v, post, frag] = pullNode jsCur.v
 		inner = @compileFrag frag
-		jsPost = js.addVar "#{jsCur}_end", "##{jsCur}#.nextSibling"
-		@doForEach ret, js, pre, jsCur, post, jsPost, jsEl, jsData, val, inner
-		return [post, jsPost]
+		jsPost = js.addVar "#{jsCur}_end", "#{jsCur}.nextSibling", post
+		@doForEach ret, js, jsCur, jsPost, jsData, val, inner
+		jsPost
 
 	# Below here, it's utility functions, which maybe should be moved.
 	tmplToFrag: (txt) ->
@@ -192,6 +180,15 @@ uncommentEscapes = (txt) ->
 
 hasEscape = (txt) ->
 	!!/\{\{/.exec txt
+
+pullNode = (node) ->
+	pre = document.createComment ""
+	post = document.createComment ""
+	node.parentNode.insertBefore pre, node
+	node.parentNode.insertBefore post, node
+	frag = document.createDocumentFragment()
+	frag.appendChild node
+	[pre, post, frag]
 
 
 class undoer

@@ -53,7 +53,7 @@ class dynamicCompiler extends platter.internal.templateCompiler
 	doSimple: (ret, js, jsCur, n, v, expr) ->
 		safen = n.replace /[^a-z0-9$_]/g, ""
 		expr = expr
-			.replace("#el#", "##{jsCur}#")
+			.replace("#el#", "#{jsCur}")
 			.replace("#n#", "'#{n}'")
 			.replace("#v#", 
 				@convertVal v
@@ -61,18 +61,18 @@ class dynamicCompiler extends platter.internal.templateCompiler
 		js.addExpr "this.runGet(function(){\n\t#{expr};\n}, data, #{@extraParam(v)})"
 
 	# Compiler: Conditional section
-	doIf: (ret, js, pre, jsPre, post, jsPost, jsEl, jsData, val, inner) ->
-		ret[jsPre] = inner
+	doIf: (ret, js, jsPre, jsPost, jsData, val, inner) ->
+		ret[jsPre.n] = inner
 		v = val
 		val = @convertVal val
-		js.addExpr "this.runIf(function(){return #{val};}, ##{jsData}#, #{@extraParam(v)}, this.#{jsPre}, ##{jsPre}#, ##{jsPost}#)"
+		js.addExpr "this.runIf(function(){return #{val};}, #{jsData}, #{@extraParam(v)}, this.#{jsPre}, #{jsPre}, #{jsPost})"
 
 	# Compiler:
-	doForEach: (ret, js, pre, jsPre, post, jsPost, jsEl, jsData, val, inner) ->
-		ret[jsPre] = inner
+	doForEach: (ret, js, jsPre, jsPost, jsData, val, inner) ->
+		ret[jsPre.n] = inner
 		v = val
 		val = @convertColl val
-		js.addExpr "this.runForEach(#{val}, this.#{jsPre}, ##{jsPre}#, ##{jsPost}#)"
+		js.addExpr "this.runForEach(#{val}, this.#{jsPre}, #{jsPre}, #{jsPost})"
 	
 	convertColl: (txt) ->
 		@escapesReplace txt, (t) -> "data.#{t}"

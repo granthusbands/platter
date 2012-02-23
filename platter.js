@@ -1,5 +1,5 @@
 (function() {
-  var backboneCompiler, backboneRunner, codegen, commentEscapes, dynamicCompiler, dynamicRunner, exprvar, hasEscape, hideAttr, plainCompiler, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName,
+  var backboneCompiler, backboneRunner, clean, codegen, commentEscapes, dynamicCompiler, dynamicRunner, exprvar, hasEscape, hideAttr, plainCompiler, pullNode, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName,
     __slice = Array.prototype.slice,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
@@ -46,25 +46,23 @@
     templateCompiler.prototype.compileFrag = function(frag) {
       var js, jsData, jsEl, ret;
       js = new platter.internal.codegen;
-      jsData = 'data';
-      js.existingVar(jsData);
-      jsEl = js.addVar('el', 'this.node.cloneNode(true)');
+      jsData = js.existingVar('data');
+      jsEl = js.addVar('el', 'this.node.cloneNode(true)', frag);
       ret = this.makeRet(frag);
-      this.compileInner(ret, frag, js, jsEl, jsData);
-      js.addExpr("return #" + jsEl + "#");
+      this.compileInner(ret, js, jsEl, jsData);
+      js.addExpr("return " + jsEl);
       ret.run = new Function('data', "" + js);
       return ret;
     };
 
-    templateCompiler.prototype.compileInner = function(ret, cur, js, jsEl, jsData) {
-      var att, attrs, ct, ev, isSpecial, jsCur, n, n2, realn, txt, v, _i, _j, _len, _len2, _ref, _ref2, _results;
-      jsCur = js.addVar(jsEl + "_ch", "#" + jsEl + "#.firstChild");
-      cur = cur.firstChild;
+    templateCompiler.prototype.compileInner = function(ret, js, jsEl, jsData) {
+      var att, attrs, ct, ev, isSpecial, jsCur, n, n2, realn, txt, v, _i, _j, _len, _len2, _ref, _results;
+      jsCur = js.addVar(jsEl + "_ch", "" + jsEl + ".firstChild", jsEl.v.firstChild);
       _results = [];
-      while (cur) {
-        if (cur.nodeType === 1) {
+      while (jsCur.v) {
+        if (jsCur.v.nodeType === 1) {
           isSpecial = false;
-          _ref = cur.attributes, attrs = 1 <= _ref.length ? __slice.call(_ref, 0) : [];
+          _ref = jsCur.v.attributes, attrs = 1 <= _ref.length ? __slice.call(_ref, 0) : [];
           for (_i = 0, _len = attrs.length; _i < _len; _i++) {
             att = attrs[_i];
             n = att.nodeName;
@@ -72,8 +70,8 @@
             if (realn && this["special_" + realn]) {
               isSpecial = true;
               v = uncommentEscapes(unhideAttr(att.nodeValue));
-              cur.removeAttribute(n);
-              _ref2 = this["special_" + realn](ret, js, cur, jsCur, jsEl, jsData, v), cur = _ref2[0], jsCur = _ref2[1];
+              jsCur.v.removeAttribute(n);
+              jsCur = this["special_" + realn](ret, js, jsCur, jsData, v);
               break;
             }
           }
@@ -83,14 +81,14 @@
               v = uncommentEscapes(unhideAttr(att.nodeValue));
               n = att.nodeName;
               realn = unhideAttrName(n);
-              if (realn !== n) cur.removeAttribute(n);
+              if (realn !== n) jsCur.v.removeAttribute(n);
               if (!(hasEscape(v))) {
-                cur.setAttribute(realn, v);
+                jsCur.v.setAttribute(realn, v);
               } else {
                 if (realn[0] === 'o' && realn[1] === 'n') {
                   ev = realn.substr(2);
                   this.escapesReplace(v, function(t) {
-                    return js.addExpr("this.runEvent(#" + jsCur + "#, '" + ev + "', function(ev){ return data." + t + "(ev, '" + ev + "', #" + jsCur + "#); })");
+                    return js.addExpr("this.runEvent(" + jsCur + ", '" + ev + "', function(ev){ return data." + t + "(ev, '" + ev + "', " + jsCur + "); })");
                   });
                 } else {
                   n2 = this.assigners[realn] ? realn : '#default';
@@ -98,53 +96,42 @@
                 }
               }
             }
-            this.compileInner(ret, cur, js, jsCur);
+            this.compileInner(ret, js, jsCur, jsData);
           }
-        } else if (cur.nodeType === 8) {
-          ct = cur.nodeValue;
+        } else if (jsCur.v.nodeType === 8) {
+          ct = jsCur.v.nodeValue;
           ct = unhideAttr(ct);
           if (/^\{\{.*\}\}$/.exec(ct)) {
             txt = document.createTextNode("");
-            cur.parentNode.insertBefore(txt, cur);
-            cur.parentNode.removeChild(cur);
-            cur = txt;
+            jsCur.v.parentNode.insertBefore(txt, jsCur.v);
+            jsCur.v.parentNode.removeChild(jsCur.v);
+            jsCur.v = txt;
             this.doSimple(ret, js, jsCur, 'text', ct, this.assigners['#text']);
           }
-        } else if (cur.nodeType === 3 || cur.nodeType === 4) {
-          cur.nodeValue = unhideAttr(cur.nodeValue);
+        } else if (jsCur.v.nodeType === 3 || jsCur.v.nodeType === 4) {
+          jsCur.v.nodeValue = unhideAttr(jsCur.v.nodeValue);
         }
-        jsCur = js.addVar("" + jsEl + "_ch", "#" + jsCur + "#.nextSibling");
-        _results.push(cur = cur.nextSibling);
+        _results.push(jsCur = js.addVar("" + jsEl + "_ch", "" + jsCur + ".nextSibling", jsCur.v.nextSibling));
       }
       return _results;
     };
 
-    templateCompiler.prototype.special_if = function(ret, js, cur, jsCur, jsEl, jsData, val) {
-      var frag, inner, jsPost, post, pre;
-      pre = document.createComment("");
-      post = document.createComment("");
-      cur.parentNode.insertBefore(pre, cur);
-      cur.parentNode.insertBefore(post, cur);
-      frag = document.createDocumentFragment();
-      frag.appendChild(cur);
+    templateCompiler.prototype.special_if = function(ret, js, jsCur, jsData, val) {
+      var frag, inner, jsPost, post, _ref;
+      _ref = pullNode(jsCur.v), jsCur.v = _ref[0], post = _ref[1], frag = _ref[2];
       inner = this.compileFrag(frag);
-      jsPost = js.addVar("" + jsCur + "_end", "#" + jsCur + "#.nextSibling");
-      this.doIf(ret, js, pre, jsCur, post, jsPost, jsEl, jsData, val, inner);
-      return [post, jsPost];
+      jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
+      this.doIf(ret, js, jsCur, jsPost, jsData, val, inner);
+      return jsPost;
     };
 
-    templateCompiler.prototype.special_foreach = function(ret, js, cur, jsCur, jsEl, jsData, val) {
-      var frag, inner, jsPost, post, pre;
-      pre = document.createComment("");
-      post = document.createComment("");
-      cur.parentNode.insertBefore(pre, cur);
-      cur.parentNode.insertBefore(post, cur);
-      frag = document.createDocumentFragment();
-      frag.appendChild(cur);
+    templateCompiler.prototype.special_foreach = function(ret, js, jsCur, jsData, val) {
+      var frag, inner, jsPost, post, _ref;
+      _ref = pullNode(jsCur.v), jsCur.v = _ref[0], post = _ref[1], frag = _ref[2];
       inner = this.compileFrag(frag);
-      jsPost = js.addVar("" + jsCur + "_end", "#" + jsCur + "#.nextSibling");
-      this.doForEach(ret, js, pre, jsCur, post, jsPost, jsEl, jsData, val, inner);
-      return [post, jsPost];
+      jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
+      this.doForEach(ret, js, jsCur, jsPost, jsData, val, inner);
+      return jsPost;
     };
 
     templateCompiler.prototype.tmplToFrag = function(txt) {
@@ -243,6 +230,17 @@
     return !!/\{\{/.exec(txt);
   };
 
+  pullNode = function(node) {
+    var frag, post, pre;
+    pre = document.createComment("");
+    post = document.createComment("");
+    node.parentNode.insertBefore(pre, node);
+    node.parentNode.insertBefore(post, node);
+    frag = document.createDocumentFragment();
+    frag.appendChild(node);
+    return [pre, post, frag];
+  };
+
   undoer = (function() {
 
     undoer.prototype.cur = {
@@ -289,6 +287,10 @@
     }
   };
 
+  clean = function(n) {
+    return n.replace(/#/g, "");
+  };
+
   exprvar = /#(\w+)#/g;
 
   codegen = (function() {
@@ -299,22 +301,26 @@
     }
 
     codegen.prototype.existingVar = function(name) {
-      return this._vars[name] = {
+      name = clean(name);
+      this._vars[name] = {
         _name: name,
         _count: 1000
       };
+      return this.getVar(name);
     };
 
     codegen.prototype.forceVar = function(name) {
-      return this._vars[name]._count = 1000;
+      return this._vars[name.n || name]._count = 1000;
     };
 
-    codegen.prototype.addVar = function(name, expr) {
+    codegen.prototype.addVar = function(name, expr, compVal) {
+      name = clean(name);
       name = this._uniqName(name);
       this._vars[name] = {
         _name: name,
         _count: -1,
-        _expr: expr
+        _expr: expr,
+        _compVal: compVal
       };
       this.addOp({
         _expr: "var #" + name + "# = " + expr,
@@ -322,7 +328,19 @@
         _src: expr,
         _name: name
       });
-      return name;
+      return this.getVar(name);
+    };
+
+    codegen.prototype.getVar = function(name) {
+      var v;
+      v = this._vars[name];
+      return {
+        n: name,
+        v: v._compVal,
+        toString: function() {
+          return "#" + this.n + "#";
+        }
+      };
     };
 
     codegen.prototype.addExpr = function(expr) {
@@ -403,7 +421,7 @@
     }
 
     plainCompiler.prototype.doSimple = function(ret, js, jsCur, n, v, expr) {
-      return js.addExpr(expr.replace("#el#", "#" + jsCur + "#").replace("#n#", "'" + n + "'").replace("#v#", this.escapesReplace(v, function(t) {
+      return js.addExpr(expr.replace("#el#", "" + jsCur).replace("#n#", "'" + n + "'").replace("#v#", this.escapesReplace(v, function(t) {
         if (t === '.') {
           return "data";
         } else {
@@ -412,25 +430,25 @@
       })));
     };
 
-    plainCompiler.prototype.doIf = function(ret, js, pre, jsCur, post, jsPost, jsEl, jsData, val, inner) {
+    plainCompiler.prototype.doIf = function(ret, js, jsCur, jsPost, jsData, val, inner) {
       var _this = this;
-      ret[jsCur] = inner;
+      ret[jsCur.n] = inner;
       val = this.escapesReplace(val, function(t) {
-        return ("#" + jsData + "#.") + t;
+        return ("" + jsData + ".") + t;
       });
-      return js.addExpr("if (" + val + ") #" + jsEl + "#.insertBefore(this." + jsCur + ".run(#" + jsData + "#), #" + jsPost + "#)");
+      return js.addExpr("if (" + val + ") " + jsPost + ".parentNode.insertBefore(this." + jsCur.n + ".run(" + jsData + "), " + jsPost + ")");
     };
 
-    plainCompiler.prototype.doForEach = function(ret, js, pre, jsCur, post, jsPost, jsEl, jsData, val, inner) {
+    plainCompiler.prototype.doForEach = function(ret, js, jsCur, jsPost, jsData, val, inner) {
       var jsFor,
         _this = this;
-      ret[jsCur] = inner;
+      ret[jsCur.n] = inner;
       val = this.escapesReplace(val, function(t) {
         return "data." + t;
       });
       jsFor = js.addVar("" + jsCur + "_for", val);
       js.forceVar(jsPost);
-      return js.addExpr("for (var i=0;i<#" + jsFor + "#.length; ++i)\n	#" + jsEl + "#.insertBefore(this." + jsCur + ".run(#" + jsFor + "#[i]), #" + jsPost + "#)");
+      return js.addExpr("for (var i=0;i<" + jsFor + ".length; ++i)\n	" + jsPost + ".parentNode.insertBefore(this." + jsCur.n + ".run(" + jsFor + "[i]), " + jsPost + ")");
     };
 
     return plainCompiler;
@@ -530,24 +548,24 @@
     dynamicCompiler.prototype.doSimple = function(ret, js, jsCur, n, v, expr) {
       var safen;
       safen = n.replace(/[^a-z0-9$_]/g, "");
-      expr = expr.replace("#el#", "#" + jsCur + "#").replace("#n#", "'" + n + "'").replace("#v#", this.convertVal(v));
+      expr = expr.replace("#el#", "" + jsCur).replace("#n#", "'" + n + "'").replace("#v#", this.convertVal(v));
       return js.addExpr("this.runGet(function(){\n\t" + expr + ";\n}, data, " + (this.extraParam(v)) + ")");
     };
 
-    dynamicCompiler.prototype.doIf = function(ret, js, pre, jsPre, post, jsPost, jsEl, jsData, val, inner) {
+    dynamicCompiler.prototype.doIf = function(ret, js, jsPre, jsPost, jsData, val, inner) {
       var v;
-      ret[jsPre] = inner;
+      ret[jsPre.n] = inner;
       v = val;
       val = this.convertVal(val);
-      return js.addExpr("this.runIf(function(){return " + val + ";}, #" + jsData + "#, " + (this.extraParam(v)) + ", this." + jsPre + ", #" + jsPre + "#, #" + jsPost + "#)");
+      return js.addExpr("this.runIf(function(){return " + val + ";}, " + jsData + ", " + (this.extraParam(v)) + ", this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
     };
 
-    dynamicCompiler.prototype.doForEach = function(ret, js, pre, jsPre, post, jsPost, jsEl, jsData, val, inner) {
+    dynamicCompiler.prototype.doForEach = function(ret, js, jsPre, jsPost, jsData, val, inner) {
       var v;
-      ret[jsPre] = inner;
+      ret[jsPre.n] = inner;
       v = val;
       val = this.convertColl(val);
-      return js.addExpr("this.runForEach(" + val + ", this." + jsPre + ", #" + jsPre + "#, #" + jsPost + "#)");
+      return js.addExpr("this.runForEach(" + val + ", this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
     };
 
     dynamicCompiler.prototype.convertColl = function(txt) {
