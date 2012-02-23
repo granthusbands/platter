@@ -108,6 +108,10 @@ class templateCompiler
 		# For the browser to parse the HTML, we need to make sure there's no strange text in odd places. Browsers love them some comments, though.
 		txt = txt.replace /\{\{/g, "<!--{{"
 		txt = txt.replace /\}\}/g, "}}-->"
+		# People don't want the whitespace that accidentally surrounds their template.
+		# Whitespace nodes _within_ the template are maintained.
+		txt = txt.replace /^\s+/, ""
+		txt = txt.replace /\s+$/, ""
 		# Clones to avoid any transient nodes.
 		@htmlToFrag(txt).cloneNode(true).cloneNode(true)
 	

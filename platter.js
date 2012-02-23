@@ -146,6 +146,8 @@
     templateCompiler.prototype.tmplToFrag = function(txt) {
       txt = txt.replace(/\{\{/g, "<!--{{");
       txt = txt.replace(/\}\}/g, "}}-->");
+      txt = txt.replace(/^\s+/, "");
+      txt = txt.replace(/\s+$/, "");
       return this.htmlToFrag(txt).cloneNode(true).cloneNode(true);
     };
 
