@@ -39,34 +39,38 @@ class templateCompiler
 		while (cur)
 			if cur.nodeType==1  # ELEMENT_NODE
 				isSpecial = false
-				for att in cur.attributes
+				[attrs...] = cur.attributes
+				for att in attrs
 					n = att.nodeName
-					if (this["special_#{n}"])
+					realn = unhideAttrName n
+					if (realn&&this["special_#{realn}"])
 						isSpecial = true
-						v = att.nodeValue
-						v = v.replace /<!--\{\{/g, "{{"
-						v = v.replace /\}\}-->/g, "}}"
+						v = uncommentEscapes unhideAttr att.nodeValue
 						cur.removeAttribute n
-						[cur, jsCur] = this["special_#{n}"](ret, js, cur, jsCur, jsEl, jsData, v)
+						[cur, jsCur] = this["special_#{realn}"](ret, js, cur, jsCur, jsEl, jsData, v)
 						break
 				if !isSpecial
-					for att in cur.attributes
-						if /<!--\{\{/.exec(att.nodeValue)
-							n = att.nodeName
-							v = att.nodeValue
-							v = v.replace /<!--\{\{/g, "{{"
-							v = v.replace /\}\}-->/g, "}}"
-							if (n[0]=='o'&&n[1]=='n')
+					for att in attrs
+						v = uncommentEscapes unhideAttr att.nodeValue
+						n = att.nodeName
+						realn = unhideAttrName n
+						if (realn!=n)
+							cur.removeAttribute n
+						if !(hasEscape v)
+							cur.setAttribute realn, v
+						else
+							if (realn[0]=='o'&&realn[1]=='n')
 								# Event handler!
-								ev = n.substr(2)
+								ev = realn.substr(2)
 								@escapesReplace v, (t) ->
 									js.addExpr "this.runEvent(##{jsCur}#, '#{ev}', function(ev){ return data.#{t}(ev, '#{ev}', ##{jsCur}#); })"
 							else
-								n2 = if @assigners[n] then n else '#default'
-								@doSimple ret, js, jsCur, n, v, @assigners[n2]
+								n2 = if @assigners[realn] then realn else '#default'
+								@doSimple ret, js, jsCur, realn, v, @assigners[n2]
 					@compileInner ret, cur, js, jsCur
 			else if cur.nodeType==8  # COMMENT_NODE
 				ct = cur.nodeValue
+				ct = unhideAttr ct
 				# We know comment nodes can only contain one {{...}}
 				if /^\{\{.*\}\}$/.exec(ct)
 					# We actually need a text node rather than a comment node
@@ -75,6 +79,8 @@ class templateCompiler
 					cur.parentNode.removeChild cur
 					cur = txt
 					@doSimple ret, js, jsCur, 'text', ct, @assigners['#text']
+			else if cur.nodeType==3 || cur.nodeType==4
+				cur.nodeValue = unhideAttr cur.nodeValue
 			jsCur = js.addVar "#{jsEl}_ch", "##{jsCur}#.nextSibling";
 			cur = cur.nextSibling
 
@@ -105,13 +111,7 @@ class templateCompiler
 
 	# Below here, it's utility functions, which maybe should be moved.
 	tmplToFrag: (txt) ->
-		# For the browser to parse the HTML, we need to make sure there's no strange text in odd places. Browsers love them some comments, though.
-		txt = txt.replace /\{\{/g, "<!--{{"
-		txt = txt.replace /\}\}/g, "}}-->"
-		# People don't want the whitespace that accidentally surrounds their template.
-		# Whitespace nodes _within_ the template are maintained.
-		txt = txt.replace /^\s+/, ""
-		txt = txt.replace /\s+$/, ""
+		txt = hideAttr commentEscapes trim txt
 		# Clones to avoid any transient nodes.
 		@htmlToFrag(txt).cloneNode(true).cloneNode(true)
 	
@@ -161,6 +161,38 @@ class templateCompiler
 		'#text': "#el#.nodeValue = #v#"
 		'#default': "#el#.setAttribute(#n#, #v#)"
 		'class': "#el#.className = #v#"
+		#TODO: style in Firefox -> .style.cssText
+		#TODO: type in IE -> recreate the node, somehow
+
+
+# People don't want the whitespace that accidentally surrounds their template.
+# Whitespace nodes _within_ the template are maintained.
+trim = (txt) ->
+	txt = txt.replace /^\s+/, ""
+	txt = txt.replace /\s+$/, ""
+
+# For Firefox to not do crazy things (and, to be fair, maybe other 
+# browsers), we need to disguise some attributes.
+# However, IE doesn't like type being messed with.
+hideAttr = (txt) ->
+	txt = txt.replace /([a-z][-a-z0-9_]*=)/ig, "data-platter-$1"
+	txt = txt.replace /data-platter-type=/g, "type="
+unhideAttr = (txt) ->
+	txt = txt.replace /data-platter-([a-z][-a-z0-9_]*=)/g, "$1"
+unhideAttrName = (txt) ->
+	txt = txt.replace /data-platter-([a-z][-a-z0-9_]*)/g, "$1"
+
+# For the browser to parse our HTML, we need to make sure there's no strange text in odd places. Browsers love them some comments, though.
+commentEscapes = (txt) ->
+	txt = txt.replace /\{\{/g, "<!--{{"
+	txt = txt.replace /\}\}/g, "}}-->"
+uncommentEscapes = (txt) ->
+	txt = txt.replace /<!--\{\{/g, "{{"
+	txt = txt.replace /\}\}-->/g, "}}"
+
+hasEscape = (txt) ->
+	!!/\{\{/.exec txt
+
 
 class undoer
 	cur:

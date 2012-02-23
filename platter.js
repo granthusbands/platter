@@ -1,5 +1,6 @@
 (function() {
-  var backboneCompiler, backboneRunner, codegen, dynamicCompiler, dynamicRunner, exprvar, plainCompiler, templateCompiler, templateRunner, undoer,
+  var backboneCompiler, backboneRunner, codegen, commentEscapes, dynamicCompiler, dynamicRunner, exprvar, hasEscape, hideAttr, plainCompiler, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName,
+    __slice = Array.prototype.slice,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
@@ -56,44 +57,44 @@
     };
 
     templateCompiler.prototype.compileInner = function(ret, cur, js, jsEl, jsData) {
-      var att, ct, ev, isSpecial, jsCur, n, n2, txt, v, _i, _j, _len, _len2, _ref, _ref2, _ref3, _results;
+      var att, attrs, ct, ev, isSpecial, jsCur, n, n2, realn, txt, v, _i, _j, _len, _len2, _ref, _ref2, _results;
       jsCur = js.addVar(jsEl + "_ch", "#" + jsEl + "#.firstChild");
       cur = cur.firstChild;
       _results = [];
       while (cur) {
         if (cur.nodeType === 1) {
           isSpecial = false;
-          _ref = cur.attributes;
-          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-            att = _ref[_i];
+          _ref = cur.attributes, attrs = 1 <= _ref.length ? __slice.call(_ref, 0) : [];
+          for (_i = 0, _len = attrs.length; _i < _len; _i++) {
+            att = attrs[_i];
             n = att.nodeName;
-            if (this["special_" + n]) {
+            realn = unhideAttrName(n);
+            if (realn && this["special_" + realn]) {
               isSpecial = true;
-              v = att.nodeValue;
-              v = v.replace(/<!--\{\{/g, "{{");
-              v = v.replace(/\}\}-->/g, "}}");
+              v = uncommentEscapes(unhideAttr(att.nodeValue));
               cur.removeAttribute(n);
-              _ref2 = this["special_" + n](ret, js, cur, jsCur, jsEl, jsData, v), cur = _ref2[0], jsCur = _ref2[1];
+              _ref2 = this["special_" + realn](ret, js, cur, jsCur, jsEl, jsData, v), cur = _ref2[0], jsCur = _ref2[1];
               break;
             }
           }
           if (!isSpecial) {
-            _ref3 = cur.attributes;
-            for (_j = 0, _len2 = _ref3.length; _j < _len2; _j++) {
-              att = _ref3[_j];
-              if (/<!--\{\{/.exec(att.nodeValue)) {
-                n = att.nodeName;
-                v = att.nodeValue;
-                v = v.replace(/<!--\{\{/g, "{{");
-                v = v.replace(/\}\}-->/g, "}}");
-                if (n[0] === 'o' && n[1] === 'n') {
-                  ev = n.substr(2);
+            for (_j = 0, _len2 = attrs.length; _j < _len2; _j++) {
+              att = attrs[_j];
+              v = uncommentEscapes(unhideAttr(att.nodeValue));
+              n = att.nodeName;
+              realn = unhideAttrName(n);
+              if (realn !== n) cur.removeAttribute(n);
+              if (!(hasEscape(v))) {
+                cur.setAttribute(realn, v);
+              } else {
+                if (realn[0] === 'o' && realn[1] === 'n') {
+                  ev = realn.substr(2);
                   this.escapesReplace(v, function(t) {
                     return js.addExpr("this.runEvent(#" + jsCur + "#, '" + ev + "', function(ev){ return data." + t + "(ev, '" + ev + "', #" + jsCur + "#); })");
                   });
                 } else {
-                  n2 = this.assigners[n] ? n : '#default';
-                  this.doSimple(ret, js, jsCur, n, v, this.assigners[n2]);
+                  n2 = this.assigners[realn] ? realn : '#default';
+                  this.doSimple(ret, js, jsCur, realn, v, this.assigners[n2]);
                 }
               }
             }
@@ -101,6 +102,7 @@
           }
         } else if (cur.nodeType === 8) {
           ct = cur.nodeValue;
+          ct = unhideAttr(ct);
           if (/^\{\{.*\}\}$/.exec(ct)) {
             txt = document.createTextNode("");
             cur.parentNode.insertBefore(txt, cur);
@@ -108,6 +110,8 @@
             cur = txt;
             this.doSimple(ret, js, jsCur, 'text', ct, this.assigners['#text']);
           }
+        } else if (cur.nodeType === 3 || cur.nodeType === 4) {
+          cur.nodeValue = unhideAttr(cur.nodeValue);
         }
         jsCur = js.addVar("" + jsEl + "_ch", "#" + jsCur + "#.nextSibling");
         _results.push(cur = cur.nextSibling);
@@ -144,10 +148,7 @@
     };
 
     templateCompiler.prototype.tmplToFrag = function(txt) {
-      txt = txt.replace(/\{\{/g, "<!--{{");
-      txt = txt.replace(/\}\}/g, "}}-->");
-      txt = txt.replace(/^\s+/, "");
-      txt = txt.replace(/\s+$/, "");
+      txt = hideAttr(commentEscapes(trim(txt)));
       return this.htmlToFrag(txt).cloneNode(true).cloneNode(true);
     };
 
@@ -209,6 +210,38 @@
     return templateCompiler;
 
   })();
+
+  trim = function(txt) {
+    txt = txt.replace(/^\s+/, "");
+    return txt = txt.replace(/\s+$/, "");
+  };
+
+  hideAttr = function(txt) {
+    txt = txt.replace(/([a-z][-a-z0-9_]*=)/ig, "data-platter-$1");
+    return txt = txt.replace(/data-platter-type=/g, "type=");
+  };
+
+  unhideAttr = function(txt) {
+    return txt = txt.replace(/data-platter-([a-z][-a-z0-9_]*=)/g, "$1");
+  };
+
+  unhideAttrName = function(txt) {
+    return txt = txt.replace(/data-platter-([a-z][-a-z0-9_]*)/g, "$1");
+  };
+
+  commentEscapes = function(txt) {
+    txt = txt.replace(/\{\{/g, "<!--{{");
+    return txt = txt.replace(/\}\}/g, "}}-->");
+  };
+
+  uncommentEscapes = function(txt) {
+    txt = txt.replace(/<!--\{\{/g, "{{");
+    return txt = txt.replace(/\}\}-->/g, "}}");
+  };
+
+  hasEscape = function(txt) {
+    return !!/\{\{/.exec(txt);
+  };
 
   undoer = (function() {
 
