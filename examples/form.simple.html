@@ -12,10 +12,15 @@
 				<span class="desc">Last Name</span>
 				<input type="text" Value="{{lastname}}" oninput="{{>lastname}}" />
 			</label>
+			<label>
+				<input type="checkbox" checked="{{isMonkey}}" onchange="{{>isMonkey}}" />
+				<span class="desc"> Is a Monkey
+			</label>
 		</script>
 		<script type="text/x-platter" id="thepreview">
-			<h2 if="{{firstname}}">Your first name is {{firstname}}</h2>
-			<h2 if="{{lastname}}">Your last name is {{lastname}}</h2>
+			<h2 if="{{firstname}}">First name is {{firstname}}</h2>
+			<h2 if="{{lastname}}">Last name is {{lastname}}</h2>
+			<h2 if="{{isMonkey}}">Is a monkey</h2>
 		</script>
 
 		<script type="text/javascript" src="http://documentcloud.github.com/underscore/underscore-min.js"></script>
