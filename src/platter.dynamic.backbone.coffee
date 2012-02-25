@@ -10,6 +10,9 @@ class backboneRunner extends platter.internal.dynamicRunner
 			data.off ev, fn
 		fn()
 
+	doSet: (data, n, v) ->
+		data.set n, v
+
 	# It's actually more efficient for watchCollection to not undo the adds. The caller is expected to have their own undoer in the same context.
 	watchCollection: (coll, add, rem) ->
 		coll.on 'add', add

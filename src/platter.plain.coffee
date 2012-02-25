@@ -1,5 +1,12 @@
+class plainRunner extends platter.internal.templateRunner
+	doSet: (data, n, v) ->
+		data[n] = v
+
 # TODO: This code is probably slowed down by not passing jsEl through (causing #{jsPost}.parentNode). Maybe bring it back?
 class plainCompiler extends platter.internal.templateCompiler
+	makeRet: (node) ->
+		new plainRunner(node)
+
 	doSimple: (ret, js, jsCur, jsData, n, v, expr) ->
 		js.addExpr expr
 			.replace("#el#", "#{jsCur}")
@@ -21,5 +28,6 @@ class plainCompiler extends platter.internal.templateCompiler
 				#{jsPost}.parentNode.insertBefore(this.#{jsCur.n}.run(#{jsFor}[i]), #{jsPost})
 		"""
 
+platter.internal.plainRunner = plainRunner
 platter.internal.plainCompiler = plainCompiler
 platter.plain = new plainCompiler

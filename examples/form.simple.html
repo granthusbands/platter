@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+	<head>
+		<title>Template Test</title>
+		<script type="text/x-platter" id="theform">
+			<h1>A simple form</h1>
+			<label>
+				<span class="desc">First Name</span>
+				<input type="text" value="{{firstname}}" oninput="{{>firstname}}" />
+			</label>
+			<label>
+				<span class="desc">Last Name</span>
+				<input type="text" Value="{{lastname}}" oninput="{{>lastname}}" />
+			</label>
+		</script>
+		<script type="text/x-platter" id="thepreview">
+			<h2 if="{{firstname}}">Your first name is {{firstname}}</h2>
+			<h2 if="{{lastname}}">Your last name is {{lastname}}</h2>
+		</script>
+
+		<script type="text/javascript" src="http://documentcloud.github.com/underscore/underscore-min.js"></script>
+		<script type="text/javascript" src="http://documentcloud.github.com/backbone/backbone-min.js"></script>
+		
+		<script type="text/javascript" src="../platter.js"></script>
+
+		<script type="text/javascript">
+			function getDocTemplate(id) {
+				return document.getElementById(id).text;
+			}
+
+			var tPlainForm = platter.plain.compile(getDocTemplate('theform'));
+			var tPlainPrev = platter.plain.compile(getDocTemplate('thepreview'));
+			function goPlain(){
+				var data = {};
+				document.body.appendChild(tPlainForm.run(data));
+				document.body.appendChild(tPlainPrev.run(data));
+			}
+
+			tBBForm = platter.backbone.compile(getDocTemplate('theform'));
+			tBBPrev = platter.backbone.compile(getDocTemplate('thepreview'));
+			function goBackbone(){
+				var data = new Backbone.Model();
+				document.body.appendChild(tBBForm.run(data));
+				document.body.appendChild(tBBPrev.run(data));
+			}
+		</script>
+	</head>
+	<body>
+		<button onclick="goPlain()">Plain</button>
+		<button onclick="goBackbone()">Backbone</button>
+	</body>
+</html>

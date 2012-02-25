@@ -41,6 +41,7 @@ class templateCompiler
 	
 	compileInner: (ret, js, jsEl, jsData) ->
 		jsCur = js.addVar jsEl+"_ch", "#{jsEl}.firstChild", jsEl.v.firstChild
+		js.forceVar jsCur
 		while (jsCur.v)
 			if jsCur.v.nodeType==1  # Element
 				isSpecial = false
@@ -64,11 +65,8 @@ class templateCompiler
 						if !(hasEscape v)
 							jsCur.v.setAttribute realn, v
 						else
-							if (realn[0]=='o'&&realn[1]=='n')
-								# Event handler!
-								ev = realn.substr(2)
-								@escapesReplace v, (t) ->
-									js.addExpr "this.runEvent(#{jsCur}, '#{ev}', function(ev){ return #{jsData}.#{t}(ev, '#{ev}', #{jsCur}); })"
+							if isEvent realn
+								@doEvent ret, js, jsCur, jsData, realn, v
 							else
 								n2 = if @assigners[realn] then realn else '#default'
 								@doSimple ret, js, jsCur, jsData, realn, v, @assigners[n2]
@@ -88,6 +86,21 @@ class templateCompiler
 				jsCur.v.nodeValue = unhideAttr jsCur.v.nodeValue
 			jsCur = js.addVar "#{jsEl}_ch", "#{jsCur}.nextSibling", jsCur.v.nextSibling;
 
+	doEvent: (ret, js, jsCur, jsData, realn, v) ->
+		ev = realn.substr(2)
+		@escapesReplace v, (t) ->
+			if (t[0]=='>')
+				t = t.substr 1
+				jsThis = js.addVar "#{jsCur}_this", "this"
+				js.forceVar jsThis
+				if (jsCur.v.type=='checkbox')
+					prop = 'checked'
+				else
+					prop = 'value'
+				# TODO: Support radio buttons, select-boxes and maybe others
+				js.addExpr "this.runEvent(#{jsCur}, '#{ev}', function(ev){ #{jsThis}.doSet(#{jsData}, '#{t}', #{jsCur}.#{prop}); })"
+			else
+				js.addExpr "this.runEvent(#{jsCur}, '#{ev}', function(ev){ return #{jsData}.#{t}(ev, '#{ev}', #{jsCur}); })"
 
 	# TODO: Put these special things somewhere better
 	special_if: (ret, js, jsCur, jsData, val) ->
@@ -148,7 +161,7 @@ class templateCompiler
 		while m = escape.exec(txt)
 			if m.index>last
 				s += '+"' + txt.substring(last, m.index).replace(/[\\\"]/g, "\\$1") + '"'
-			s += '+' + fn(m[1])
+			s += '+platter.str(' + fn(m[1]) + ')'
 			last = m.index+m[0].length
 		if (last<txt.length)
 			s += '+"' + txt.substring(last, txt.length).replace(/[\\\"]/g, "\\$1") + '"'
@@ -158,6 +171,7 @@ class templateCompiler
 		'#text': "#el#.nodeValue = #v#"
 		'#default': "#el#.setAttribute(#n#, #v#)"
 		'class': "#el#.className = #v#"
+		'checked': "#el#.checked = !!#v#"
 		#TODO: style in Firefox -> .style.cssText
 		#TODO: type in IE -> recreate the node, somehow
 
@@ -190,6 +204,9 @@ uncommentEscapes = (txt) ->
 hasEscape = (txt) ->
 	!!/\{\{/.exec txt
 
+str = (o) ->
+	o ? ''
+
 pullNode = (node) ->
 	pre = document.createComment ""
 	post = document.createComment ""
@@ -198,6 +215,9 @@ pullNode = (node) ->
 	frag = document.createDocumentFragment()
 	frag.appendChild node
 	[pre, post, frag]
+
+isEvent = (name) ->
+	name[0]=='o' && name[1]=='n'
 
 
 class undoer
@@ -221,6 +241,7 @@ class undoer
 
 this.$undo = new undoer
 this.platter =
+	str: str
 	internal:
 		templateCompiler: templateCompiler
 		templateRunner: templateRunner

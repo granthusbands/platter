@@ -19,7 +19,7 @@ class dynamicRunner extends platter.internal.templateRunner
 				@removeBetween start, end
 				undo()
 				undo = null
-		@runGet onchange, data, ev
+		@runGet onchange, data, extra
 
 	# Runtime: A collection of models, automatically expanded/collapsed as members get added/removed
 	runForEach: (coll, tmpl, start, end) ->
