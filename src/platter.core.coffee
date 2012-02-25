@@ -45,21 +45,24 @@ class templateCompiler
 		while (jsCur.v)
 			if jsCur.v.nodeType==1  # Element
 				isSpecial = false
-				[attrs...] = jsCur.v.attributes
-				for att in attrs
-					n = att.nodeName
-					realn = unhideAttrName n
+				attrs = ({
+				  n: att.nodeName
+				  realn: unhideAttrName att.nodeName
+				  v: uncommentEscapes unhideAttr att.nodeValue
+				  } for att in jsCur.v.attributes)
+				if jsCur.v.tagName.toLowerCase()=='textarea' && hasEscape jsCur.v.value
+					attrs.push
+						n: 'value'
+						realn: 'value'
+						v: uncommentEscapes unhideAttr jsCur.v.value
+				for {n, realn, v} in attrs
 					if (realn&&this["special_#{realn}"])
 						isSpecial = true
-						v = uncommentEscapes unhideAttr att.nodeValue
 						jsCur.v.removeAttribute n
 						jsCur = this["special_#{realn}"](ret, js, jsCur, jsData, v)
 						break
 				if !isSpecial
-					for att in attrs
-						v = uncommentEscapes unhideAttr att.nodeValue
-						n = att.nodeName
-						realn = unhideAttrName n
+					for {n, realn, v} in attrs
 						if (realn!=n)
 							jsCur.v.removeAttribute n
 						if !(hasEscape v)
@@ -172,6 +175,7 @@ class templateCompiler
 		'#default': "#el#.setAttribute(#n#, #v#)"
 		'class': "#el#.className = #v#"
 		'checked': "#el#.checked = !!#v#"
+		'value': "#el#.value = #v#"
 		#TODO: style in Firefox -> .style.cssText
 		#TODO: type in IE -> recreate the node, somehow
 

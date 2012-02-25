@@ -1,6 +1,5 @@
 (function() {
   var backboneCompiler, backboneRunner, clean, codegen, commentEscapes, dynamicCompiler, dynamicRunner, exprvar, hasEscape, hideAttr, isEvent, plainCompiler, plainRunner, pullNode, str, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName,
-    __slice = Array.prototype.slice,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
@@ -56,21 +55,38 @@
     };
 
     templateCompiler.prototype.compileInner = function(ret, js, jsEl, jsData) {
-      var att, attrs, ct, isSpecial, jsCur, n, n2, realn, txt, v, _i, _j, _len, _len2, _ref, _results;
+      var att, attrs, ct, isSpecial, jsCur, n, n2, realn, txt, v, _i, _j, _len, _len2, _ref, _ref2, _results;
       jsCur = js.addVar(jsEl + "_ch", "" + jsEl + ".firstChild", jsEl.v.firstChild);
       js.forceVar(jsCur);
       _results = [];
       while (jsCur.v) {
         if (jsCur.v.nodeType === 1) {
           isSpecial = false;
-          _ref = jsCur.v.attributes, attrs = 1 <= _ref.length ? __slice.call(_ref, 0) : [];
+          attrs = (function() {
+            var _i, _len, _ref, _results2;
+            _ref = jsCur.v.attributes;
+            _results2 = [];
+            for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+              att = _ref[_i];
+              _results2.push({
+                n: att.nodeName,
+                realn: unhideAttrName(att.nodeName),
+                v: uncommentEscapes(unhideAttr(att.nodeValue))
+              });
+            }
+            return _results2;
+          })();
+          if (jsCur.v.tagName.toLowerCase() === 'textarea' && hasEscape(jsCur.v.value)) {
+            attrs.push({
+              n: 'value',
+              realn: 'value',
+              v: uncommentEscapes(unhideAttr(jsCur.v.value))
+            });
+          }
           for (_i = 0, _len = attrs.length; _i < _len; _i++) {
-            att = attrs[_i];
-            n = att.nodeName;
-            realn = unhideAttrName(n);
+            _ref = attrs[_i], n = _ref.n, realn = _ref.realn, v = _ref.v;
             if (realn && this["special_" + realn]) {
               isSpecial = true;
-              v = uncommentEscapes(unhideAttr(att.nodeValue));
               jsCur.v.removeAttribute(n);
               jsCur = this["special_" + realn](ret, js, jsCur, jsData, v);
               break;
@@ -78,10 +94,7 @@
           }
           if (!isSpecial) {
             for (_j = 0, _len2 = attrs.length; _j < _len2; _j++) {
-              att = attrs[_j];
-              v = uncommentEscapes(unhideAttr(att.nodeValue));
-              n = att.nodeName;
-              realn = unhideAttrName(n);
+              _ref2 = attrs[_j], n = _ref2.n, realn = _ref2.realn, v = _ref2.v;
               if (realn !== n) jsCur.v.removeAttribute(n);
               if (!(hasEscape(v))) {
                 jsCur.v.setAttribute(realn, v);
@@ -213,7 +226,8 @@
       '#text': "#el#.nodeValue = #v#",
       '#default': "#el#.setAttribute(#n#, #v#)",
       'class': "#el#.className = #v#",
-      'checked': "#el#.checked = !!#v#"
+      'checked': "#el#.checked = !!#v#",
+      'value': "#el#.value = #v#"
     };
 
     return templateCompiler;
