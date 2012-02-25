@@ -120,6 +120,7 @@
       var frag, inner, jsPost, post, _ref;
       _ref = pullNode(jsCur.v), jsCur.v = _ref[0], post = _ref[1], frag = _ref[2];
       inner = this.compileFrag(frag);
+      ret[jsCur.n] = inner;
       jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
       this.doIf(ret, js, jsCur, jsPost, jsData, val, inner);
       return jsPost;
@@ -129,6 +130,7 @@
       var frag, inner, jsPost, post, _ref;
       _ref = pullNode(jsCur.v), jsCur.v = _ref[0], post = _ref[1], frag = _ref[2];
       inner = this.compileFrag(frag);
+      ret[jsCur.n] = inner;
       jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
       this.doForEach(ret, js, jsCur, jsPost, jsData, val, inner);
       return jsPost;
@@ -432,7 +434,6 @@
 
     plainCompiler.prototype.doIf = function(ret, js, jsCur, jsPost, jsData, val, inner) {
       var _this = this;
-      ret[jsCur.n] = inner;
       val = this.escapesReplace(val, function(t) {
         return ("" + jsData + ".") + t;
       });
@@ -442,7 +443,6 @@
     plainCompiler.prototype.doForEach = function(ret, js, jsCur, jsPost, jsData, val, inner) {
       var jsFor,
         _this = this;
-      ret[jsCur.n] = inner;
       val = this.escapesReplace(val, function(t) {
         return ("" + jsData + ".") + t;
       });
@@ -554,7 +554,6 @@
 
     dynamicCompiler.prototype.doIf = function(ret, js, jsPre, jsPost, jsData, val, inner) {
       var v;
-      ret[jsPre.n] = inner;
       v = val;
       val = this.convertVal(val, jsData);
       return js.addExpr("this.runIf(function(){return " + val + ";}, " + jsData + ", " + (this.extraParam(v)) + ", this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
@@ -562,7 +561,6 @@
 
     dynamicCompiler.prototype.doForEach = function(ret, js, jsPre, jsPost, jsData, val, inner) {
       var v;
-      ret[jsPre.n] = inner;
       v = val;
       val = this.convertColl(val, jsData);
       return js.addExpr("this.runForEach(" + val + ", this." + jsPre + ", " + jsPre + ", " + jsPost + ")");

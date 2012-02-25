@@ -9,12 +9,10 @@ class plainCompiler extends platter.internal.templateCompiler
 			)
 	
 	doIf: (ret, js, jsCur, jsPost, jsData, val, inner) ->
-		ret[jsCur.n] = inner
 		val = @escapesReplace val, (t) => "#{jsData}."+t
 		js.addExpr "if (#{val}) #{jsPost}.parentNode.insertBefore(this.#{jsCur.n}.run(#{jsData}), #{jsPost})"
 
 	doForEach: (ret, js, jsCur, jsPost, jsData, val, inner) ->
-		ret[jsCur.n] = inner
 		val = @escapesReplace val, (t) => "#{jsData}."+t
 		jsFor = js.addVar "#{jsCur}_for", val
 		js.forceVar jsPost

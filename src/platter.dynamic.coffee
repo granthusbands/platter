@@ -62,14 +62,12 @@ class dynamicCompiler extends platter.internal.templateCompiler
 
 	# Compiler: Conditional section
 	doIf: (ret, js, jsPre, jsPost, jsData, val, inner) ->
-		ret[jsPre.n] = inner
 		v = val
 		val = @convertVal val, jsData
 		js.addExpr "this.runIf(function(){return #{val};}, #{jsData}, #{@extraParam(v)}, this.#{jsPre}, #{jsPre}, #{jsPost})"
 
 	# Compiler:
 	doForEach: (ret, js, jsPre, jsPost, jsData, val, inner) ->
-		ret[jsPre.n] = inner
 		v = val
 		val = @convertColl val, jsData
 		js.addExpr "this.runForEach(#{val}, this.#{jsPre}, #{jsPre}, #{jsPost})"
