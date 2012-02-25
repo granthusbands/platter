@@ -8,6 +8,13 @@ class templateRunner
 			par.removeChild prev
 		undefined
 	runEvent: (el, ev, fn) ->
+		# TODO: Optionally use jQuery, ext, Prototype, etc
+		# TODO: Polyfill oninput:
+		  # IE <=8: attachEvent onpropertychange, ev.propertyName=='value'
+		  # IE9: Misses some input (as does onpropertychange).
+		  #      Probably should also handle onkeydown+delay.
+		  # Safari: Fires ontextinput for textarea, instead.
+		  # All else: Use oninput
 		el.addEventListener ev, fn
 		$undo.add ->
 			el.removeEventListener ev, fn
