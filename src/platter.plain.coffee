@@ -1,11 +1,11 @@
 # TODO: This code is probably slowed down by not passing jsEl through (causing #{jsPost}.parentNode). Maybe bring it back?
 class plainCompiler extends platter.internal.templateCompiler
-	doSimple: (ret, js, jsCur, n, v, expr) ->
+	doSimple: (ret, js, jsCur, jsData, n, v, expr) ->
 		js.addExpr expr
 			.replace("#el#", "#{jsCur}")
 			.replace("#n#", "'#{n}'")
 			.replace("#v#", 
-				@escapesReplace v, (t) -> if t=='.' then "data" else "data.#{t}"  #TODO: data -> #{jsData}
+				@escapesReplace v, (t) -> if t=='.' then "#{jsData}" else "#{jsData}.#{t}"
 			)
 	
 	doIf: (ret, js, jsCur, jsPost, jsData, val, inner) ->
@@ -15,7 +15,7 @@ class plainCompiler extends platter.internal.templateCompiler
 
 	doForEach: (ret, js, jsCur, jsPost, jsData, val, inner) ->
 		ret[jsCur.n] = inner
-		val = @escapesReplace val, (t) => "data."+t
+		val = @escapesReplace val, (t) => "#{jsData}."+t
 		jsFor = js.addVar "#{jsCur}_for", val
 		js.forceVar jsPost
 		js.addExpr """

@@ -88,11 +88,11 @@
                 if (realn[0] === 'o' && realn[1] === 'n') {
                   ev = realn.substr(2);
                   this.escapesReplace(v, function(t) {
-                    return js.addExpr("this.runEvent(" + jsCur + ", '" + ev + "', function(ev){ return data." + t + "(ev, '" + ev + "', " + jsCur + "); })");
+                    return js.addExpr("this.runEvent(" + jsCur + ", '" + ev + "', function(ev){ return " + jsData + "." + t + "(ev, '" + ev + "', " + jsCur + "); })");
                   });
                 } else {
                   n2 = this.assigners[realn] ? realn : '#default';
-                  this.doSimple(ret, js, jsCur, realn, v, this.assigners[n2]);
+                  this.doSimple(ret, js, jsCur, jsData, realn, v, this.assigners[n2]);
                 }
               }
             }
@@ -106,7 +106,7 @@
             jsCur.v.parentNode.insertBefore(txt, jsCur.v);
             jsCur.v.parentNode.removeChild(jsCur.v);
             jsCur.v = txt;
-            this.doSimple(ret, js, jsCur, 'text', ct, this.assigners['#text']);
+            this.doSimple(ret, js, jsCur, jsData, 'text', ct, this.assigners['#text']);
           }
         } else if (jsCur.v.nodeType === 3 || jsCur.v.nodeType === 4) {
           jsCur.v.nodeValue = unhideAttr(jsCur.v.nodeValue);
@@ -420,12 +420,12 @@
       plainCompiler.__super__.constructor.apply(this, arguments);
     }
 
-    plainCompiler.prototype.doSimple = function(ret, js, jsCur, n, v, expr) {
+    plainCompiler.prototype.doSimple = function(ret, js, jsCur, jsData, n, v, expr) {
       return js.addExpr(expr.replace("#el#", "" + jsCur).replace("#n#", "'" + n + "'").replace("#v#", this.escapesReplace(v, function(t) {
         if (t === '.') {
-          return "data";
+          return "" + jsData;
         } else {
-          return "data." + t;
+          return "" + jsData + "." + t;
         }
       })));
     };
@@ -444,7 +444,7 @@
         _this = this;
       ret[jsCur.n] = inner;
       val = this.escapesReplace(val, function(t) {
-        return "data." + t;
+        return ("" + jsData + ".") + t;
       });
       jsFor = js.addVar("" + jsCur + "_for", val);
       js.forceVar(jsPost);
@@ -545,18 +545,18 @@
       return new dynamicRunner(node);
     };
 
-    dynamicCompiler.prototype.doSimple = function(ret, js, jsCur, n, v, expr) {
+    dynamicCompiler.prototype.doSimple = function(ret, js, jsCur, jsData, n, v, expr) {
       var safen;
       safen = n.replace(/[^a-z0-9$_]/g, "");
-      expr = expr.replace("#el#", "" + jsCur).replace("#n#", "'" + n + "'").replace("#v#", this.convertVal(v));
-      return js.addExpr("this.runGet(function(){\n\t" + expr + ";\n}, data, " + (this.extraParam(v)) + ")");
+      expr = expr.replace("#el#", "" + jsCur).replace("#n#", "'" + n + "'").replace("#v#", this.convertVal(v, jsData));
+      return js.addExpr("this.runGet(function(){\n\t" + expr + ";\n}, " + jsData + ", " + (this.extraParam(v)) + ")");
     };
 
     dynamicCompiler.prototype.doIf = function(ret, js, jsPre, jsPost, jsData, val, inner) {
       var v;
       ret[jsPre.n] = inner;
       v = val;
-      val = this.convertVal(val);
+      val = this.convertVal(val, jsData);
       return js.addExpr("this.runIf(function(){return " + val + ";}, " + jsData + ", " + (this.extraParam(v)) + ", this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
     };
 
@@ -564,13 +564,13 @@
       var v;
       ret[jsPre.n] = inner;
       v = val;
-      val = this.convertColl(val);
+      val = this.convertColl(val, jsData);
       return js.addExpr("this.runForEach(" + val + ", this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
     };
 
-    dynamicCompiler.prototype.convertColl = function(txt) {
+    dynamicCompiler.prototype.convertColl = function(txt, jsData) {
       return this.escapesReplace(txt, function(t) {
-        return "data." + t;
+        return "" + jsData + "." + t;
       });
     };
 
@@ -649,9 +649,9 @@
       return new backboneRunner(node);
     };
 
-    backboneCompiler.prototype.convertVal = function(txt) {
+    backboneCompiler.prototype.convertVal = function(txt, jsData) {
       return this.escapesReplace(txt, function(t) {
-        return "data.get('" + t + "')";
+        return "" + jsData + ".get('" + t + "')";
       });
     };
 

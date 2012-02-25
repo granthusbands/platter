@@ -61,10 +61,10 @@ class templateCompiler
 								# Event handler!
 								ev = realn.substr(2)
 								@escapesReplace v, (t) ->
-									js.addExpr "this.runEvent(#{jsCur}, '#{ev}', function(ev){ return data.#{t}(ev, '#{ev}', #{jsCur}); })"
+									js.addExpr "this.runEvent(#{jsCur}, '#{ev}', function(ev){ return #{jsData}.#{t}(ev, '#{ev}', #{jsCur}); })"
 							else
 								n2 = if @assigners[realn] then realn else '#default'
-								@doSimple ret, js, jsCur, realn, v, @assigners[n2]
+								@doSimple ret, js, jsCur, jsData, realn, v, @assigners[n2]
 					@compileInner ret, js, jsCur, jsData
 			else if jsCur.v.nodeType==8  # Comment
 				ct = jsCur.v.nodeValue
@@ -76,7 +76,7 @@ class templateCompiler
 					jsCur.v.parentNode.insertBefore txt, jsCur.v
 					jsCur.v.parentNode.removeChild jsCur.v
 					jsCur.v = txt
-					@doSimple ret, js, jsCur, 'text', ct, @assigners['#text']
+					@doSimple ret, js, jsCur, jsData, 'text', ct, @assigners['#text']
 			else if jsCur.v.nodeType==3 || jsCur.v.nodeType==4  # Text/CData
 				jsCur.v.nodeValue = unhideAttr jsCur.v.nodeValue
 			jsCur = js.addVar "#{jsEl}_ch", "#{jsCur}.nextSibling", jsCur.v.nextSibling;

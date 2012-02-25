@@ -50,32 +50,32 @@ class dynamicCompiler extends platter.internal.templateCompiler
 		new dynamicRunner(node)
 
 	# Compiler: Handle simple value-assignments with escapes.
-	doSimple: (ret, js, jsCur, n, v, expr) ->
+	doSimple: (ret, js, jsCur, jsData, n, v, expr) ->
 		safen = n.replace /[^a-z0-9$_]/g, ""
 		expr = expr
 			.replace("#el#", "#{jsCur}")
 			.replace("#n#", "'#{n}'")
 			.replace("#v#", 
-				@convertVal v
+				@convertVal v, jsData
 			)
-		js.addExpr "this.runGet(function(){\n\t#{expr};\n}, data, #{@extraParam(v)})"
+		js.addExpr "this.runGet(function(){\n\t#{expr};\n}, #{jsData}, #{@extraParam(v)})"
 
 	# Compiler: Conditional section
 	doIf: (ret, js, jsPre, jsPost, jsData, val, inner) ->
 		ret[jsPre.n] = inner
 		v = val
-		val = @convertVal val
+		val = @convertVal val, jsData
 		js.addExpr "this.runIf(function(){return #{val};}, #{jsData}, #{@extraParam(v)}, this.#{jsPre}, #{jsPre}, #{jsPost})"
 
 	# Compiler:
 	doForEach: (ret, js, jsPre, jsPost, jsData, val, inner) ->
 		ret[jsPre.n] = inner
 		v = val
-		val = @convertColl val
+		val = @convertColl val, jsData
 		js.addExpr "this.runForEach(#{val}, this.#{jsPre}, #{jsPre}, #{jsPost})"
 	
-	convertColl: (txt) ->
-		@escapesReplace txt, (t) -> "data.#{t}"
+	convertColl: (txt, jsData) ->
+		@escapesReplace txt, (t) -> "#{jsData}.#{t}"
 
 platter.internal.dynamicRunner = dynamicRunner
 platter.internal.dynamicCompiler = dynamicCompiler
