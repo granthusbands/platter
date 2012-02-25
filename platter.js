@@ -1,5 +1,5 @@
 (function() {
-  var backboneCompiler, backboneRunner, clean, codegen, commentEscapes, dynamicCompiler, dynamicRunner, exprvar, hasEscape, hideAttr, plainCompiler, pullNode, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName,
+  var backboneCompiler, backboneRunner, clean, codegen, commentEscapes, dynamicCompiler, dynamicRunner, exprvar, hasEscape, hideAttr, isEvent, plainCompiler, plainRunner, pullNode, str, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName,
     __slice = Array.prototype.slice,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
@@ -56,8 +56,9 @@
     };
 
     templateCompiler.prototype.compileInner = function(ret, js, jsEl, jsData) {
-      var att, attrs, ct, ev, isSpecial, jsCur, n, n2, realn, txt, v, _i, _j, _len, _len2, _ref, _results;
+      var att, attrs, ct, isSpecial, jsCur, n, n2, realn, txt, v, _i, _j, _len, _len2, _ref, _results;
       jsCur = js.addVar(jsEl + "_ch", "" + jsEl + ".firstChild", jsEl.v.firstChild);
+      js.forceVar(jsCur);
       _results = [];
       while (jsCur.v) {
         if (jsCur.v.nodeType === 1) {
@@ -85,11 +86,8 @@
               if (!(hasEscape(v))) {
                 jsCur.v.setAttribute(realn, v);
               } else {
-                if (realn[0] === 'o' && realn[1] === 'n') {
-                  ev = realn.substr(2);
-                  this.escapesReplace(v, function(t) {
-                    return js.addExpr("this.runEvent(" + jsCur + ", '" + ev + "', function(ev){ return " + jsData + "." + t + "(ev, '" + ev + "', " + jsCur + "); })");
-                  });
+                if (isEvent(realn)) {
+                  this.doEvent(ret, js, jsCur, jsData, realn, v);
                 } else {
                   n2 = this.assigners[realn] ? realn : '#default';
                   this.doSimple(ret, js, jsCur, jsData, realn, v, this.assigners[n2]);
@@ -114,6 +112,27 @@
         _results.push(jsCur = js.addVar("" + jsEl + "_ch", "" + jsCur + ".nextSibling", jsCur.v.nextSibling));
       }
       return _results;
+    };
+
+    templateCompiler.prototype.doEvent = function(ret, js, jsCur, jsData, realn, v) {
+      var ev;
+      ev = realn.substr(2);
+      return this.escapesReplace(v, function(t) {
+        var jsThis, prop;
+        if (t[0] === '>') {
+          t = t.substr(1);
+          jsThis = js.addVar("" + jsCur + "_this", "this");
+          js.forceVar(jsThis);
+          if (jsCur.v.type === 'checkbox') {
+            prop = 'checked';
+          } else {
+            prop = 'value';
+          }
+          return js.addExpr("this.runEvent(" + jsCur + ", '" + ev + "', function(ev){ " + jsThis + ".doSet(" + jsData + ", '" + t + "', " + jsCur + "." + prop + "); })");
+        } else {
+          return js.addExpr("this.runEvent(" + jsCur + ", '" + ev + "', function(ev){ return " + jsData + "." + t + "(ev, '" + ev + "', " + jsCur + "); })");
+        }
+      });
     };
 
     templateCompiler.prototype.special_if = function(ret, js, jsCur, jsData, val) {
@@ -181,7 +200,7 @@
         if (m.index > last) {
           s += '+"' + txt.substring(last, m.index).replace(/[\\\"]/g, "\\$1") + '"';
         }
-        s += '+' + fn(m[1]);
+        s += '+platter.str(' + fn(m[1]) + ')';
         last = m.index + m[0].length;
       }
       if (last < txt.length) {
@@ -193,7 +212,8 @@
     templateCompiler.prototype.assigners = {
       '#text': "#el#.nodeValue = #v#",
       '#default': "#el#.setAttribute(#n#, #v#)",
-      'class': "#el#.className = #v#"
+      'class': "#el#.className = #v#",
+      'checked': "#el#.checked = !!#v#"
     };
 
     return templateCompiler;
@@ -232,6 +252,10 @@
     return !!/\{\{/.exec(txt);
   };
 
+  str = function(o) {
+    return o != null ? o : '';
+  };
+
   pullNode = function(node) {
     var frag, post, pre;
     pre = document.createComment("");
@@ -241,6 +265,10 @@
     frag = document.createDocumentFragment();
     frag.appendChild(node);
     return [pre, post, frag];
+  };
+
+  isEvent = function(name) {
+    return name[0] === 'o' && name[1] === 'n';
   };
 
   undoer = (function() {
@@ -283,6 +311,7 @@
   this.$undo = new undoer;
 
   this.platter = {
+    str: str,
     internal: {
       templateCompiler: templateCompiler,
       templateRunner: templateRunner
@@ -414,6 +443,22 @@
 
   platter.internal.codegen = codegen;
 
+  plainRunner = (function(_super) {
+
+    __extends(plainRunner, _super);
+
+    function plainRunner() {
+      plainRunner.__super__.constructor.apply(this, arguments);
+    }
+
+    plainRunner.prototype.doSet = function(data, n, v) {
+      return data[n] = v;
+    };
+
+    return plainRunner;
+
+  })(platter.internal.templateRunner);
+
   plainCompiler = (function(_super) {
 
     __extends(plainCompiler, _super);
@@ -421,6 +466,10 @@
     function plainCompiler() {
       plainCompiler.__super__.constructor.apply(this, arguments);
     }
+
+    plainCompiler.prototype.makeRet = function(node) {
+      return new plainRunner(node);
+    };
 
     plainCompiler.prototype.doSimple = function(ret, js, jsCur, jsData, n, v, expr) {
       return js.addExpr(expr.replace("#el#", "" + jsCur).replace("#n#", "'" + n + "'").replace("#v#", this.escapesReplace(v, function(t) {
@@ -454,6 +503,8 @@
     return plainCompiler;
 
   })(platter.internal.templateCompiler);
+
+  platter.internal.plainRunner = plainRunner;
 
   platter.internal.plainCompiler = plainCompiler;
 
@@ -490,7 +541,7 @@
           return undo = null;
         }
       };
-      return this.runGet(onchange, data, ev);
+      return this.runGet(onchange, data, extra);
     };
 
     dynamicRunner.prototype.runForEach = function(coll, tmpl, start, end) {
@@ -600,6 +651,10 @@
         return data.off(ev, fn);
       });
       return fn();
+    };
+
+    backboneRunner.prototype.doSet = function(data, n, v) {
+      return data.set(n, v);
     };
 
     backboneRunner.prototype.watchCollection = function(coll, add, rem) {
