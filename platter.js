@@ -1,7 +1,25 @@
 (function() {
-  var backboneCompiler, backboneRunner, clean, codegen, commentEscapes, dynamicCompiler, dynamicRunner, exprvar, hasEscape, hideAttr, isEvent, plainCompiler, plainRunner, pullNode, str, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName,
+  var backboneCompiler, backboneRunner, clean, codegen, commentEscapes, defaultRunEvent, dynamicCompiler, dynamicRunner, exprvar, hasEscape, hideAttr, isEvent, plainCompiler, plainRunner, pullNode, runDOMEvent, runJQueryEvent, str, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  runDOMEvent = function(el, ev, fn) {
+    el.addEventListener(ev, fn);
+    return $undo.add(function() {
+      return el.removeEventListener(ev, fn);
+    });
+  };
+
+  runJQueryEvent = function(el, ev, fn) {
+    jQuery(el).on(ev, fn);
+    return $undo.add(function() {
+      return jQuery(el).off(ev, fn);
+    });
+  };
+
+  defaultRunEvent = runDOMEvent;
+
+  if (window.jQuery) defaultRunEvent = runJQueryEvent;
 
   templateRunner = (function() {
 
@@ -20,12 +38,7 @@
       return;
     };
 
-    templateRunner.prototype.runEvent = function(el, ev, fn) {
-      el.addEventListener(ev, fn);
-      return $undo.add(function() {
-        return el.removeEventListener(ev, fn);
-      });
-    };
+    templateRunner.prototype.runEvent = defaultRunEvent;
 
     templateRunner.prototype.removeAll = function(startel, endel) {
       var par;

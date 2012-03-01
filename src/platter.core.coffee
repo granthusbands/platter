@@ -1,3 +1,24 @@
+runDOMEvent = (el, ev, fn) ->
+	# TODO: Polyfill oninput:
+	# IE <=8: attachEvent onpropertychange, ev.propertyName=='value'
+	# IE9: Misses some input (as does onpropertychange).
+	#      Probably should also handle onkeydown+delay.
+	# Safari: Fires ontextinput for textarea, instead.
+	# All else: Use oninput
+	el.addEventListener ev, fn
+	$undo.add ->
+		el.removeEventListener ev, fn
+
+runJQueryEvent = (el, ev, fn) ->
+	jQuery(el).on ev, fn
+	$undo.add ->
+		jQuery(el).off ev, fn
+
+defaultRunEvent = runDOMEvent
+if window.jQuery
+	defaultRunEvent = runJQueryEvent
+# TODO: Maybe support ext, Prototype and other event libraries
+
 class templateRunner
 	constructor: (node) ->
 		@node = node
@@ -8,17 +29,7 @@ class templateRunner
 		while (prev=endel.previousSibling)!=startel
 			par.removeChild prev
 		undefined
-	runEvent: (el, ev, fn) ->
-		# TODO: Optionally use jQuery, ext, Prototype, etc
-		# TODO: Polyfill oninput:
-		  # IE <=8: attachEvent onpropertychange, ev.propertyName=='value'
-		  # IE9: Misses some input (as does onpropertychange).
-		  #      Probably should also handle onkeydown+delay.
-		  # Safari: Fires ontextinput for textarea, instead.
-		  # All else: Use oninput
-		el.addEventListener ev, fn
-		$undo.add ->
-			el.removeEventListener ev, fn
+	runEvent: defaultRunEvent
 	removeAll: (startel, endel) ->
 		@removeBetween startel, endel
 		par = startel.parentNode
