@@ -64,7 +64,11 @@
       jsLastChild = js.addForcedVar("lastChild", "" + jsEl + ".lastChild");
       jsSelf = js.addForcedVar("self", "this");
       js.addExpr("if (" + jsAutoRemove + "===true||" + jsAutoRemove + "==null)\n	$undo.add(function(){\n		" + jsSelf + ".removeAll(" + jsFirstChild + ", " + jsLastChild + ");\n	});");
-      js.addExpr("return " + jsEl);
+      if (jsEl.v.firstChild === jsEl.v.lastChild) {
+        js.addExpr("return " + jsFirstChild);
+      } else {
+        js.addExpr("return " + jsEl);
+      }
       ret.run = new Function('data', 'autoRemove', "" + js);
       return ret;
     };

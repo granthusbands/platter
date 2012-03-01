@@ -51,7 +51,10 @@ class templateCompiler
 					#{jsSelf}.removeAll(#{jsFirstChild}, #{jsLastChild});
 				});
 			"""
-		js.addExpr "return #{jsEl}"
+		if jsEl.v.firstChild==jsEl.v.lastChild
+			js.addExpr "return #{jsFirstChild}"
+		else
+			js.addExpr "return #{jsEl}"
 		#alert js
 		ret.run = new Function('data', 'autoRemove', ""+js)
 		ret
