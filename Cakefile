@@ -3,13 +3,13 @@ coffeecmd = require 'coffee-script/lib/coffee-script/command'
 
 option '-w', '--watch', 'watch files for changes'
 
-# Well, it amuses me.
+# Ho-hum
 task 'build', 'Build platter.js', (options) ->
-  oldargv = process.argv
   process.argv = [
     process.argv[0]
     process.argv[1]
     '-c'
+    (if options.watch then ['-w'] else [])...
     '-j'
     'platter.js'
     'src/platter.core.coffee'
@@ -18,8 +18,4 @@ task 'build', 'Build platter.js', (options) ->
     'src/platter.dynamic.coffee'
     'src/platter.dynamic.backbone.coffee'
   ]
-  if options.watch
-    process.argv.splice 2, 0, '-w'
   coffeecmd.run()
-  process.argv = oldargv
-
