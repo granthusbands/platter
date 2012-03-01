@@ -22,6 +22,11 @@ class codegen
 	forceVar: (name) ->
 		@_vars[name.n||name]._count = 1000
 
+	addForcedVar: (name, expr, compVal) ->
+		ret = @addVar name, expr, compVal
+		@forceVar ret
+		ret
+
 	addVar: (name, expr, compVal) ->
 		name = clean name
 		name = @_uniqName name

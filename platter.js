@@ -12,6 +12,7 @@
     templateRunner.prototype.removeBetween = function(startel, endel) {
       var par, prev;
       par = startel.parentNode;
+      if (!par) return;
       prev = void 0;
       while ((prev = endel.previousSibling) !== startel) {
         par.removeChild(prev);
@@ -24,6 +25,15 @@
       return $undo.add(function() {
         return el.removeEventListener(ev, fn);
       });
+    };
+
+    templateRunner.prototype.removeAll = function(startel, endel) {
+      var par;
+      this.removeBetween(startel, endel);
+      par = startel.parentNode;
+      if (!par) return;
+      par.removeChild(endel);
+      return par.removeChild(startel);
     };
 
     return templateRunner;
@@ -43,14 +53,19 @@
     };
 
     templateCompiler.prototype.compileFrag = function(frag) {
-      var js, jsData, jsEl, ret;
+      var js, jsAutoRemove, jsData, jsEl, jsFirstChild, jsLastChild, jsSelf, ret;
       js = new platter.internal.codegen;
       jsData = js.existingVar('data');
+      jsAutoRemove = js.existingVar('autoRemove');
       jsEl = js.addVar('el', 'this.node.cloneNode(true)', frag);
       ret = this.makeRet(frag);
       this.compileInner(ret, js, jsEl, jsData);
+      jsFirstChild = js.addForcedVar("firstChild", "" + jsEl + ".firstChild");
+      jsLastChild = js.addForcedVar("lastChild", "" + jsEl + ".lastChild");
+      jsSelf = js.addForcedVar("self", "this");
+      js.addExpr("if (" + jsAutoRemove + "===true||" + jsAutoRemove + "==null)\n	$undo.add(function(){\n		" + jsSelf + ".removeAll(" + jsFirstChild + ", " + jsLastChild + ");\n	});");
       js.addExpr("return " + jsEl);
-      ret.run = new Function('data', "" + js);
+      ret.run = new Function('data', 'autoRemove', "" + js);
       return ret;
     };
 
@@ -358,6 +373,13 @@
       return this._vars[name.n || name]._count = 1000;
     };
 
+    codegen.prototype.addForcedVar = function(name, expr, compVal) {
+      var ret;
+      ret = this.addVar(name, expr, compVal);
+      this.forceVar(ret);
+      return ret;
+    };
+
     codegen.prototype.addVar = function(name, expr, compVal) {
       name = clean(name);
       name = this._uniqName(name);
@@ -500,7 +522,7 @@
       val = this.escapesReplace(val, function(t) {
         return ("" + jsData + ".") + t;
       });
-      return js.addExpr("if (" + val + ") " + jsPost + ".parentNode.insertBefore(this." + jsCur.n + ".run(" + jsData + "), " + jsPost + ")");
+      return js.addExpr("if (" + val + ") " + jsPost + ".parentNode.insertBefore(this." + jsCur.n + ".run(" + jsData + ", false), " + jsPost + ")");
     };
 
     plainCompiler.prototype.doForEach = function(ret, js, jsCur, jsPost, jsData, val, inner) {
@@ -511,7 +533,7 @@
       });
       jsFor = js.addVar("" + jsCur + "_for", val);
       js.forceVar(jsPost);
-      return js.addExpr("for (var i=0;i<" + jsFor + ".length; ++i)\n	" + jsPost + ".parentNode.insertBefore(this." + jsCur.n + ".run(" + jsFor + "[i]), " + jsPost + ")");
+      return js.addExpr("for (var i=0;i<" + jsFor + ".length; ++i)\n	" + jsPost + ".parentNode.insertBefore(this." + jsCur.n + ".run(" + jsFor + "[i], false), " + jsPost + ")");
     };
 
     return plainCompiler;
@@ -547,7 +569,7 @@
         shown = show;
         if (show) {
           $undo.start();
-          end.parentNode.insertBefore(tmpl.run(data), end);
+          end.parentNode.insertBefore(tmpl.run(data, false), end);
           return undo = $undo.claim();
         } else {
           _this.removeBetween(start, end);
@@ -571,7 +593,7 @@
         ends.splice(at + 1, 0, newend);
         par.insertBefore(newend, ends[at].nextSibling);
         $undo.start();
-        par.insertBefore(tmpl.run(model), newend);
+        par.insertBefore(tmpl.run(model, false), newend);
         return undo.splice(at, 0, $undo.claim());
       };
       rem = function(model, coll, opts) {

@@ -3,6 +3,7 @@ class templateRunner
 		@node = node
 	removeBetween: (startel, endel) ->
 		par = startel.parentNode
+		return if !par
 		prev = undefined
 		while (prev=endel.previousSibling)!=startel
 			par.removeChild prev
@@ -18,6 +19,12 @@ class templateRunner
 		el.addEventListener ev, fn
 		$undo.add ->
 			el.removeEventListener ev, fn
+	removeAll: (startel, endel) ->
+		@removeBetween startel, endel
+		par = startel.parentNode
+		return if !par
+		par.removeChild endel
+		par.removeChild startel
 
 
 class templateCompiler
@@ -31,12 +38,22 @@ class templateCompiler
 	compileFrag: (frag) ->
 		js = new platter.internal.codegen
 		jsData = js.existingVar 'data'
+		jsAutoRemove = js.existingVar 'autoRemove'
 		jsEl = js.addVar 'el', 'this.node.cloneNode(true)', frag
 		ret = @makeRet(frag)
 		@compileInner ret, js, jsEl, jsData
+		jsFirstChild = js.addForcedVar "firstChild", "#{jsEl}.firstChild"
+		jsLastChild = js.addForcedVar "lastChild", "#{jsEl}.lastChild"
+		jsSelf = js.addForcedVar "self", "this"
+		js.addExpr """
+			if (#{jsAutoRemove}===true||#{jsAutoRemove}==null)
+				$undo.add(function(){
+					#{jsSelf}.removeAll(#{jsFirstChild}, #{jsLastChild});
+				});
+			"""
 		js.addExpr "return #{jsEl}"
 		#alert js
-		ret.run = new Function('data', ""+js)
+		ret.run = new Function('data', 'autoRemove', ""+js)
 		ret
 	
 	compileInner: (ret, js, jsEl, jsData) ->

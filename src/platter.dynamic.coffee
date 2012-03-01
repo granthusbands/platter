@@ -13,7 +13,7 @@ class dynamicRunner extends platter.internal.templateRunner
 			shown = show
 			if (show)
 				$undo.start()
-				end.parentNode.insertBefore tmpl.run(data), end
+				end.parentNode.insertBefore tmpl.run(data, false), end
 				undo = $undo.claim()
 			else
 				@removeBetween start, end
@@ -32,7 +32,7 @@ class dynamicRunner extends platter.internal.templateRunner
 			ends.splice at+1, 0, newend
 			par.insertBefore newend, ends[at].nextSibling
 			$undo.start()
-			par.insertBefore tmpl.run(model), newend
+			par.insertBefore tmpl.run(model, false), newend
 			undo.splice(at, 0, $undo.claim())
 		rem = (model, coll, opts) =>
 			at = opts.index
