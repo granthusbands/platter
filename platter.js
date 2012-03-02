@@ -1,7 +1,8 @@
 (function() {
-  var backboneCompiler, backboneRunner, clean, codegen, commentEscapes, defaultRunEvent, dynamicCompiler, dynamicRunner, exprvar, hasEscape, hideAttr, isEvent, plainCompiler, plainRunner, pullNode, runDOMEvent, runJQueryEvent, str, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName,
+  var backboneCompiler, backboneRunner, clean, codegen, commentEscapes, defaultRunEvent, dynamicCompiler, dynamicRunner, exprvar, hasEscape, hideAttr, isEvent, never_equal_to_anything, plainCompiler, plainRunner, pullNode, runDOMEvent, runJQueryEvent, str, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName,
     __hasProp = Object.prototype.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; },
+    __slice = Array.prototype.slice;
 
   runDOMEvent = function(el, ev, fn) {
     el.addEventListener(ev, fn);
@@ -365,7 +366,9 @@
   };
 
   clean = function(n) {
-    return n.replace(/#/g, "");
+    n = n.replace(/#/g, "");
+    if (!/^[a-z]/i) n = 'v' + n;
+    return n.replace(/[^a-z0-9\$]+/ig, "_");
   };
 
   exprvar = /#(\w+)#/g;
@@ -650,10 +653,21 @@
     };
 
     dynamicCompiler.prototype.doSimple = function(ret, js, jsCur, jsData, n, v, expr) {
-      var safen;
-      safen = n.replace(/[^a-z0-9$_]/g, "");
-      expr = expr.replace("#el#", "" + jsCur).replace("#n#", "'" + n + "'").replace("#v#", this.convertVal(v, jsData));
-      return js.addExpr("this.runGet(function(){\n\t" + expr + ";\n}, " + jsData + ", " + (this.extraParam(v)) + ")");
+      var esc, escn, escvar, jsChange;
+      esc = {};
+      jsChange = js.addVar("" + jsCur + "_change", "null");
+      this.escapesReplace(v, function(t) {
+        return esc[t] = js.addVar("" + jsCur + "_" + t, "null", t);
+      });
+      expr = expr.replace("#el#", "" + jsCur).replace("#n#", "'" + n + "'").replace("#v#", this.escapesReplace(v, function(t) {
+        return esc[t];
+      }));
+      for (escn in esc) {
+        escvar = esc[escn];
+        js.addExpr("this.runGetMulti(function(val){\n	" + escvar + " = val;\n	if (" + jsChange + ") " + jsChange + "();\n}, " + jsData + ", ['" + (escn.split('.').join("','")) + "'])");
+      }
+      js.addExpr("" + jsChange + " = function() {\n	" + expr + ";\n}");
+      return js.addExpr("" + jsChange + "()");
     };
 
     dynamicCompiler.prototype.doIf = function(ret, js, jsPre, jsPost, jsData, val, inner) {
@@ -690,6 +704,8 @@
     };
   }
 
+  never_equal_to_anything = {};
+
   backboneRunner = (function(_super) {
 
     __extends(backboneRunner, _super);
@@ -704,6 +720,38 @@
         return data.off(ev, fn);
       });
       return fn();
+    };
+
+    backboneRunner.prototype.runGetMulti = function(fn, data, _arg) {
+      var bit1, bits, fn2, undo, val,
+        _this = this;
+      bit1 = _arg[0], bits = 2 <= _arg.length ? __slice.call(_arg, 1) : [];
+      val = never_equal_to_anything;
+      undo = null;
+      $undo.add(function() {
+        if (undo) return undo();
+      });
+      fn2 = function() {
+        var oval;
+        oval = val;
+        val = _this.fetchVal(data, bit1);
+        if (oval === val) return;
+        if (bits.length === 0) {
+          return fn(val);
+        } else {
+          if (undo) undo();
+          $undo.start();
+          _this.runGetMulti(fn, val, bits);
+          return undo = $undo.claim();
+        }
+      };
+      if (data instanceof Backbone.Model) {
+        data.on("change:" + bit1, fn2);
+        $undo.add(function() {
+          return data.off("change:" + bit1, fn2);
+        });
+      }
+      return fn2();
     };
 
     backboneRunner.prototype.doSet = function(data, n, v) {
@@ -726,16 +774,11 @@
     };
 
     backboneRunner.prototype.fetchVal = function(data, ident) {
-      var ret;
-      if (data.hasKey(ident)) {
+      if (!data) return;
+      if (data.hasKey && data.hasKey(ident)) {
         return data.get(ident);
       } else {
-        ret = data[ident];
-        if (typeof ret === 'function') {
-          return ret();
-        } else {
-          return ret;
-        }
+        return data[ident];
       }
     };
 
@@ -783,5 +826,19 @@
   platter.internal.backboneCompiler = backboneCompiler;
 
   platter.backbone = new backboneCompiler;
+
+  platter.backbone.bigDebug = function() {
+    platter.subcount = platter.subcount || 0;
+    Backbone.Model.prototype.on1 = Backbone.Model.prototype.on;
+    Backbone.Model.prototype.off1 = Backbone.Model.prototype.off;
+    Backbone.Model.prototype.on = function(a, b, c) {
+      document.title = "Subs=" + ++platter.subcount;
+      return this.on1(a, b, c);
+    };
+    return Backbone.Model.prototype.off = function(a, b, c) {
+      document.title = "Subs=" + --platter.subcount;
+      return this.off1(a, b, c);
+    };
+  };
 
 }).call(this);

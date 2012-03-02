@@ -3,10 +3,10 @@
 	<head>
 		<title>Template Test</title>
 		<script type="text/x-platter" id="ggt">
-			<h1>{{title}}</h1>
+			<h1 if="{{title}}">{{title}}</h1>
 			<ul>
 				<li class="before">This is before the list</li>
-				<li foreach="{{blah}}" class="{{class}} within" onclick="{{click}}">{{name}}</li>
+				<li foreach="{{blah}}" class="{{class.t}} within" onclick="{{click}}">{{name}}</li>
 				<li class="after">This is after the list</li>
 			</ul>
 		</script>
@@ -22,9 +22,9 @@
 			function goPlain(){
 				var template = platter.plain.compile(document.getElementById('ggt').text);
 				
-				var data = {title: "This is the title", blah: []};
+				var data = {title: Math.random()>0.5?"This is the title":null, blah: []};
 				for (var i=0;Math.random()*5>i;++i)
-					data.blah.push({class:'row'+i, name:'Name '+Math.random(), click:function(){alert(1);}});
+					data.blah.push({class:{t:'row'+i}, name:'Name '+Math.random(), click:function(){alert(1);}});
 				
 				var els = template.run(data);
 				document.body.appendChild(els);
@@ -33,20 +33,21 @@
 			function goBackbone(){
 				var template = platter.backbone.compile(document.getElementById('ggt').text);
 				var data = new Backbone.Model();
-				data.set({title: "This is the title"});
+				data.set({title: Math.random()>0.5?"This is the title":null});
 				data.blah = new Backbone.Collection();
 				for (var i=0;Math.random()*5>i;++i) {
 					var row = new Backbone.Model();
-					row.set({class:'row'+i, name:'Name '+Math.random()});
+					row.set({class:{t:'row'+i}, name:'Name '+Math.random()});
 					row.click=function(){alert(2);};
 					data.blah.add(row);
 				}
 				
 				var mungedata = function(){
+					data.set({title: Math.random()>0.5?"This is the title":null});
 					if (Math.random()*5>data.blah.length) {
 						var row = new Backbone.Model();
 						var at = Math.floor(Math.random()*(data.blah.length+1));
-						row.set({class:'row'+at, name:'Name '+Math.random()});
+						row.set({class:{t:'row'+at}, name:'Name '+Math.random()});
 						row.click=function(){alert(2);};
 						data.blah.add(row, {at:at});
 					}
@@ -58,9 +59,20 @@
 							ent.set({name:'Name '+Math.random()})
 					}
 				};
-				setInterval(mungedata, 1000);
+				var timer = setInterval(mungedata, 1000);
+				var button = document.createElement('button');
+				$undo.start();
 				var els = template.run(data);
+				$undo.add(function(){
+					document.body.removeChild(button);
+					data.blah.reset();
+					clearInterval(timer);
+				});
+				var undo = $undo.claim();
 				document.body.appendChild(els);
+				button.innerHTML = "Undo";
+				button.onclick = undo;
+				document.body.appendChild(button);
 			}
 		</script>
 	</head>

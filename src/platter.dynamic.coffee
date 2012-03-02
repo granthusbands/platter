@@ -51,14 +51,29 @@ class dynamicCompiler extends platter.internal.templateCompiler
 
 	# Compiler: Handle simple value-assignments with escapes.
 	doSimple: (ret, js, jsCur, jsData, n, v, expr) ->
-		safen = n.replace /[^a-z0-9$_]/g, ""
+		esc = {}
+		jsChange = js.addVar "#{jsCur}_change", "null"
+		@escapesReplace v, (t) ->
+			esc[t] = js.addVar "#{jsCur}_#{t}", "null", t
 		expr = expr
 			.replace("#el#", "#{jsCur}")
 			.replace("#n#", "'#{n}'")
 			.replace("#v#", 
-				@convertVal v, jsData
+				@escapesReplace v, (t) -> esc[t]
 			)
-		js.addExpr "this.runGet(function(){\n\t#{expr};\n}, #{jsData}, #{@extraParam(v)})"
+		for escn, escvar of esc
+			js.addExpr """
+				this.runGetMulti(function(val){
+					#{escvar} = val;
+					if (#{jsChange}) #{jsChange}();
+				}, #{jsData}, ['#{escn.split('.').join("','")}'])
+			"""
+		js.addExpr """
+			#{jsChange} = function() {
+				#{expr};
+			}
+		"""
+		js.addExpr "#{jsChange}()"
 
 	# Compiler: Conditional section
 	doIf: (ret, js, jsPre, jsPost, jsData, val, inner) ->
