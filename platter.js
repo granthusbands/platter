@@ -1,5 +1,5 @@
 (function() {
-  var backboneCompiler, backboneRunner, clean, codegen, commentEscapes, defaultRunEvent, dynamicCompiler, dynamicRunner, exprvar, hasEscape, hideAttr, isEvent, never_equal_to_anything, plainCompiler, plainRunner, pullNode, runDOMEvent, runJQueryEvent, str, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName,
+  var backboneCompiler, backboneRunner, clean, codegen, commentEscapes, defaultRunEvent, dynamicCompiler, dynamicRunner, exprvar, hasEscape, hideAttr, isEvent, jskeywords, never_equal_to_anything, plainCompiler, plainRunner, pullNode, runDOMEvent, runJQueryEvent, str, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; },
     __slice = Array.prototype.slice;
@@ -174,9 +174,9 @@
           } else {
             prop = 'value';
           }
-          return js.addExpr("this.runEvent(" + jsCur + ", '" + ev + "', function(ev){ " + jsThis + ".doSet(" + jsData + ", '" + t + "', " + jsCur + "." + prop + "); })");
+          return js.addExpr("this.runEvent(" + jsCur + ", " + (js.toSrc(ev)) + ", function(ev){ " + jsThis + ".doSet(" + jsData + ", " + (js.toSrc(t)) + ", " + (js.index(jsCur, prop)) + "); })");
         } else {
-          return js.addExpr("this.runEvent(" + jsCur + ", '" + ev + "', function(ev){ return " + jsData + "." + t + "(ev, '" + ev + "', " + jsCur + "); })");
+          return js.addExpr("this.runEvent(" + jsCur + ", " + (js.toSrc(ev)) + ", function(ev){ return " + (js.index(jsData, t)) + "(ev, " + (js.toSrc(ev)) + ", " + jsCur + "); })");
         }
       });
     };
@@ -367,11 +367,73 @@
 
   clean = function(n) {
     n = n.replace(/#/g, "");
-    if (!/^[a-z]/i) n = 'v' + n;
+    if (!/^[a-z]/i.exec(n)) n = 'v' + n;
     return n.replace(/[^a-z0-9\$]+/ig, "_");
   };
 
   exprvar = /#(\w+)#/g;
+
+  jskeywords = {
+    'break': 1,
+    'else': 1,
+    'new': 1,
+    'var': 1,
+    'case': 1,
+    'finally': 1,
+    'return': 1,
+    'void': 1,
+    'catch': 1,
+    'for': 1,
+    'switch': 1,
+    'while': 1,
+    'continue': 1,
+    'function': 1,
+    'this': 1,
+    'with': 1,
+    'default': 1,
+    'if': 1,
+    'throw': 1,
+    'delete': 1,
+    'in': 1,
+    'try': 1,
+    'do': 1,
+    'instanceof': 1,
+    'typeof': 1,
+    'abstract': 1,
+    'enum': 1,
+    'int': 1,
+    'short': 1,
+    'boolean': 1,
+    'export': 1,
+    'interface': 1,
+    'static': 1,
+    'byte': 1,
+    'extends': 1,
+    'long': 1,
+    'super': 1,
+    'char': 1,
+    'final': 1,
+    'native': 1,
+    'synchronized': 1,
+    'class': 1,
+    'float': 1,
+    'package': 1,
+    'throws': 1,
+    'const': 1,
+    'goto': 1,
+    'private': 1,
+    'transient': 1,
+    'debugger': 1,
+    'implements': 1,
+    'protected': 1,
+    'volatile': 1,
+    'double': 1,
+    'import': 1,
+    'public': 1,
+    'null': 1,
+    'true': 1,
+    'false': 1
+  };
 
   codegen = (function() {
 
@@ -493,6 +555,35 @@
       return name;
     };
 
+    codegen.prototype.toSrc = function(o) {
+      var a;
+      if (o === null) return 'null';
+      if (typeof o === 'string') {
+        return "'" + (o.replace(/([\\'])/g, "\\$1")) + "'";
+      }
+      if (typeof o === 'number') return o + '';
+      if (o instanceof Array) {
+        return "[" + (((function() {
+          var _i, _len, _results;
+          _results = [];
+          for (_i = 0, _len = o.length; _i < _len; _i++) {
+            a = o[_i];
+            _results.push(this.toSrc(a));
+          }
+          return _results;
+        }).call(this)).join(',')) + "]";
+      }
+      throw "Kaboom!";
+    };
+
+    codegen.prototype.index = function(arr, entry) {
+      if (!/^[a-z$_][a-z0-9$_]*$/.exec(entry) || jskeywords[entry]) {
+        return "" + arr + "[" + (this.toSrc(entry)) + "]";
+      } else {
+        return "" + arr + "." + entry;
+      }
+    };
+
     return codegen;
 
   })();
@@ -528,11 +619,11 @@
     };
 
     plainCompiler.prototype.doSimple = function(ret, js, jsCur, jsData, n, v, expr) {
-      return js.addExpr(expr.replace("#el#", "" + jsCur).replace("#n#", "'" + n + "'").replace("#v#", this.escapesReplace(v, function(t) {
+      return js.addExpr(expr.replace("#el#", "" + jsCur).replace("#n#", js.toSrc(n)).replace("#v#", this.escapesReplace(v, function(t) {
         if (t === '.') {
           return "" + jsData;
         } else {
-          return "" + jsData + "." + t;
+          return js.index(jsData, t);
         }
       })));
     };
@@ -540,20 +631,20 @@
     plainCompiler.prototype.doIf = function(ret, js, jsCur, jsPost, jsData, val, inner) {
       var _this = this;
       val = this.escapesReplace(val, function(t) {
-        return ("" + jsData + ".") + t;
+        return js.index(jsData, t);
       });
-      return js.addExpr("if (" + val + ") " + jsPost + ".parentNode.insertBefore(this." + jsCur.n + ".run(" + jsData + ", false), " + jsPost + ")");
+      return js.addExpr("if (" + val + ") " + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + jsData + ", false), " + jsPost + ")");
     };
 
     plainCompiler.prototype.doForEach = function(ret, js, jsCur, jsPost, jsData, val, inner) {
       var jsFor,
         _this = this;
       val = this.escapesReplace(val, function(t) {
-        return ("" + jsData + ".") + t;
+        return js.index(jsData, t);
       });
       jsFor = js.addVar("" + jsCur + "_for", val);
       js.forceVar(jsPost);
-      return js.addExpr("for (var i=0;i<" + jsFor + ".length; ++i)\n	" + jsPost + ".parentNode.insertBefore(this." + jsCur.n + ".run(" + jsFor + "[i], false), " + jsPost + ")");
+      return js.addExpr("for (var i=0;i<" + jsFor + ".length; ++i)\n	" + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + jsFor + "[i], false), " + jsPost + ")");
     };
 
     return plainCompiler;
@@ -659,12 +750,12 @@
       this.escapesReplace(v, function(t) {
         return esc[t] = js.addVar("" + jsCur + "_" + t, "null", t);
       });
-      expr = expr.replace("#el#", "" + jsCur).replace("#n#", "'" + n + "'").replace("#v#", this.escapesReplace(v, function(t) {
+      expr = expr.replace("#el#", "" + jsCur).replace("#n#", js.toSrc(n)).replace("#v#", this.escapesReplace(v, function(t) {
         return esc[t];
       }));
       for (escn in esc) {
         escvar = esc[escn];
-        js.addExpr("this.runGetMulti(function(val){\n	" + escvar + " = val;\n	if (" + jsChange + ") " + jsChange + "();\n}, " + jsData + ", ['" + (escn.split('.').join("','")) + "'])");
+        js.addExpr("this.runGetMulti(function(val){\n	" + escvar + " = val;\n	if (" + jsChange + ") " + jsChange + "();\n}, " + jsData + ", " + (js.toSrc(escn.split('.'))) + ")");
       }
       js.addExpr("" + jsChange + " = function() {\n	" + expr + ";\n}");
       return js.addExpr("" + jsChange + "()");
@@ -673,20 +764,20 @@
     dynamicCompiler.prototype.doIf = function(ret, js, jsPre, jsPost, jsData, val, inner) {
       var v;
       v = val;
-      val = this.convertVal(val, jsData);
-      return js.addExpr("this.runIf(function(){return " + val + ";}, " + jsData + ", " + (this.extraParam(v)) + ", this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
+      val = this.convertVal(val, js, jsData);
+      return js.addExpr("this.runIf(function(){return " + val + ";}, " + jsData + ", " + (this.extraParam(js, v)) + ", this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
     };
 
     dynamicCompiler.prototype.doForEach = function(ret, js, jsPre, jsPost, jsData, val, inner) {
       var v;
       v = val;
-      val = this.convertColl(val, jsData);
+      val = this.convertColl(val, js, jsData);
       return js.addExpr("this.runForEach(" + val + ", this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
     };
 
-    dynamicCompiler.prototype.convertColl = function(txt, jsData) {
+    dynamicCompiler.prototype.convertColl = function(txt, js, jsData) {
       return this.escapesReplace(txt, function(t) {
-        return "" + jsData + "." + t;
+        return js.index(jsData, t);
       });
     };
 
@@ -798,13 +889,13 @@
       return new backboneRunner(node);
     };
 
-    backboneCompiler.prototype.convertVal = function(txt, jsData) {
+    backboneCompiler.prototype.convertVal = function(txt, js, jsData) {
       return this.escapesReplace(txt, function(t) {
-        return "" + jsData + ".get('" + t + "')";
+        return "" + jsData + ".get(" + (js.toSrc(t)) + ")";
       });
     };
 
-    backboneCompiler.prototype.extraParam = function(txt) {
+    backboneCompiler.prototype.extraParam = function(js, txt) {
       var ev, seen;
       seen = {};
       ev = [];
@@ -814,7 +905,7 @@
           return ev.push("change:" + t);
         }
       });
-      return "'" + (ev.join(" ")) + "'";
+      return "" + (js.toSrc(ev.join(" ")));
     };
 
     return backboneCompiler;

@@ -132,9 +132,9 @@ class templateCompiler
 				else
 					prop = 'value'
 				# TODO: Support radio buttons, select-boxes and maybe others
-				js.addExpr "this.runEvent(#{jsCur}, '#{ev}', function(ev){ #{jsThis}.doSet(#{jsData}, '#{t}', #{jsCur}.#{prop}); })"
+				js.addExpr "this.runEvent(#{jsCur}, #{js.toSrc ev}, function(ev){ #{jsThis}.doSet(#{jsData}, #{js.toSrc t}, #{js.index jsCur, prop}); })"
 			else
-				js.addExpr "this.runEvent(#{jsCur}, '#{ev}', function(ev){ return #{jsData}.#{t}(ev, '#{ev}', #{jsCur}); })"
+				js.addExpr "this.runEvent(#{jsCur}, #{js.toSrc ev}, function(ev){ return #{js.index jsData, t}(ev, #{js.toSrc ev}, #{jsCur}); })"
 
 	# TODO: Put these special things somewhere better
 	special_if: (ret, js, jsCur, jsData, val) ->

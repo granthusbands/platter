@@ -2,7 +2,7 @@
 
 A compiled-template engine that supports backbone and should eventually support many reactive frameworks. It supports reactivity while still using natural HTML syntax.
 
-__This is not suitable for production use.__ There's a distinct lack of filtering/care on the code-generation, right now, and there's no test suite.
+__This is not suitable for production use.__ Mainly because there's not yet a test suite.
 
 There's a usage example in example.html, but here's a template and a couple of example usages:
 
@@ -38,3 +38,12 @@ for (var i=0;Math.random()*5>i;++i) {
 var els = template.run(data);
 document.body.appendChild(els);
 ```
+
+Undoing a template is currently slightly long-winded. Basically, create it like this:
+```javascript
+$undo.start();
+template.run(data);
+var undoer = $undo.claim();
+```
+
+And then run ```undoer``` to undo all of the template's effects (that will also remove its nodes from wherever they've been put).

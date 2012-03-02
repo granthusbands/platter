@@ -57,7 +57,7 @@ class dynamicCompiler extends platter.internal.templateCompiler
 			esc[t] = js.addVar "#{jsCur}_#{t}", "null", t
 		expr = expr
 			.replace("#el#", "#{jsCur}")
-			.replace("#n#", "'#{n}'")
+			.replace("#n#", js.toSrc n)
 			.replace("#v#", 
 				@escapesReplace v, (t) -> esc[t]
 			)
@@ -66,7 +66,7 @@ class dynamicCompiler extends platter.internal.templateCompiler
 				this.runGetMulti(function(val){
 					#{escvar} = val;
 					if (#{jsChange}) #{jsChange}();
-				}, #{jsData}, ['#{escn.split('.').join("','")}'])
+				}, #{jsData}, #{js.toSrc escn.split '.'})
 			"""
 		js.addExpr """
 			#{jsChange} = function() {
@@ -78,17 +78,17 @@ class dynamicCompiler extends platter.internal.templateCompiler
 	# Compiler: Conditional section
 	doIf: (ret, js, jsPre, jsPost, jsData, val, inner) ->
 		v = val
-		val = @convertVal val, jsData
-		js.addExpr "this.runIf(function(){return #{val};}, #{jsData}, #{@extraParam(v)}, this.#{jsPre}, #{jsPre}, #{jsPost})"
+		val = @convertVal val, js, jsData
+		js.addExpr "this.runIf(function(){return #{val};}, #{jsData}, #{@extraParam js, v}, this.#{jsPre}, #{jsPre}, #{jsPost})"
 
 	# Compiler:
 	doForEach: (ret, js, jsPre, jsPost, jsData, val, inner) ->
 		v = val
-		val = @convertColl val, jsData
+		val = @convertColl val, js, jsData
 		js.addExpr "this.runForEach(#{val}, this.#{jsPre}, #{jsPre}, #{jsPost})"
 	
-	convertColl: (txt, jsData) ->
-		@escapesReplace txt, (t) -> "#{jsData}.#{t}"
+	convertColl: (txt, js, jsData) ->
+		@escapesReplace txt, (t) -> js.index jsData, t
 
 platter.internal.dynamicRunner = dynamicRunner
 platter.internal.dynamicCompiler = dynamicCompiler
