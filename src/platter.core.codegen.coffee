@@ -4,7 +4,10 @@
 #   If a variable is not used at all, remove it altogether (even if the initialisation has side effects).
 # The optimisations make codegen easier elsewhere, as we generate a large number of variables that only actually exist if used more than once.
 clean = (n) ->
-	n.replace /#/g, ""
+	n = n.replace /#/g, ""
+	if !/^[a-z]/i
+		n = 'v'+n
+	n.replace /[^a-z0-9\$]+/ig, "_"
 
 exprvar = /#(\w+)#/g
 class codegen
