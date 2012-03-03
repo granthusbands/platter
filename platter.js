@@ -602,6 +602,16 @@
       return data[n] = v;
     };
 
+    plainRunner.prototype.runGetMulti = function(data, bits) {
+      var bit, _i, _len;
+      for (_i = 0, _len = bits.length; _i < _len; _i++) {
+        bit = bits[_i];
+        if (!data) return data;
+        data = data[bit];
+      }
+      return data;
+    };
+
     return plainRunner;
 
   })(platter.internal.templateRunner);
@@ -623,7 +633,7 @@
         if (t === '.') {
           return "" + jsData;
         } else {
-          return js.index(jsData, t);
+          return "this.runGetMulti(" + jsData + ", " + (js.toSrc(t.split('.'))) + ")";
         }
       })));
     };
@@ -631,7 +641,7 @@
     plainCompiler.prototype.doIf = function(ret, js, jsCur, jsPost, jsData, val, inner) {
       var _this = this;
       val = this.escapesReplace(val, function(t) {
-        return js.index(jsData, t);
+        return "this.runGetMulti(" + jsData + ", " + (js.toSrc(t.split('.'))) + ")";
       });
       return js.addExpr("if (" + val + ") " + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + jsData + ", false), " + jsPost + ")");
     };
@@ -640,7 +650,7 @@
       var jsFor,
         _this = this;
       val = this.escapesReplace(val, function(t) {
-        return js.index(jsData, t);
+        return "this.runGetMulti(" + jsData + ", " + (js.toSrc(t.split('.'))) + ")";
       });
       jsFor = js.addVar("" + jsCur + "_for", val);
       js.forceVar(jsPost);
