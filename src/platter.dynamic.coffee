@@ -2,12 +2,12 @@
 
 class dynamicRunner extends platter.internal.templateRunner
 	# Runtime: A conditional section, automatically filled/removed as fn changes.
-	runIf: (fn, data, extra, tmpl, start, end) ->
+	runIf: (data, tmpl, start, end) ->
 		shown = false
 		undo = null
 		$undo.add -> undo() if undo
-		onchange = =>
-			show = !!fn();
+		(show) =>
+			show = !!show;
 			if shown==show
 				return
 			shown = show
@@ -19,7 +19,6 @@ class dynamicRunner extends platter.internal.templateRunner
 				@removeBetween start, end
 				undo()
 				undo = null
-		@runGet onchange, data, extra
 
 	# Runtime: A collection of models, automatically expanded/collapsed as members get added/removed
 	runForEach: (coll, tmpl, start, end) ->
@@ -54,7 +53,7 @@ class dynamicCompiler extends platter.internal.templateCompiler
 		esc = {}
 		jsChange = js.addVar "#{jsCur}_change", "null"
 		@escapesReplace v, (t) ->
-			esc[t] = js.addVar "#{jsCur}_#{t}", "null", t
+			esc[t] = js.addForcedVar "#{jsCur}_#{t}", "null", t
 		expr = expr
 			.replace("#el#", "#{jsCur}")
 			.replace("#n#", js.toSrc n)
@@ -77,9 +76,8 @@ class dynamicCompiler extends platter.internal.templateCompiler
 
 	# Compiler: Conditional section
 	doIf: (ret, js, jsPre, jsPost, jsData, val, inner) ->
-		v = val
-		val = @convertVal val, js, jsData
-		js.addExpr "this.runIf(function(){return #{val};}, #{jsData}, #{@extraParam js, v}, this.#{jsPre}, #{jsPre}, #{jsPost})"
+		jsChange = js.addForcedVar "#{jsPre}_ifchange", "this.runIf(#{jsData}, this.#{jsPre}, #{jsPre}, #{jsPost})"
+		@doSimple ret, js, jsPre, jsData, null, val, "#{jsChange}(#v#)"
 
 	# Compiler:
 	doForEach: (ret, js, jsPre, jsPost, jsData, val, inner) ->

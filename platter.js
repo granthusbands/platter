@@ -665,17 +665,16 @@
       dynamicRunner.__super__.constructor.apply(this, arguments);
     }
 
-    dynamicRunner.prototype.runIf = function(fn, data, extra, tmpl, start, end) {
-      var onchange, shown, undo,
+    dynamicRunner.prototype.runIf = function(data, tmpl, start, end) {
+      var shown, undo,
         _this = this;
       shown = false;
       undo = null;
       $undo.add(function() {
         if (undo) return undo();
       });
-      onchange = function() {
-        var show;
-        show = !!fn();
+      return function(show) {
+        show = !!show;
         if (shown === show) return;
         shown = show;
         if (show) {
@@ -688,7 +687,6 @@
           return undo = null;
         }
       };
-      return this.runGet(onchange, data, extra);
     };
 
     dynamicRunner.prototype.runForEach = function(coll, tmpl, start, end) {
@@ -748,7 +746,7 @@
       esc = {};
       jsChange = js.addVar("" + jsCur + "_change", "null");
       this.escapesReplace(v, function(t) {
-        return esc[t] = js.addVar("" + jsCur + "_" + t, "null", t);
+        return esc[t] = js.addForcedVar("" + jsCur + "_" + t, "null", t);
       });
       expr = expr.replace("#el#", "" + jsCur).replace("#n#", js.toSrc(n)).replace("#v#", this.escapesReplace(v, function(t) {
         return esc[t];
@@ -762,10 +760,9 @@
     };
 
     dynamicCompiler.prototype.doIf = function(ret, js, jsPre, jsPost, jsData, val, inner) {
-      var v;
-      v = val;
-      val = this.convertVal(val, js, jsData);
-      return js.addExpr("this.runIf(function(){return " + val + ";}, " + jsData + ", " + (this.extraParam(js, v)) + ", this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
+      var jsChange;
+      jsChange = js.addForcedVar("" + jsPre + "_ifchange", "this.runIf(" + jsData + ", this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
+      return this.doSimple(ret, js, jsPre, jsData, null, val, "" + jsChange + "(#v#)");
     };
 
     dynamicCompiler.prototype.doForEach = function(ret, js, jsPre, jsPost, jsData, val, inner) {
@@ -887,25 +884,6 @@
 
     backboneCompiler.prototype.makeRet = function(node) {
       return new backboneRunner(node);
-    };
-
-    backboneCompiler.prototype.convertVal = function(txt, js, jsData) {
-      return this.escapesReplace(txt, function(t) {
-        return "" + jsData + ".get(" + (js.toSrc(t)) + ")";
-      });
-    };
-
-    backboneCompiler.prototype.extraParam = function(js, txt) {
-      var ev, seen;
-      seen = {};
-      ev = [];
-      this.escapesReplace(txt, function(t) {
-        if (!seen[t]) {
-          seen[t] = 1;
-          return ev.push("change:" + t);
-        }
-      });
-      return "" + (js.toSrc(ev.join(" ")));
     };
 
     return backboneCompiler;

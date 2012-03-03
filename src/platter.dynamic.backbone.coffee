@@ -62,19 +62,6 @@ class backboneCompiler extends platter.internal.dynamicCompiler
 	makeRet: (node) ->
 		new backboneRunner(node)
 
-	convertVal: (txt, js, jsData) ->
-		@escapesReplace txt, (t) -> "#{jsData}.get(#{js.toSrc t})"
-
-	# Compiler: Turn "{{a}}blah{{b}}" into event names, so "change:a change:b"
-	extraParam: (js, txt) ->
-		seen = {}
-		ev = []
-		@escapesReplace txt, (t) ->
-			if !seen[t]
-				seen[t] = 1
-				ev.push "change:#{t}"
-		"#{js.toSrc ev.join(" ")}"
-
 
 platter.internal.backboneRunner = backboneRunner
 platter.internal.backboneCompiler = backboneCompiler
