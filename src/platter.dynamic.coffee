@@ -20,8 +20,19 @@ class dynamicRunner extends platter.internal.templateRunner
 				undo()
 				undo = null
 
+	# Runtime: Provide a callback for doing foreach
+	runForEach: (tmpl, start, end) ->
+		undo = null
+		(coll) =>
+			if undo
+				undo()
+				@removeBetween start, end
+			$undo.start()
+			@runForEachInner coll, tmpl, start, end
+			undo = $undo.claim()
+
 	# Runtime: A collection of models, automatically expanded/collapsed as members get added/removed
-	runForEach: (coll, tmpl, start, end) ->
+	runForEachInner: (coll, tmpl, start, end) ->
 		ends = [start, end]
 		undo = []
 		par = start.parentNode
@@ -81,12 +92,8 @@ class dynamicCompiler extends platter.internal.templateCompiler
 
 	# Compiler:
 	doForEach: (ret, js, jsPre, jsPost, jsData, val, inner) ->
-		v = val
-		val = @convertColl val, js, jsData
-		js.addExpr "this.runForEach(#{val}, this.#{jsPre}, #{jsPre}, #{jsPost})"
-	
-	convertColl: (txt, js, jsData) ->
-		@escapesReplace txt, (t) -> js.index jsData, t
+		jsChange = js.addForcedVar "#{jsPre}_forchange", "this.runForEach(this.#{jsPre}, #{jsPre}, #{jsPost})"
+		@doSimple ret, js, jsPre, jsData, null, val, "#{jsChange}(#v#)"
 
 platter.internal.dynamicRunner = dynamicRunner
 platter.internal.dynamicCompiler = dynamicCompiler

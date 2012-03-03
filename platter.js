@@ -689,7 +689,22 @@
       };
     };
 
-    dynamicRunner.prototype.runForEach = function(coll, tmpl, start, end) {
+    dynamicRunner.prototype.runForEach = function(tmpl, start, end) {
+      var undo,
+        _this = this;
+      undo = null;
+      return function(coll) {
+        if (undo) {
+          undo();
+          _this.removeBetween(start, end);
+        }
+        $undo.start();
+        _this.runForEachInner(coll, tmpl, start, end);
+        return undo = $undo.claim();
+      };
+    };
+
+    dynamicRunner.prototype.runForEachInner = function(coll, tmpl, start, end) {
       var add, ends, par, rem, undo,
         _this = this;
       ends = [start, end];
@@ -766,16 +781,9 @@
     };
 
     dynamicCompiler.prototype.doForEach = function(ret, js, jsPre, jsPost, jsData, val, inner) {
-      var v;
-      v = val;
-      val = this.convertColl(val, js, jsData);
-      return js.addExpr("this.runForEach(" + val + ", this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
-    };
-
-    dynamicCompiler.prototype.convertColl = function(txt, js, jsData) {
-      return this.escapesReplace(txt, function(t) {
-        return js.index(jsData, t);
-      });
+      var jsChange;
+      jsChange = js.addForcedVar("" + jsPre + "_forchange", "this.runForEach(this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
+      return this.doSimple(ret, js, jsPre, jsData, null, val, "" + jsChange + "(#v#)");
     };
 
     return dynamicCompiler;
