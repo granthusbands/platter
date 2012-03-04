@@ -48,7 +48,7 @@ class backboneRunner extends platter.internal.dynamicRunner
 			return
 		coll.on 'add', add
 		coll.on 'remove', rem
-		for i in [0..(coll.length-1)]
+		for i in [0...coll.length]
 			add coll.at(i), coll, {index:i}
 		$undo.add ->
 			coll.off 'add', add
