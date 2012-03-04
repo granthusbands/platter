@@ -40,6 +40,12 @@ class backboneRunner extends platter.internal.dynamicRunner
 
 	# It's actually more efficient for watchCollection to not undo the adds. The caller is expected to have their own undoer in the same context.
 	watchCollection: (coll, add, rem) ->
+		if coll instanceof Array 
+			for o,i in coll
+				add o, coll, {index:i}
+			return
+		if !coll || !coll.on
+			return
 		coll.on 'add', add
 		coll.on 'remove', rem
 		for i in [0..(coll.length-1)]
