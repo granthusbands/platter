@@ -31,9 +31,13 @@ class templateRunner
 		undefined
 	runEvent: defaultRunEvent
 	removeAll: (startel, endel) ->
-		@removeBetween startel, endel
 		par = startel.parentNode
 		return if !par
+		if startel==endel
+			par.removeChild startel
+			return
+		if startel.nextSibling!=endel
+			@removeBetween startel, endel
 		par.removeChild endel
 		par.removeChild startel
 
