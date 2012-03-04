@@ -40,6 +40,7 @@ document.body.appendChild(els);
 ```
 
 Undoing a template is currently slightly long-winded. Basically, create it like this:
+
 ```javascript
 $undo.start();
 template.run(data);
