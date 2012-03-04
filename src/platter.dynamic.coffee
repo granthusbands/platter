@@ -35,11 +35,11 @@ class dynamicRunner extends platter.internal.templateRunner
 	runForEachInner: (coll, tmpl, start, end) ->
 		ends = [start, end]
 		undo = []
-		par = start.parentNode
 		add = (model, coll, opts) =>
 			at = opts.index
 			newend = document.createComment ""
 			ends.splice at+1, 0, newend
+			par = start.parentNode
 			par.insertBefore newend, ends[at].nextSibling
 			$undo.start()
 			par.insertBefore tmpl.run(model, false), newend
