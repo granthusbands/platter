@@ -52,7 +52,9 @@ class templateCompiler
 	
 	compileFrag: (frag) ->
 		js = new platter.internal.codegen
+		# TODO: Confirm that we can change this variable name without issue
 		jsData = js.existingVar 'data'
+		# TODO: Confirm that we can change this variable name without issue
 		jsAutoRemove = js.existingVar 'autoRemove'
 		jsEl = js.addVar 'el', 'this.node.cloneNode(true)', frag
 		ret = @makeRet(frag)
