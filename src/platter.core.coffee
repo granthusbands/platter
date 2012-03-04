@@ -211,7 +211,7 @@ class templateCompiler
 		'#text': "#el#.nodeValue = #v#"
 		'#default': "#el#.setAttribute(#n#, #v#)"
 		'class': "#el#.className = #v#"
-		'checked': "#el#.checked = !!#v#"
+		'checked': "#el#.checked = !!(#v#)"
 		'value': "#el#.value = #v#"
 		#TODO: style in Firefox -> .style.cssText
 		#TODO: type in IE -> recreate the node, somehow
