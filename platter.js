@@ -150,7 +150,7 @@
           ct = jsCur.v.nodeValue;
           ct = unhideAttr(ct);
           if (/^\{\{.*\}\}$/.exec(ct)) {
-            txt = document.createTextNode("");
+            txt = document.createTextNode(".");
             jsCur.v.parentNode.insertBefore(txt, jsCur.v);
             jsCur.v.parentNode.removeChild(jsCur.v);
             jsCur.v = txt;

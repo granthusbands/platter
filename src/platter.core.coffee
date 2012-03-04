@@ -117,7 +117,7 @@ class templateCompiler
 				# We know comment nodes can only contain one {{...}}
 				if /^\{\{.*\}\}$/.exec(ct)
 					# We actually need a text node rather than a comment node
-					txt = document.createTextNode ""
+					txt = document.createTextNode "."
 					jsCur.v.parentNode.insertBefore txt, jsCur.v
 					jsCur.v.parentNode.removeChild jsCur.v
 					jsCur.v = txt
