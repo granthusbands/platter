@@ -93,7 +93,7 @@ class templateCompiler
 						realn: 'value'
 						v: uncommentEscapes unhideAttr jsCur.v.value
 				for {n, realn, v} in attrs
-					if (realn&&this["special_#{realn}"])
+					if (realn && this["special_#{realn}"] && hasEscape v)
 						isSpecial = true
 						jsCur.v.removeAttribute n
 						jsCur = this["special_#{realn}"](ret, js, jsCur, jsData, v)
