@@ -230,9 +230,9 @@ hideAttr = (txt) ->
 	txt = txt.replace /([a-z][-a-z0-9_]*=)/ig, "data-platter-$1"
 	txt = txt.replace /data-platter-type=/g, "type="
 unhideAttr = (txt) ->
-	txt = txt.replace /data-platter-([a-z][-a-z0-9_]*=)/g, "$1"
+	txt = txt.replace /data-platter-(?!type=)([a-z][-a-z0-9_]*=)/g, "$1"
 unhideAttrName = (txt) ->
-	txt = txt.replace /data-platter-([a-z][-a-z0-9_]*)/g, "$1"
+	txt = txt.replace /data-platter-(?!type(?:[^-a-z0-9_]|$))([a-z][-a-z0-9_]*)/g, "$1"
 
 # For the browser to parse our HTML, we need to make sure there's no strange text in odd places. Browsers love them some comments, though.
 commentEscapes = (txt) ->
