@@ -43,9 +43,13 @@
 
     templateRunner.prototype.removeAll = function(startel, endel) {
       var par;
-      this.removeBetween(startel, endel);
       par = startel.parentNode;
       if (!par) return;
+      if (startel === endel) {
+        par.removeChild(startel);
+        return;
+      }
+      if (startel.nextSibling !== endel) this.removeBetween(startel, endel);
       par.removeChild(endel);
       return par.removeChild(startel);
     };
@@ -118,7 +122,7 @@
           }
           for (_i = 0, _len = attrs.length; _i < _len; _i++) {
             _ref = attrs[_i], n = _ref.n, realn = _ref.realn, v = _ref.v;
-            if (realn && this["special_" + realn]) {
+            if (realn && this["special_" + realn] && hasEscape(v)) {
               isSpecial = true;
               jsCur.v.removeAttribute(n);
               jsCur = this["special_" + realn](ret, js, jsCur, jsData, v);
@@ -259,7 +263,7 @@
       '#text': "#el#.nodeValue = #v#",
       '#default': "#el#.setAttribute(#n#, #v#)",
       'class': "#el#.className = #v#",
-      'checked': "#el#.checked = !!#v#",
+      'checked': "#el#.checked = !!(#v#)",
       'value': "#el#.value = #v#"
     };
 
@@ -278,11 +282,11 @@
   };
 
   unhideAttr = function(txt) {
-    return txt = txt.replace(/data-platter-([a-z][-a-z0-9_]*=)/g, "$1");
+    return txt = txt.replace(/data-platter-(?!type=)([a-z][-a-z0-9_]*=)/g, "$1");
   };
 
   unhideAttrName = function(txt) {
-    return txt = txt.replace(/data-platter-([a-z][-a-z0-9_]*)/g, "$1");
+    return txt = txt.replace(/data-platter-(?!type(?:[^-a-z0-9_]|$))([a-z][-a-z0-9_]*)/g, "$1");
   };
 
   commentEscapes = function(txt) {
@@ -351,6 +355,10 @@
       };
     };
 
+    undoer.prototype.undoToStart = function() {
+      return this.claim()();
+    };
+
     return undoer;
 
   })();
@@ -368,7 +376,9 @@
   clean = function(n) {
     n = n.replace(/#/g, "");
     if (!/^[a-z]/i.exec(n)) n = 'v' + n;
-    return n.replace(/[^a-z0-9\$]+/ig, "_");
+    n = n.replace(/[^a-z0-9\$]+/ig, "_");
+    if (jskeywords[n]) n = "" + n + "_";
+    return n;
   };
 
   exprvar = /#(\w+)#/g;
@@ -557,11 +567,10 @@
 
     codegen.prototype.toSrc = function(o) {
       var a;
-      if (o === null) return 'null';
       if (typeof o === 'string') {
         return "'" + (o.replace(/([\\'])/g, "\\$1")) + "'";
       }
-      if (typeof o === 'number') return o + '';
+      if (typeof o === 'number' || !o) return o + '';
       if (o instanceof Array) {
         return "[" + (((function() {
           var _i, _len, _results;
@@ -715,16 +724,16 @@
     };
 
     dynamicRunner.prototype.runForEachInner = function(coll, tmpl, start, end) {
-      var add, ends, par, rem, undo,
+      var add, ends, rem, undo,
         _this = this;
       ends = [start, end];
       undo = [];
-      par = start.parentNode;
       add = function(model, coll, opts) {
-        var at, newend;
+        var at, newend, par;
         at = opts.index;
         newend = document.createComment("");
         ends.splice(at + 1, 0, newend);
+        par = start.parentNode;
         par.insertBefore(newend, ends[at].nextSibling);
         $undo.start();
         par.insertBefore(tmpl.run(model, false), newend);
@@ -771,10 +780,16 @@
       esc = {};
       jsChange = js.addVar("" + jsCur + "_change", "null");
       this.escapesReplace(v, function(t) {
-        return esc[t] = js.addForcedVar("" + jsCur + "_" + t, "null", t);
+        if (t !== '.') {
+          return esc[t] = js.addForcedVar("" + jsCur + "_" + t, "null", t);
+        }
       });
       expr = expr.replace("#el#", "" + jsCur).replace("#n#", js.toSrc(n)).replace("#v#", this.escapesReplace(v, function(t) {
-        return esc[t];
+        if (t === '.') {
+          return jsData;
+        } else {
+          return esc[t];
+        }
       }));
       for (escn in esc) {
         escvar = esc[escn];
@@ -865,10 +880,20 @@
     };
 
     backboneRunner.prototype.watchCollection = function(coll, add, rem) {
-      var i, _ref;
+      var i, o, _len, _ref;
+      if (coll instanceof Array) {
+        for (i = 0, _len = coll.length; i < _len; i++) {
+          o = coll[i];
+          add(o, coll, {
+            index: i
+          });
+        }
+        return;
+      }
+      if (!coll || !coll.on) return;
       coll.on('add', add);
       coll.on('remove', rem);
-      for (i = 0, _ref = coll.length - 1; 0 <= _ref ? i <= _ref : i >= _ref; 0 <= _ref ? i++ : i--) {
+      for (i = 0, _ref = coll.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
         add(coll.at(i), coll, {
           index: i
         });

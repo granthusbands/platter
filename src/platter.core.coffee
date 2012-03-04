@@ -279,6 +279,8 @@ class undoer
 			for fn in cur
 				fn()
 			cur = []
+	undoToStart: () ->
+		@claim()()
 
 this.$undo = new undoer
 this.platter =
