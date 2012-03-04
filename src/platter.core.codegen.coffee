@@ -94,12 +94,11 @@ class codegen
 			name = name + c
 		name
 
+	# JSON library not guaranteed, and this is easy enough. Limited to types generated in the library.
 	toSrc: (o) ->
-		if o==null
-			return 'null'
 		if typeof o == 'string'
 			return "'#{o.replace /([\\'])/g, "\\$1"}'"
-		if typeof o == 'number'
+		if typeof o == 'number' || !o
 			return o+''
 		if o instanceof Array
 			return "[#{(@toSrc(a) for a in o).join ','}]"
