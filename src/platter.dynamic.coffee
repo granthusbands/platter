@@ -23,16 +23,16 @@ class dynamicRunner extends platter.internal.templateRunner
 	# Runtime: Provide a callback for doing foreach
 	runForEach: (tmpl, start, end) ->
 		undo = null
-		(coll) =>
+		ret = (coll) =>
 			if undo
 				undo()
 				@removeBetween start, end
 			$undo.start()
-			@runForEachInner coll, tmpl, start, end
+			@runForEachInner coll, tmpl, start, end, ret
 			undo = $undo.claim()
 
 	# Runtime: A collection of models, automatically expanded/collapsed as members get added/removed
-	runForEachInner: (coll, tmpl, start, end) ->
+	runForEachInner: (coll, tmpl, start, end, replaceMe) ->
 		ends = [start, end]
 		undo = []
 		add = (model, coll, opts) =>
@@ -50,7 +50,7 @@ class dynamicRunner extends platter.internal.templateRunner
 			ends.splice(at+1,1)
 			undo[at]()
 			undo.splice(at, 1)
-		@watchCollection coll, add, rem
+		@watchCollection coll, add, rem, replaceMe
 		$undo.add ->
 			for undoer in undo
 				undoer()

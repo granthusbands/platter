@@ -709,21 +709,21 @@
     };
 
     dynamicRunner.prototype.runForEach = function(tmpl, start, end) {
-      var undo,
+      var ret, undo,
         _this = this;
       undo = null;
-      return function(coll) {
+      return ret = function(coll) {
         if (undo) {
           undo();
           _this.removeBetween(start, end);
         }
         $undo.start();
-        _this.runForEachInner(coll, tmpl, start, end);
+        _this.runForEachInner(coll, tmpl, start, end, ret);
         return undo = $undo.claim();
       };
     };
 
-    dynamicRunner.prototype.runForEachInner = function(coll, tmpl, start, end) {
+    dynamicRunner.prototype.runForEachInner = function(coll, tmpl, start, end, replaceMe) {
       var add, ends, rem, undo,
         _this = this;
       ends = [start, end];
@@ -747,7 +747,7 @@
         undo[at]();
         return undo.splice(at, 1);
       };
-      this.watchCollection(coll, add, rem);
+      this.watchCollection(coll, add, rem, replaceMe);
       return $undo.add(function() {
         var undoer, _i, _len, _results;
         _results = [];
@@ -879,8 +879,11 @@
       return data.set(n, v);
     };
 
-    backboneRunner.prototype.watchCollection = function(coll, add, rem) {
-      var i, o, _len, _ref;
+    backboneRunner.prototype.watchCollection = function(coll, add, rem, replaceMe) {
+      var doRep, i, o, _len, _ref;
+      doRep = function() {
+        return replaceMe(coll);
+      };
       if (coll instanceof Array) {
         for (i = 0, _len = coll.length; i < _len; i++) {
           o = coll[i];
@@ -893,6 +896,7 @@
       if (!coll || !coll.on) return;
       coll.on('add', add);
       coll.on('remove', rem);
+      coll.on('reset', doRep);
       for (i = 0, _ref = coll.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
         add(coll.at(i), coll, {
           index: i
@@ -900,7 +904,8 @@
       }
       return $undo.add(function() {
         coll.off('add', add);
-        return coll.off('remove', rem);
+        coll.off('remove', rem);
+        return coll.off('reset', doRep);
       });
     };
 

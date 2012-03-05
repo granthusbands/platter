@@ -39,7 +39,8 @@ class backboneRunner extends platter.internal.dynamicRunner
 		data.set n, v
 
 	# It's actually more efficient for watchCollection to not undo the adds. The caller is expected to have their own undoer in the same context.
-	watchCollection: (coll, add, rem) ->
+	watchCollection: (coll, add, rem, replaceMe) ->
+		doRep = -> replaceMe coll
 		if coll instanceof Array 
 			for o,i in coll
 				add o, coll, {index:i}
@@ -48,11 +49,13 @@ class backboneRunner extends platter.internal.dynamicRunner
 			return
 		coll.on 'add', add
 		coll.on 'remove', rem
+		coll.on 'reset', doRep
 		for i in [0...coll.length]
 			add coll.at(i), coll, {index:i}
 		$undo.add ->
 			coll.off 'add', add
 			coll.off 'remove', rem
+			coll.off 'reset', doRep
 
 	# Runtime: When people say {{blah}}, they might mean data.get(blah) or data[blah]
 	# TODO: Maybe they mean data[blah]()?

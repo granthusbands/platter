@@ -581,6 +581,16 @@ jQuery(function(){
 					tests: {h2AC:0, h2ABC:1}
 				},
 				{
+					name: "Reset the collection to A,C",
+					go: function(data){
+						var el1 = new Backbone.Model({txt:'A'});
+						var el2 = new Backbone.Model({txt:'C'});
+						var coll = data.get('objs');
+						coll.reset([el1, el2]);
+					},
+					tests: {h2ABC:0, h2AC:1}
+				},
+				{
 					name: "Replace objs with plain object",
 					go: function(data){ data.set('objs', [{txt:'A'}, {txt:'BC'}]); },
 					tests: {h2AC:0, h2ABC:1}
