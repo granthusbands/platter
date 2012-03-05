@@ -14,13 +14,13 @@ class dynamicRunner extends platter.internal.templateRunner
 			val = @fetchVal data, bit1
 			if oval==val
 				return 
+			undo() if undo
+			$undo.start()
 			if bits.length==0
 				fn(val)
 			else
-				undo() if undo
-				$undo.start()
 				@runGetMulti fn, val, bits
-				undo = $undo.claim()
+			undo = $undo.claim()
 		if data && data.platter_watch
 			data.platter_watch bit1, fn2
 		fn2()
