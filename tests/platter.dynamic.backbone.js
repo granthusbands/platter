@@ -1,4 +1,7 @@
 jQuery(function(){
+	// Slows things down, but monitors subscriptions, so we can test for cleanup.
+	platter.internal.bigDebug();
+
 	module("Backbone+plain templates");
 
 	// First, we rerun the plain-template tests against the backbone compiler, since the backbone compiler should support all of the plain results.
@@ -732,6 +735,7 @@ jQuery(function(){
 
 	function dotest(def) {
 		test(def.name, function(){
+			startsubs = platter.internal.subscount
 			ok(testdiv.innerHTML=='', 'test div is empty');
 			$undo.start();
 			var totest = copyFrom(def.testsstart);
@@ -764,6 +768,7 @@ jQuery(function(){
 
 			$undo.undoToStart();
 			testdiv.innerHTML = '';
+			equal(platter.internal.subscount, startsubs, "Events all gone");
 		});
 	}
 

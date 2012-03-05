@@ -1,5 +1,5 @@
 (function() {
-  var clean, codegen, commentEscapes, defaultRunEvent, dynamicCompiler, dynamicRunner, exprvar, hasEscape, hideAttr, isEvent, jskeywords, never_equal_to_anything, plainCompiler, plainRunner, pullNode, runDOMEvent, runJQueryEvent, str, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName,
+  var bigDebug, bigDebugRan, clean, codegen, collprot, commentEscapes, defaultRunEvent, dynamicCompiler, dynamicRunner, exprvar, hasEscape, hideAttr, isEvent, jskeywords, modprot, never_equal_to_anything, plainCompiler, plainRunner, pullNode, runDOMEvent, runJQueryEvent, stackTrace, str, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; },
     __slice = Array.prototype.slice;
@@ -322,6 +322,57 @@
     return name[0] === 'o' && name[1] === 'n';
   };
 
+  stackTrace = function() {
+    try {
+      throw new Error;
+    } catch (e) {
+      return e.stack;
+    }
+  };
+
+  bigDebugRan = false;
+
+  bigDebug = function() {
+    var o, _i, _len, _ref, _results;
+    if (bigDebugRan) return;
+    bigDebugRan = true;
+    _ref = platter.internal.debuglist;
+    _results = [];
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      o = _ref[_i];
+      _results.push((function(o) {
+        var id, id2, orig, orig2;
+        if (o.platter_watch) {
+          id = Math.random();
+          orig = o.platter_watch.platter_watch;
+          o.platter_watch.platter_watch = function(n, fn) {
+            platter.internal.subscount++;
+            platter.internal.subs[id] = stackTrace();
+            $undo.add(function() {
+              platter.internal.subscount--;
+              return delete platter.internal.subs[id];
+            });
+            return orig.call(this, n, fn);
+          };
+        }
+        if (o.platter_watchcoll) {
+          id2 = Math.random();
+          orig2 = o.platter_watchcoll.platter_watchcoll;
+          return o.platter_watchcoll.platter_watchcoll = function(add, remove, replaceMe) {
+            platter.internal.subscount++;
+            platter.internal.subs[id2] = stackTrace();
+            $undo.add(function() {
+              platter.internal.subscount--;
+              return delete platter.internal.subs[id2];
+            });
+            return orig2.call(this, add, remove, replaceMe);
+          };
+        }
+      })(o));
+    }
+    return _results;
+  };
+
   undoer = (function() {
 
     undoer.prototype.cur = {
@@ -369,7 +420,11 @@
     str: str,
     internal: {
       templateCompiler: templateCompiler,
-      templateRunner: templateRunner
+      templateRunner: templateRunner,
+      debuglist: [],
+      subscount: 0,
+      subs: {},
+      bigDebug: bigDebug
     }
   };
 
@@ -700,14 +755,14 @@
         oval = val;
         val = _this.fetchVal(data, bit1);
         if (oval === val) return;
+        if (undo) undo();
+        $undo.start();
         if (bits.length === 0) {
-          return fn(val);
+          fn(val);
         } else {
-          if (undo) undo();
-          $undo.start();
           _this.runGetMulti(fn, val, bits);
-          return undo = $undo.claim();
         }
+        return undo = $undo.claim();
       };
       if (data && data.platter_watch) data.platter_watch(bit1, fn2);
       return fn2();
@@ -732,8 +787,9 @@
         }
         return;
       }
-      if (!coll || !coll.on) return;
-      if (coll.platter_watch) return coll.platter_watch(add, rem, replaceMe);
+      if (coll && coll.platter_watchcoll) {
+        return coll.platter_watchcoll(add, rem, replaceMe);
+      }
     };
 
     dynamicRunner.prototype.fetchVal = function(data, ident) {
@@ -773,6 +829,9 @@
       var ret, undo,
         _this = this;
       undo = null;
+      $undo.add(function() {
+        if (undo) return undo();
+      });
       return ret = function(coll) {
         if (undo) {
           undo();
@@ -882,11 +941,15 @@
 
   platter.dynamic = new dynamicCompiler;
 
-  Backbone.Model.prototype.platter_hasKey = Backbone.Model.prototype.hasKey || function(n) {
+  modprot = Backbone.Model.prototype;
+
+  collprot = Backbone.Collection.prototype;
+
+  modprot.platter_hasKey = modprot.hasKey || function(n) {
     return this.attributes.hasOwnProperty(n);
   };
 
-  Backbone.Model.prototype.platter_watch = function(n, fn) {
+  modprot.platter_watch = function(n, fn) {
     var ev,
       _this = this;
     ev = "change:" + n;
@@ -896,7 +959,7 @@
     });
   };
 
-  Backbone.Model.prototype.platter_get = function(n) {
+  modprot.platter_get = function(n) {
     if (this.platter_hasKey(n)) {
       return this.get(n);
     } else {
@@ -904,11 +967,11 @@
     }
   };
 
-  Backbone.Model.prototype.platter_set = function(n, v) {
+  modprot.platter_set = function(n, v) {
     return this.set(n, v);
   };
 
-  Backbone.Collection.prototype.platter_watch = function(add, remove, replaceMe) {
+  collprot.platter_watchcoll = function(add, remove, replaceMe) {
     var doRep, i, _ref,
       _this = this;
     doRep = function() {
@@ -916,7 +979,7 @@
     };
     this.on('add', add);
     this.on('remove', remove);
-    this.on('reset', replaceMe);
+    this.on('reset', doRep);
     for (i = 0, _ref = this.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
       add(this.at(i), this, {
         index: i
@@ -928,6 +991,14 @@
       return _this.off('reset', doRep);
     });
   };
+
+  platter.internal.debuglist.push({
+    platter_haskey: modprot,
+    platter_watch: modprot,
+    platter_get: modprot,
+    platter_set: modprot,
+    platter_watchcoll: collprot
+  });
 
   platter.backbone = platter.dynamic;
 

@@ -260,6 +260,38 @@ pullNode = (node) ->
 isEvent = (name) ->
 	name[0]=='o' && name[1]=='n'
 
+stackTrace = ->
+	try
+		throw new Error
+	catch e
+		e.stack
+
+bigDebugRan = false
+bigDebug = ->
+	return if bigDebugRan
+	bigDebugRan = true
+	for o in platter.internal.debuglist
+		do (o) ->
+			if o.platter_watch
+				id = Math.random()
+				orig = o.platter_watch.platter_watch
+				o.platter_watch.platter_watch = (n, fn) ->
+					platter.internal.subscount++
+					platter.internal.subs[id] = stackTrace()
+					$undo.add ->
+						platter.internal.subscount--
+						delete platter.internal.subs[id]
+					orig.call @, n, fn
+			if o.platter_watchcoll
+				id2 = Math.random()
+				orig2 = o.platter_watchcoll.platter_watchcoll
+				o.platter_watchcoll.platter_watchcoll = (add, remove, replaceMe) ->
+					platter.internal.subscount++
+					platter.internal.subs[id2] = stackTrace()
+					$undo.add ->
+						platter.internal.subscount--
+						delete platter.internal.subs[id2]
+					orig2.call @, add, remove, replaceMe
 
 class undoer
 	cur:
@@ -288,3 +320,7 @@ this.platter =
 	internal:
 		templateCompiler: templateCompiler
 		templateRunner: templateRunner
+		debuglist: []
+		subscount: 0
+		subs: {}
+		bigDebug: bigDebug

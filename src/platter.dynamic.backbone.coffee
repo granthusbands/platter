@@ -32,5 +32,11 @@ collprot.platter_watchcoll = (add, remove, replaceMe) ->
 		@off 'remove', remove
 		@off 'reset', doRep
 
+platter.internal.debuglist.push
+	platter_haskey: modprot
+	platter_watch: modprot
+	platter_get: modprot
+	platter_set: modprot
+	platter_watchcoll: collprot
 
 platter.backbone = platter.dynamic
