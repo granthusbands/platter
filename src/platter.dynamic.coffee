@@ -39,10 +39,8 @@ class dynamicRunner extends platter.internal.templateRunner
 			for o,i in coll
 				add o, coll, {index:i}
 			return
-		if !coll || !coll.on
-			return
-		if coll.platter_watch
-			coll.platter_watch add, rem, replaceMe
+		if coll && coll.platter_watchcoll
+			coll.platter_watchcoll add, rem, replaceMe
 
 	# Runtime: When people say {{blah}}, they might mean data.get(blah) or data[blah]
 	# TODO: Maybe they mean data[blah]()?
