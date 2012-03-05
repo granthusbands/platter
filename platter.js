@@ -948,6 +948,8 @@
     platter.subcount = platter.subcount || 0;
     Backbone.Model.prototype.on1 = Backbone.Model.prototype.on;
     Backbone.Model.prototype.off1 = Backbone.Model.prototype.off;
+    Backbone.Collection.prototype.on1 = Backbone.Model.prototype.on;
+    Backbone.Collection.prototype.off1 = Backbone.Model.prototype.off;
     Backbone.Model.prototype.on = function(a, b, c) {
       document.title = "Subs=" + ++platter.subcount;
       return this.on1(a, b, c);
