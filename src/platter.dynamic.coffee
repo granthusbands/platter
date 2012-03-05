@@ -74,6 +74,8 @@ class dynamicRunner extends platter.internal.templateRunner
 	# Runtime: Provide a callback for doing foreach
 	runForEach: (tmpl, start, end) ->
 		undo = null
+		$undo.add ->
+			undo() if undo
 		ret = (coll) =>
 			if undo
 				undo()
