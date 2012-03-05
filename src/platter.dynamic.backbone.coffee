@@ -1,17 +1,37 @@
-# Monkey-patch backbone models to have a hasKey method (ignoring backbone's broken null handling)
-if !Backbone.Model.prototype.hasKey
-	Backbone.Model.prototype.hasKey = (n) ->
+Backbone.Model.prototype.platter_hasKey = 
+	Backbone.Model.prototype.hasKey || (n) ->
 		@attributes.hasOwnProperty(n)
+
+Backbone.Model.prototype.platter_watch = (n, fn) ->
+	ev = "change:"+n
+	@on ev, fn
+	$undo.add =>
+		@off ev, fn
+
+Backbone.Model.prototype.platter_get = (n) ->
+	if @platter_hasKey n
+		@get n
+	else
+		@[n]
+
+Backbone.Model.prototype.platter_set = (n, v) ->
+	@set n, v
+
+Backbone.Collection.prototype.platter_watch = (add, remove, replaceMe) ->
+	doRep = -> replaceMe @
+	@on 'add', add
+	@on 'remove', remove
+	@on 'reset', replaceMe
+	for i in [0...@length]
+		add @at(i), @, {index:i}
+	$undo.add =>
+		@off 'add', add
+		@off 'remove', remove
+		@off 'reset', doRep
 
 never_equal_to_anything = {}
 
 class backboneRunner extends platter.internal.dynamicRunner
-	runGet: (fn, data, ev) ->
-		data.on ev, fn
-		$undo.add ->
-			data.off ev, fn
-		fn()
-
 	runGetMulti: (fn, data, [bit1, bits...]) ->
 		val = never_equal_to_anything
 		undo = null;
@@ -29,41 +49,32 @@ class backboneRunner extends platter.internal.dynamicRunner
 				$undo.start()
 				@runGetMulti fn, val, bits
 				undo = $undo.claim()
-		if data instanceof Backbone.Model
-			data.on "change:#{bit1}", fn2
-			$undo.add ->
-				data.off "change:#{bit1}", fn2
+		if data && data.platter_watch
+			data.platter_watch bit1, fn2
 		fn2()
 
 	doSet: (data, n, v) ->
-		data.set n, v
+		if data.platter_set
+			data.platter_set n, v
 
 	# It's actually more efficient for watchCollection to not undo the adds. The caller is expected to have their own undoer in the same context.
 	watchCollection: (coll, add, rem, replaceMe) ->
-		doRep = -> replaceMe coll
 		if coll instanceof Array 
 			for o,i in coll
 				add o, coll, {index:i}
 			return
 		if !coll || !coll.on
 			return
-		coll.on 'add', add
-		coll.on 'remove', rem
-		coll.on 'reset', doRep
-		for i in [0...coll.length]
-			add coll.at(i), coll, {index:i}
-		$undo.add ->
-			coll.off 'add', add
-			coll.off 'remove', rem
-			coll.off 'reset', doRep
+		if coll.platter_watch
+			coll.platter_watch add, rem, replaceMe
 
 	# Runtime: When people say {{blah}}, they might mean data.get(blah) or data[blah]
 	# TODO: Maybe they mean data[blah]()?
 	fetchVal: (data, ident) ->
 		if !data
 			return undefined
-		if data.hasKey && data.hasKey ident
-			data.get ident
+		if data.platter_get
+			data.platter_get ident
 		else
 			data[ident]
 

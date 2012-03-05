@@ -819,11 +819,52 @@
 
   platter.internal.dynamicCompiler = dynamicCompiler;
 
-  if (!Backbone.Model.prototype.hasKey) {
-    Backbone.Model.prototype.hasKey = function(n) {
-      return this.attributes.hasOwnProperty(n);
+  Backbone.Model.prototype.platter_hasKey = Backbone.Model.prototype.hasKey || function(n) {
+    return this.attributes.hasOwnProperty(n);
+  };
+
+  Backbone.Model.prototype.platter_watch = function(n, fn) {
+    var ev,
+      _this = this;
+    ev = "change:" + n;
+    this.on(ev, fn);
+    return $undo.add(function() {
+      return _this.off(ev, fn);
+    });
+  };
+
+  Backbone.Model.prototype.platter_get = function(n) {
+    if (this.platter_hasKey(n)) {
+      return this.get(n);
+    } else {
+      return this[n];
+    }
+  };
+
+  Backbone.Model.prototype.platter_set = function(n, v) {
+    return this.set(n, v);
+  };
+
+  Backbone.Collection.prototype.platter_watch = function(add, remove, replaceMe) {
+    var doRep, i, _ref,
+      _this = this;
+    doRep = function() {
+      return replaceMe(this);
     };
-  }
+    this.on('add', add);
+    this.on('remove', remove);
+    this.on('reset', replaceMe);
+    for (i = 0, _ref = this.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
+      add(this.at(i), this, {
+        index: i
+      });
+    }
+    return $undo.add(function() {
+      _this.off('add', add);
+      _this.off('remove', remove);
+      return _this.off('reset', doRep);
+    });
+  };
 
   never_equal_to_anything = {};
 
@@ -834,14 +875,6 @@
     function backboneRunner() {
       backboneRunner.__super__.constructor.apply(this, arguments);
     }
-
-    backboneRunner.prototype.runGet = function(fn, data, ev) {
-      data.on(ev, fn);
-      $undo.add(function() {
-        return data.off(ev, fn);
-      });
-      return fn();
-    };
 
     backboneRunner.prototype.runGetMulti = function(fn, data, _arg) {
       var bit1, bits, fn2, undo, val,
@@ -866,24 +899,16 @@
           return undo = $undo.claim();
         }
       };
-      if (data instanceof Backbone.Model) {
-        data.on("change:" + bit1, fn2);
-        $undo.add(function() {
-          return data.off("change:" + bit1, fn2);
-        });
-      }
+      if (data && data.platter_watch) data.platter_watch(bit1, fn2);
       return fn2();
     };
 
     backboneRunner.prototype.doSet = function(data, n, v) {
-      return data.set(n, v);
+      if (data.platter_set) return data.platter_set(n, v);
     };
 
     backboneRunner.prototype.watchCollection = function(coll, add, rem, replaceMe) {
-      var doRep, i, o, _len, _ref;
-      doRep = function() {
-        return replaceMe(coll);
-      };
+      var i, o, _len;
       if (coll instanceof Array) {
         for (i = 0, _len = coll.length; i < _len; i++) {
           o = coll[i];
@@ -894,25 +919,13 @@
         return;
       }
       if (!coll || !coll.on) return;
-      coll.on('add', add);
-      coll.on('remove', rem);
-      coll.on('reset', doRep);
-      for (i = 0, _ref = coll.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
-        add(coll.at(i), coll, {
-          index: i
-        });
-      }
-      return $undo.add(function() {
-        coll.off('add', add);
-        coll.off('remove', rem);
-        return coll.off('reset', doRep);
-      });
+      if (coll.platter_watch) return coll.platter_watch(add, rem, replaceMe);
     };
 
     backboneRunner.prototype.fetchVal = function(data, ident) {
       if (!data) return;
-      if (data.hasKey && data.hasKey(ident)) {
-        return data.get(ident);
+      if (data.platter_get) {
+        return data.platter_get(ident);
       } else {
         return data[ident];
       }
