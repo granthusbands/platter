@@ -601,6 +601,127 @@ jQuery(function(){
 					tests: {h2ABC:0, h22:0, h20:1}
 				},
 			]
+		},
+
+
+		// Backbone collection indirected
+		{
+			name:"Attribute: foreach indirect",
+			tests: {
+				h1: ruleElExists('h1[foreach]'),
+				h20: ruleElCount('h2', 0),
+				h21: ruleElCount('h2', 1),
+				h22: ruleElCount('h2', 2),
+				h23: ruleElCount('h2', 3),
+				h2A: ruleElText('h2', 'A'),
+				h2AC: ruleElText('h2', 'AC'),
+				h2ABC: ruleElText('h2', 'ABC'),
+			},
+			testsstart: {h1:1, h20:1, h30:1},
+			template:
+				"<h1 foreach='bogus'>a</h1>"+
+				"<h2 foreach='{{a.b.objs}}'>{{txt}}</h2>",
+			actions: [
+				{
+					name: "Set objs to noise",
+					go: function(data){ data.set('a', {b: {objs:'noise'}}); },
+					tests: {}
+				},
+				{
+					name: "Set objs to empty collection",
+					go: function(data){ data.set('a', {b: {objs:new Backbone.Collection()}}); },
+					tests: {h5:1}
+				},
+				{
+					name: "Insert empty model into objs",
+					go: function(data){
+						var coll = data.get('a').b.objs;
+						coll.add(new Backbone.Model());
+					},
+					tests: {h20:0, h21:1}
+				},
+				{
+					name: "Insert empty model into objs",
+					go: function(data){
+						var coll = data.get('a').b.objs;
+						coll.add(new Backbone.Model());
+					},
+					tests: {h21:0, h22:1}
+				},
+				{
+					name: "Insert empty model into objs",
+					go: function(data){
+						var coll = data.get('a').b.objs;
+						coll.add(new Backbone.Model());
+					},
+					tests: {h22:0, h23:1}
+				},
+				{
+					name: "Alter objs[0] to contain A",
+					go: function(data){
+						var coll = data.get('a').b.objs;
+						var el = coll.at(0);
+						el.set('txt', 'A');
+					},
+					tests: {h2A:1}
+				},
+				{
+					name: "Alter objs[2] to contain C",
+					go: function(data){
+						var coll = data.get('a').b.objs;
+						var el = coll.at(2);
+						el.set('txt', 'C');
+					},
+					tests: {h2A:0, h2AC:1}
+				},
+				{
+					name: "Alter objs[1] to contain B",
+					go: function(data){
+						var coll = data.get('a').b.objs;
+						var el = coll.at(1);
+						el.set('txt', 'B');
+					},
+					tests: {h2AC:0, h2ABC:1}
+				},
+				{
+					name: "Remove objs[1]",
+					go: function(data){
+						var coll = data.get('a').b.objs;
+						var el = coll.at(1);
+						coll.remove(el);
+					},
+					tests: {h2ABC:0, h2AC:1, h23:0, h22:1}
+				},
+				{
+					name: "Alter objs[1] to contain BC",
+					go: function(data){
+						var coll = data.get('a').b.objs;
+						var el = coll.at(1);
+						el.set('txt', 'BC');
+					},
+					tests: {h2AC:0, h2ABC:1}
+				},
+				{
+					name: "Reset the collection to A,C",
+					go: function(data){
+						var el1 = new Backbone.Model({txt:'A'});
+						var el2 = new Backbone.Model({txt:'C'});
+						var coll = data.get('a').b.objs;
+						coll.reset([el1, el2]);
+					},
+					tests: {h2ABC:0, h2AC:1}
+				},
+				{
+					name: "Replace objs with plain object",
+					go: function(data){ data.set('a', {b: {objs:[{txt:'A'}, {txt:'BC'}]}}); },
+					tests: {h2AC:0, h2ABC:1}
+				},
+				{
+					name: "Replace objs with garbage",
+					go: function(data){ data.set('a', {b: {objs:'garbage'}}); },
+					tests: {h2ABC:0, h22:0, h20:1}
+				},
+			]
 		}
 	];
 
