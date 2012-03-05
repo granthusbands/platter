@@ -1,5 +1,5 @@
 (function() {
-  var backboneCompiler, backboneRunner, clean, codegen, commentEscapes, defaultRunEvent, dynamicCompiler, dynamicRunner, exprvar, hasEscape, hideAttr, isEvent, jskeywords, never_equal_to_anything, plainCompiler, plainRunner, pullNode, runDOMEvent, runJQueryEvent, str, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName,
+  var clean, codegen, commentEscapes, defaultRunEvent, dynamicCompiler, dynamicRunner, exprvar, hasEscape, hideAttr, isEvent, jskeywords, never_equal_to_anything, plainCompiler, plainRunner, pullNode, runDOMEvent, runJQueryEvent, str, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; },
     __slice = Array.prototype.slice;
@@ -676,6 +676,8 @@
 
   platter.plain = new plainCompiler;
 
+  never_equal_to_anything = {};
+
   dynamicRunner = (function(_super) {
 
     __extends(dynamicRunner, _super);
@@ -683,6 +685,65 @@
     function dynamicRunner() {
       dynamicRunner.__super__.constructor.apply(this, arguments);
     }
+
+    dynamicRunner.prototype.runGetMulti = function(fn, data, _arg) {
+      var bit1, bits, fn2, undo, val,
+        _this = this;
+      bit1 = _arg[0], bits = 2 <= _arg.length ? __slice.call(_arg, 1) : [];
+      val = never_equal_to_anything;
+      undo = null;
+      $undo.add(function() {
+        if (undo) return undo();
+      });
+      fn2 = function() {
+        var oval;
+        oval = val;
+        val = _this.fetchVal(data, bit1);
+        if (oval === val) return;
+        if (bits.length === 0) {
+          return fn(val);
+        } else {
+          if (undo) undo();
+          $undo.start();
+          _this.runGetMulti(fn, val, bits);
+          return undo = $undo.claim();
+        }
+      };
+      if (data && data.platter_watch) data.platter_watch(bit1, fn2);
+      return fn2();
+    };
+
+    dynamicRunner.prototype.doSet = function(data, n, v) {
+      if (data.platter_set) {
+        return data.platter_set(n, v);
+      } else {
+        return data[n] = v;
+      }
+    };
+
+    dynamicRunner.prototype.watchCollection = function(coll, add, rem, replaceMe) {
+      var i, o, _len;
+      if (coll instanceof Array) {
+        for (i = 0, _len = coll.length; i < _len; i++) {
+          o = coll[i];
+          add(o, coll, {
+            index: i
+          });
+        }
+        return;
+      }
+      if (!coll || !coll.on) return;
+      if (coll.platter_watch) return coll.platter_watch(add, rem, replaceMe);
+    };
+
+    dynamicRunner.prototype.fetchVal = function(data, ident) {
+      if (!data) return;
+      if (data.platter_get) {
+        return data.platter_get(ident);
+      } else {
+        return data[ident];
+      }
+    };
 
     dynamicRunner.prototype.runIf = function(data, tmpl, start, end) {
       var shown, undo,
@@ -819,6 +880,8 @@
 
   platter.internal.dynamicCompiler = dynamicCompiler;
 
+  platter.dynamic = new dynamicCompiler;
+
   Backbone.Model.prototype.platter_hasKey = Backbone.Model.prototype.hasKey || function(n) {
     return this.attributes.hasOwnProperty(n);
   };
@@ -866,111 +929,6 @@
     });
   };
 
-  never_equal_to_anything = {};
-
-  backboneRunner = (function(_super) {
-
-    __extends(backboneRunner, _super);
-
-    function backboneRunner() {
-      backboneRunner.__super__.constructor.apply(this, arguments);
-    }
-
-    backboneRunner.prototype.runGetMulti = function(fn, data, _arg) {
-      var bit1, bits, fn2, undo, val,
-        _this = this;
-      bit1 = _arg[0], bits = 2 <= _arg.length ? __slice.call(_arg, 1) : [];
-      val = never_equal_to_anything;
-      undo = null;
-      $undo.add(function() {
-        if (undo) return undo();
-      });
-      fn2 = function() {
-        var oval;
-        oval = val;
-        val = _this.fetchVal(data, bit1);
-        if (oval === val) return;
-        if (bits.length === 0) {
-          return fn(val);
-        } else {
-          if (undo) undo();
-          $undo.start();
-          _this.runGetMulti(fn, val, bits);
-          return undo = $undo.claim();
-        }
-      };
-      if (data && data.platter_watch) data.platter_watch(bit1, fn2);
-      return fn2();
-    };
-
-    backboneRunner.prototype.doSet = function(data, n, v) {
-      if (data.platter_set) return data.platter_set(n, v);
-    };
-
-    backboneRunner.prototype.watchCollection = function(coll, add, rem, replaceMe) {
-      var i, o, _len;
-      if (coll instanceof Array) {
-        for (i = 0, _len = coll.length; i < _len; i++) {
-          o = coll[i];
-          add(o, coll, {
-            index: i
-          });
-        }
-        return;
-      }
-      if (!coll || !coll.on) return;
-      if (coll.platter_watch) return coll.platter_watch(add, rem, replaceMe);
-    };
-
-    backboneRunner.prototype.fetchVal = function(data, ident) {
-      if (!data) return;
-      if (data.platter_get) {
-        return data.platter_get(ident);
-      } else {
-        return data[ident];
-      }
-    };
-
-    return backboneRunner;
-
-  })(platter.internal.dynamicRunner);
-
-  backboneCompiler = (function(_super) {
-
-    __extends(backboneCompiler, _super);
-
-    function backboneCompiler() {
-      backboneCompiler.__super__.constructor.apply(this, arguments);
-    }
-
-    backboneCompiler.prototype.makeRet = function(node) {
-      return new backboneRunner(node);
-    };
-
-    return backboneCompiler;
-
-  })(platter.internal.dynamicCompiler);
-
-  platter.internal.backboneRunner = backboneRunner;
-
-  platter.internal.backboneCompiler = backboneCompiler;
-
-  platter.backbone = new backboneCompiler;
-
-  platter.backbone.bigDebug = function() {
-    platter.subcount = platter.subcount || 0;
-    Backbone.Model.prototype.on1 = Backbone.Model.prototype.on;
-    Backbone.Model.prototype.off1 = Backbone.Model.prototype.off;
-    Backbone.Collection.prototype.on1 = Backbone.Model.prototype.on;
-    Backbone.Collection.prototype.off1 = Backbone.Model.prototype.off;
-    Backbone.Model.prototype.on = function(a, b, c) {
-      document.title = "Subs=" + ++platter.subcount;
-      return this.on1(a, b, c);
-    };
-    return Backbone.Model.prototype.off = function(a, b, c) {
-      document.title = "Subs=" + --platter.subcount;
-      return this.off1(a, b, c);
-    };
-  };
+  platter.backbone = platter.dynamic;
 
 }).call(this);

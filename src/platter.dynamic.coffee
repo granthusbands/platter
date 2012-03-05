@@ -1,6 +1,59 @@
 # The code in this file is probably useful for all dynamically-updating interfaces
 
+never_equal_to_anything = {}
+
 class dynamicRunner extends platter.internal.templateRunner
+	# Runtime: Fetches data.bit1.bit2.bit3..., calls fn with the result. Calls it again when the result changes.
+	runGetMulti: (fn, data, [bit1, bits...]) ->
+		val = never_equal_to_anything
+		undo = null;
+		$undo.add ->
+			undo() if undo
+		fn2 = =>
+			oval = val
+			val = @fetchVal data, bit1
+			if oval==val
+				return 
+			if bits.length==0
+				fn(val)
+			else
+				undo() if undo
+				$undo.start()
+				@runGetMulti fn, val, bits
+				undo = $undo.claim()
+		if data && data.platter_watch
+			data.platter_watch bit1, fn2
+		fn2()
+
+	# Runtime: Sets a value, first using things that cause events
+	doSet: (data, n, v) ->
+		if data.platter_set
+			data.platter_set n, v
+		else
+			data[n] = v
+
+	# Runtime: Call add/rem appropriately for the collection (with change-watching, if possible)
+	# It's actually more efficient for watchCollection to not undo the adds. The caller is expected to have their own undoer in the same context.
+	watchCollection: (coll, add, rem, replaceMe) ->
+		if coll instanceof Array 
+			for o,i in coll
+				add o, coll, {index:i}
+			return
+		if !coll || !coll.on
+			return
+		if coll.platter_watch
+			coll.platter_watch add, rem, replaceMe
+
+	# Runtime: When people say {{blah}}, they might mean data.get(blah) or data[blah]
+	# TODO: Maybe they mean data[blah]()?
+	fetchVal: (data, ident) ->
+		if !data
+			return undefined
+		if data.platter_get
+			data.platter_get ident
+		else
+			data[ident]
+
 	# Runtime: A conditional section, automatically filled/removed as fn changes.
 	runIf: (data, tmpl, start, end) ->
 		shown = false
@@ -98,3 +151,4 @@ class dynamicCompiler extends platter.internal.templateCompiler
 
 platter.internal.dynamicRunner = dynamicRunner
 platter.internal.dynamicCompiler = dynamicCompiler
+platter.dynamic = new dynamicCompiler
