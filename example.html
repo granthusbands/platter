@@ -24,7 +24,7 @@
 				
 				var data = {title: Math.random()>0.5?"This is the title":null, blah: []};
 				for (var i=0;Math.random()*5>i;++i)
-					data.blah.push({class:{t:'row'+i}, name:'Name '+Math.random(), click:function(){alert(1);}});
+					data.blah.push({'class':{t:'row'+i}, name:'Name '+Math.random(), click:function(){alert(1);}});
 				
 				var els = template.run(data);
 				document.body.appendChild(els);
@@ -37,7 +37,7 @@
 				data.blah = new Backbone.Collection();
 				for (var i=0;Math.random()*5>i;++i) {
 					var row = new Backbone.Model();
-					row.set({class:{t:'row'+i}, name:'Name '+Math.random()});
+					row.set({'class':{t:'row'+i}, name:'Name '+Math.random()});
 					row.click=function(){alert(2);};
 					data.blah.add(row);
 				}
@@ -47,7 +47,7 @@
 					if (Math.random()*5>data.blah.length) {
 						var row = new Backbone.Model();
 						var at = Math.floor(Math.random()*(data.blah.length+1));
-						row.set({class:{t:'row'+at}, name:'Name '+Math.random()});
+						row.set({'class':{t:'row'+at}, name:'Name '+Math.random()});
 						row.click=function(){alert(2);};
 						data.blah.add(row, {at:at});
 					}
