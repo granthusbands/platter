@@ -144,6 +144,11 @@ class dynamicCompiler extends platter.internal.templateCompiler
 		jsChange = js.addForcedVar "#{jsPre}_ifchange", "this.runIf(#{jsData}, this.#{jsPre}, #{jsPre}, #{jsPost})"
 		@doSimple ret, js, jsPre, jsData, null, val, "#{jsChange}(#v#)"
 
+	# Compiler: Conditional section
+	doUnless: (ret, js, jsPre, jsPost, jsData, val, inner) ->
+		jsChange = js.addForcedVar "#{jsPre}_ifchange", "this.runIf(#{jsData}, this.#{jsPre}, #{jsPre}, #{jsPost})"
+		@doSimple ret, js, jsPre, jsData, null, val, "#{jsChange}(!(#v#))"
+
 	# Compiler:
 	doForEach: (ret, js, jsPre, jsPost, jsData, val, inner) ->
 		jsChange = js.addForcedVar "#{jsPre}_forchange", "this.runForEach(this.#{jsPre}, #{jsPre}, #{jsPost})"

@@ -128,6 +128,22 @@ jQuery(function(){
 			// TODO: Maybe decide on and test what if="{{a}} {{b}}" should do
 		});
 
+		test("Attribute: unless", function(){
+			hasJQ('<h1 unless="bogus">Hey</h1>', data, "h1", "Non-special attribute ignored");
+			hasJQ("<h1 unless='{{bo}}'>Hey</h1>", data, "h1", "Missing value");
+			hasJQ("<h1 unless='{{two.bo}}'>Hey</h1>", data, "h1", "Missing second-level value");
+			hasNotJQ("<h1 unless='{{one}}'>Hey</h1>", data, "h1", "One-level value");
+			hasNotJQ("<h1 unless='{{two.too}}'>Hey</h1>", data, "h1", "Two-level value");
+			hasNotJQ("<h1 unless='{{three.tree.tee}}'>Hey</h1>", data, "h1", "Three-level value");
+			hasNotJQ("<h1 unless='{{one}} {{two.too}} {{three.tree.tee}}'>Hey</h1>", data, "h1", "All-level value");
+			hasNotJQ("<h1 unless='{{yes}}'>Hey</h1>", data, "h1", "Boolean true");
+			hasJQ("<h1 unless='{{no}}'>Hey</h1>", data, "h1", "Boolean false");
+			hasJQ("<h1 unless='{{zero}}'>Hey</h1>", data, "h1", "Zero");
+			// TODO: Maybe empty arrays should be false. Probably not, though.
+			hasNotJQ("<h1 unless='{{empty}}'>Hey</h1>", data, "h1", "Empty array");
+			// TODO: Maybe decide on and test what unless="{{a}} {{b}}" should do
+		});
+
 		test("Attribute: foreach", function(){
 			hasJQ('<h1 foreach="bogus">Hey</h1>', data, "h1", "Non-special attribute ignored");
 			hasNotJQ("<h1 foreach='{{bo}}'>Hey</h1>", data, "h1", "Missing value");

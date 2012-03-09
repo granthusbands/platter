@@ -195,6 +195,16 @@
       return jsPost;
     };
 
+    templateCompiler.prototype.special_unless = function(ret, js, jsCur, jsData, val) {
+      var frag, inner, jsPost, post, _ref;
+      _ref = pullNode(jsCur.v), jsCur.v = _ref[0], post = _ref[1], frag = _ref[2];
+      inner = this.compileFrag(frag);
+      ret[jsCur.n] = inner;
+      jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
+      this.doUnless(ret, js, jsCur, jsPost, jsData, val, inner);
+      return jsPost;
+    };
+
     templateCompiler.prototype.special_foreach = function(ret, js, jsCur, jsData, val) {
       var frag, inner, jsPost, post, _ref;
       _ref = pullNode(jsCur.v), jsCur.v = _ref[0], post = _ref[1], frag = _ref[2];
@@ -710,6 +720,14 @@
       return js.addExpr("if (" + val + ") " + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + jsData + ", false), " + jsPost + ")");
     };
 
+    plainCompiler.prototype.doUnless = function(ret, js, jsCur, jsPost, jsData, val, inner) {
+      var _this = this;
+      val = this.escapesReplace(val, function(t) {
+        return "this.runGetMulti(" + jsData + ", " + (js.toSrc(t.split('.'))) + ")";
+      });
+      return js.addExpr("if (!(" + val + ")) " + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + jsData + ", false), " + jsPost + ")");
+    };
+
     plainCompiler.prototype.doForEach = function(ret, js, jsCur, jsPost, jsData, val, inner) {
       var jsFor,
         _this = this;
@@ -923,6 +941,12 @@
       var jsChange;
       jsChange = js.addForcedVar("" + jsPre + "_ifchange", "this.runIf(" + jsData + ", this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
       return this.doSimple(ret, js, jsPre, jsData, null, val, "" + jsChange + "(#v#)");
+    };
+
+    dynamicCompiler.prototype.doUnless = function(ret, js, jsPre, jsPost, jsData, val, inner) {
+      var jsChange;
+      jsChange = js.addForcedVar("" + jsPre + "_ifchange", "this.runIf(" + jsData + ", this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
+      return this.doSimple(ret, js, jsPre, jsData, null, val, "" + jsChange + "(!(#v#))");
     };
 
     dynamicCompiler.prototype.doForEach = function(ret, js, jsPre, jsPost, jsData, val, inner) {

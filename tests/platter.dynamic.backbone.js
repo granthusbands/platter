@@ -480,7 +480,47 @@ jQuery(function(){
 				{
 					name: "Set no to false",
 					go: function(data){ data.set('no', false); },
-					tests: {h5:1}
+					tests: {}
+				}
+			])
+		},
+
+
+		{
+			name:"Attribute: unless",
+			tests: { // TODO: Should empty array be false and tested? Probably not.
+				h1: ruleElExists('h1[if]'),
+				h2: ruleElExists('h2'),
+				h3: ruleElExists('h3'),
+				h4: ruleElExists('h4'),
+				h5: ruleElExists('h5'),
+				h6: ruleElExists('h6'),
+				p: ruleElExists('p')
+			},
+			testsstart: {'h2':1, 'h3':1, 'h4':1, 'h5':1, 'h6':1, 'p':1},
+			template:
+				"<h1 unless='bogus'>a</h1>"+
+				"<h2 unless='{{one}}'>b</h2>"+
+				"<h3 unless='{{two.too}}'>c</h3>"+
+				"<h4 unless='{{three.tree.tee}}'>d</h4>"+
+				"<h5 unless='{{yes}}'>e</h5>"+
+				"<h6 unless='{{no}}'>f</h6>"+
+				"<p unless='{{zero}}'></p>",
+			actions: onetwothreetests({h2:0}, {h3:0}, {h4:0}).concat([
+				{
+					name: "Set zero to 0",
+					go: function(data){ data.set('zero', 0); },
+					tests: {}
+				},
+				{
+					name: "Set yes to true",
+					go: function(data){ data.set('yes', true); },
+					tests: {h5:0}
+				},
+				{
+					name: "Set no to false",
+					go: function(data){ data.set('no', false); },
+					tests: {}
 				}
 			])
 		},

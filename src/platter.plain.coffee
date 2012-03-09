@@ -27,6 +27,10 @@ class plainCompiler extends platter.internal.templateCompiler
 		val = @escapesReplace val, (t) => "this.runGetMulti(#{jsData}, #{js.toSrc t.split '.'})"
 		js.addExpr "if (#{val}) #{jsPost}.parentNode.insertBefore(this.#{jsCur}.run(#{jsData}, false), #{jsPost})"
 
+	doUnless: (ret, js, jsCur, jsPost, jsData, val, inner) ->
+		val = @escapesReplace val, (t) => "this.runGetMulti(#{jsData}, #{js.toSrc t.split '.'})"
+		js.addExpr "if (!(#{val})) #{jsPost}.parentNode.insertBefore(this.#{jsCur}.run(#{jsData}, false), #{jsPost})"
+
 	doForEach: (ret, js, jsCur, jsPost, jsData, val, inner) ->
 		val = @escapesReplace val, (t) => "this.runGetMulti(#{jsData}, #{js.toSrc t.split '.'})"
 		jsFor = js.addVar "#{jsCur}_for", val

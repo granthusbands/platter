@@ -151,6 +151,14 @@ class templateCompiler
 		@doIf ret, js, jsCur, jsPost, jsData, val, inner
 		jsPost
 
+	special_unless: (ret, js, jsCur, jsData, val) ->
+		[jsCur.v, post, frag] = pullNode jsCur.v
+		inner = @compileFrag frag
+		ret[jsCur.n] = inner
+		jsPost = js.addVar "#{jsCur}_end", "#{jsCur}.nextSibling", post
+		@doUnless ret, js, jsCur, jsPost, jsData, val, inner
+		jsPost
+
 	special_foreach: (ret, js, jsCur, jsData, val) ->
 		[jsCur.v, post, frag] = pullNode jsCur.v
 		inner = @compileFrag frag
