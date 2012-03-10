@@ -17,7 +17,7 @@ jQuery(function(){
 	};
 
 	if (!platter.tests) platter.tests = {};
-	platter.tests.trivial = function(comp, has, hasNot, hasJQ, hasNotJQ, hasValue){
+	platter.tests.trivial = function(comp, has, hasNot, hasJQ, hasNotJQ, hasValue, textIs){
 
 		test("No tokens", function(){
 			equal(testdiv.innerHTML, "", "Test div empty");
@@ -39,16 +39,15 @@ jQuery(function(){
 		});
 
 		test("Text tokens", function(){
-			has("<h1>{{one}}</h1>", data, "First", "One-level text insertion");
-			has("<h1>{{two.too}}</h1>", data, "Second", "Two-level text insertion");
-			has("<h1>{{three.tree.tee}}</h1>", data, "Third", "Three-level text insertion");
-			has("<h1>{{one}} {{two.too}} {{three.tree.tee}}</h1>", data, "First Second Third", "All-level text insertion");
-			has("<h1>{{bo}}</h1>", data, "<h1></h1>", "Missing value");
-			has("<h1>{{two.bo}}</h1>", data, "<h1></h1>", "Missing econd-level value");
-			hasNot("<h1>{{two.bo}}</h1>", data, "0", "No zero");
-			has("<h1>{{zero}}</h1>", data, "0", "Zero");
+			textIs("<h1>{{one}}</h1>", data, "First", "One-level text insertion");
+			textIs("<h1>{{two.too}}</h1>", data, "Second", "Two-level text insertion");
+			textIs("<h1>{{three.tree.tee}}</h1>", data, "Third", "Three-level text insertion");
+			textIs("<h1>{{one}} {{two.too}} {{three.tree.tee}}</h1>", data, "First Second Third", "All-level text insertion");
+			textIs("<h1>{{bo}}</h1>", data, "", "Missing value");
+			textIs("<h1>{{two.bo}}</h1>", data, "", "Missing econd-level value");
+			textIs("<h1>{{zero}}</h1>", data, "0", "Zero");
 			// TODO: What should {{no}} insert? "false" or ""?
-			has("<h1>{{yes}}</h1>", data, "true", "True");
+			textIs("<h1>{{yes}}</h1>", data, "true", "True");
 		});
 
 		// TODO: Test tokens inside comments
@@ -228,5 +227,9 @@ jQuery(function(){
 		equal(jQuery(':input', div).val(), txt, msg);
 	});
 
-	platter.tests.trivial(platter.plain, has, hasNot, hasJQ, hasNotJQ, hasValue);
+	var textIs = testwrap(function(tmpl, data, txt, msg, div) {
+		equal(jQuery(div).text(), txt, msg);
+	});
+
+	platter.tests.trivial(platter.plain, has, hasNot, hasJQ, hasNotJQ, hasValue, textIs);
 });

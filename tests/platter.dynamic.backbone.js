@@ -61,7 +61,11 @@ jQuery(function(){
 		equal(jQuery(':input', div).val(), txt, msg);
 	});
 
-	platter.tests.trivial(platter.plain, quickHas, quickHasNot, quickHasJQ, quickHasNotJQ, quickHasValue);
+	var quickTextIs = testwrap(function(tmpl, data, txt, msg, div) {
+		equal(jQuery(div).text(), txt, msg);
+	});
+
+	platter.tests.trivial(platter.plain, quickHas, quickHasNot, quickHasJQ, quickHasNotJQ, quickHasValue, quickTextIs);
 
 
 
