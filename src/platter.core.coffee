@@ -238,6 +238,7 @@ class templateCompiler
 		'class': "#el#.className = #v#"
 		'checked': "#el#.defaultChecked = #el#.checked = !!(#v#)"
 		'value': "#el#.value = #v#"
+		#'name': "#el#.name = #v#" #IE7 doesn't let you setAttribute name  TODO: Check and implement
 		#TODO: style in Firefox -> .style.cssText
 		#TODO: type in IE -> recreate the node, somehow
 
