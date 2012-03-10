@@ -117,7 +117,8 @@ class templateCompiler
 						if (realn!=n)
 							jsCur.v.removeAttribute n
 						if !(hasEscape v)
-							jsCur.v.setAttribute realn, v
+							if realn!=n
+								jsCur.v.setAttribute realn, v
 						else
 							if isEvent realn
 								@doEvent ret, js, jsCur, jsData, realn, v
