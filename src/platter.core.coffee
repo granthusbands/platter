@@ -128,17 +128,13 @@ class templateCompiler
 			else if jsCur.v.nodeType==8  # Comment
 				ct = jsCur.v.nodeValue
 				ct = unhideAttr ct
-				# We know comment nodes can only contain one {{...}}
-				if /^\{\{.*\}\}$/.exec(ct)
-					# We actually need a text node rather than a comment node
-					txt = document.createTextNode "."
-					jsCur.v.parentNode.insertBefore txt, jsCur.v
-					jsCur.v.parentNode.removeChild jsCur.v
-					jsCur.v = txt
-					@doSimple ret, js, jsCur, jsData, 'text', ct, @assigners['#text']
+				# We know our comment nodes can only contain one {{...}}
+				#if /^\{\{.*\}\}$/.exec(ct)
+					#TODO: Handle the block command therein
 			else if jsCur.v.nodeType==3 || jsCur.v.nodeType==4  # Text/CData
 				jsCur.v.nodeValue = unhideAttr jsCur.v.nodeValue
-			jsCur = js.addVar "#{jsEl}_ch", "#{jsCur}.nextSibling", jsCur.v.nextSibling;
+				@doSimple ret, js, jsCur, jsData, 'text', jsCur.v.nodeValue, @assigners['#text']
+			jsCur = js.addVar "#{jsEl}_ch", "#{jsCur}.nextSibling", jsCur.v.nextSibling
 
 	doEvent: (ret, js, jsCur, jsData, realn, v) ->
 		ev = realn.substr(2)
@@ -261,11 +257,9 @@ isPlatterAttr = (txt) ->
 
 # For the browser to parse our HTML, we need to make sure there's no strange text in odd places. Browsers love them some comments, though.
 commentEscapes = (txt) ->
-	txt = txt.replace /\{\{/g, "<!--{{"
-	txt = txt.replace /\}\}/g, "}}-->"
+	txt = txt.replace /\{\{([#\/].*?)\}\}/g, "<!--{{$1}}-->"
 uncommentEscapes = (txt) ->
-	txt = txt.replace /<!--\{\{/g, "{{"
-	txt = txt.replace /\}\}-->/g, "}}"
+	txt = txt.replace /<!--\{\{([#\/].*?)\}\}-->/g, "{{$1}}"
 
 hasEscape = (txt) ->
 	!!/\{\{/.exec txt

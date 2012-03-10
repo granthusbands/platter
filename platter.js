@@ -1,8 +1,23 @@
 (function() {
-  var bigDebug, bigDebugRan, clean, codegen, collprot, commentEscapes, defaultRunEvent, dynamicCompiler, dynamicRunner, exprvar, hasEscape, hideAttr, isEvent, jskeywords, modprot, never_equal_to_anything, plainCompiler, plainRunner, pullNode, runDOMEvent, runJQueryEvent, stackTrace, str, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName,
+  var bigDebug, bigDebugRan, browser, clean, codegen, collprot, commentEscapes, defaultRunEvent, dynamicCompiler, dynamicRunner, exprvar, hasEscape, hideAttr, isEvent, isPlatterAttr, jskeywords, modprot, never_equal_to_anything, plainCompiler, plainRunner, pullNode, runDOMEvent, runJQueryEvent, stackTrace, str, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; },
     __slice = Array.prototype.slice;
+
+  browser = {};
+
+  (function() {
+    var div;
+    div = document.createElement('div');
+    div.innerHTML = "<div> <span>a</span></div>";
+    if (div.firstChild.firstChild === div.firstChild.lastChild) {
+      browser.brokenWhitespace = true;
+    }
+    div.innerHTML = "a";
+    div.appendChild(document.createTextNode("b"));
+    div = div.cloneNode(true);
+    if (div.firstChild === div.lastChild) return browser.combinesTextNodes = true;
+  })();
 
   runDOMEvent = function(el, ev, fn) {
     el.addEventListener(ev, fn);
@@ -92,7 +107,7 @@
     };
 
     templateCompiler.prototype.compileInner = function(ret, js, jsEl, jsData) {
-      var att, attrs, ct, isSpecial, jsCur, n, n2, realn, txt, v, _i, _j, _len, _len2, _ref, _ref2, _results;
+      var att, attrs, ct, isSpecial, jsCur, n, n2, realn, v, _i, _j, _len, _len2, _ref, _ref2, _results;
       jsCur = js.addVar(jsEl + "_ch", "" + jsEl + ".firstChild", jsEl.v.firstChild);
       js.forceVar(jsCur);
       _results = [];
@@ -105,11 +120,13 @@
             _results2 = [];
             for (_i = 0, _len = _ref.length; _i < _len; _i++) {
               att = _ref[_i];
-              _results2.push({
-                n: att.nodeName,
-                realn: unhideAttrName(att.nodeName),
-                v: uncommentEscapes(unhideAttr(att.nodeValue))
-              });
+              if (isPlatterAttr(att.nodeName)) {
+                _results2.push({
+                  n: att.nodeName,
+                  realn: unhideAttrName(att.nodeName),
+                  v: uncommentEscapes(unhideAttr(att.nodeValue))
+                });
+              }
             }
             return _results2;
           })();
@@ -149,15 +166,9 @@
         } else if (jsCur.v.nodeType === 8) {
           ct = jsCur.v.nodeValue;
           ct = unhideAttr(ct);
-          if (/^\{\{.*\}\}$/.exec(ct)) {
-            txt = document.createTextNode(".");
-            jsCur.v.parentNode.insertBefore(txt, jsCur.v);
-            jsCur.v.parentNode.removeChild(jsCur.v);
-            jsCur.v = txt;
-            this.doSimple(ret, js, jsCur, jsData, 'text', ct, this.assigners['#text']);
-          }
         } else if (jsCur.v.nodeType === 3 || jsCur.v.nodeType === 4) {
           jsCur.v.nodeValue = unhideAttr(jsCur.v.nodeValue);
+          this.doSimple(ret, js, jsCur, jsData, 'text', jsCur.v.nodeValue, this.assigners['#text']);
         }
         _results.push(jsCur = js.addVar("" + jsEl + "_ch", "" + jsCur + ".nextSibling", jsCur.v.nextSibling));
       }
@@ -299,14 +310,16 @@
     return txt = txt.replace(/data-platter-(?!type(?:[^-a-z0-9_]|$))([a-z][-a-z0-9_]*)/g, "$1");
   };
 
+  isPlatterAttr = function(txt) {
+    return txt === 'type' || !!/data-platter-(?!type(?:[^-a-z0-9_]|$))([a-z][-a-z0-9_]*)/.exec(txt);
+  };
+
   commentEscapes = function(txt) {
-    txt = txt.replace(/\{\{/g, "<!--{{");
-    return txt = txt.replace(/\}\}/g, "}}-->");
+    return txt = txt.replace(/\{\{([#\/].*?)\}\}/g, "<!--{{$1}}-->");
   };
 
   uncommentEscapes = function(txt) {
-    txt = txt.replace(/<!--\{\{/g, "{{");
-    return txt = txt.replace(/\}\}-->/g, "}}");
+    return txt = txt.replace(/<!--\{\{([#\/].*?)\}\}-->/g, "{{$1}}");
   };
 
   hasEscape = function(txt) {
@@ -428,6 +441,7 @@
 
   this.platter = {
     str: str,
+    browser: browser,
     internal: {
       templateCompiler: templateCompiler,
       templateRunner: templateRunner,
@@ -965,65 +979,59 @@
 
   platter.dynamic = new dynamicCompiler;
 
-  modprot = Backbone.Model.prototype;
-
-  collprot = Backbone.Collection.prototype;
-
-  modprot.platter_hasKey = modprot.hasKey || function(n) {
-    return this.attributes.hasOwnProperty(n);
-  };
-
-  modprot.platter_watch = function(n, fn) {
-    var ev,
-      _this = this;
-    ev = "change:" + n;
-    this.on(ev, fn);
-    return $undo.add(function() {
-      return _this.off(ev, fn);
-    });
-  };
-
-  modprot.platter_get = function(n) {
-    if (this.platter_hasKey(n)) {
-      return this.get(n);
-    } else {
-      return this[n];
-    }
-  };
-
-  modprot.platter_set = function(n, v) {
-    return this.set(n, v);
-  };
-
-  collprot.platter_watchcoll = function(add, remove, replaceMe) {
-    var doRep, i, _ref,
-      _this = this;
-    doRep = function() {
-      return replaceMe(this);
+  if (window.Backbone) {
+    modprot = Backbone.Model.prototype;
+    collprot = Backbone.Collection.prototype;
+    modprot.platter_hasKey = modprot.hasKey || function(n) {
+      return this.attributes.hasOwnProperty(n);
     };
-    this.on('add', add);
-    this.on('remove', remove);
-    this.on('reset', doRep);
-    for (i = 0, _ref = this.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
-      add(this.at(i), this, {
-        index: i
+    modprot.platter_watch = function(n, fn) {
+      var ev,
+        _this = this;
+      ev = "change:" + n;
+      this.on(ev, fn);
+      return $undo.add(function() {
+        return _this.off(ev, fn);
       });
-    }
-    return $undo.add(function() {
-      _this.off('add', add);
-      _this.off('remove', remove);
-      return _this.off('reset', doRep);
+    };
+    modprot.platter_get = function(n) {
+      if (this.platter_hasKey(n)) {
+        return this.get(n);
+      } else {
+        return this[n];
+      }
+    };
+    modprot.platter_set = function(n, v) {
+      return this.set(n, v);
+    };
+    collprot.platter_watchcoll = function(add, remove, replaceMe) {
+      var doRep, i, _ref,
+        _this = this;
+      doRep = function() {
+        return replaceMe(this);
+      };
+      this.on('add', add);
+      this.on('remove', remove);
+      this.on('reset', doRep);
+      for (i = 0, _ref = this.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
+        add(this.at(i), this, {
+          index: i
+        });
+      }
+      return $undo.add(function() {
+        _this.off('add', add);
+        _this.off('remove', remove);
+        return _this.off('reset', doRep);
+      });
+    };
+    platter.internal.debuglist.push({
+      platter_haskey: modprot,
+      platter_watch: modprot,
+      platter_get: modprot,
+      platter_set: modprot,
+      platter_watchcoll: collprot
     });
-  };
-
-  platter.internal.debuglist.push({
-    platter_haskey: modprot,
-    platter_watch: modprot,
-    platter_get: modprot,
-    platter_set: modprot,
-    platter_watchcoll: collprot
-  });
-
-  platter.backbone = platter.dynamic;
+    platter.backbone = platter.dynamic;
+  }
 
 }).call(this);
