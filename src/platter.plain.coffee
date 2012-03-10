@@ -17,9 +17,9 @@ class plainCompiler extends platter.internal.templateCompiler
 
 	doSimple: (ret, js, jsCur, jsData, n, v, expr) ->
 		js.addExpr expr
-			.replace("#el#", "#{jsCur}")
-			.replace("#n#", js.toSrc n)
-			.replace("#v#", 
+			.replace(/#el#/g, "#{jsCur}")
+			.replace(/#n#/g, js.toSrc n)
+			.replace(/#v#/g, 
 				@escapesReplace v, (t) -> if t=='.' then "#{jsData}" else "this.runGetMulti(#{jsData}, #{js.toSrc t.split '.'})"
 			)
 	

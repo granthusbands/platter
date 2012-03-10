@@ -120,9 +120,9 @@ class dynamicCompiler extends platter.internal.templateCompiler
 			if t!='.'
 				esc[t] = js.addForcedVar "#{jsCur}_#{t}", "null", t
 		expr = expr
-			.replace("#el#", "#{jsCur}")
-			.replace("#n#", js.toSrc n)
-			.replace("#v#", 
+			.replace(/#el#/g, "#{jsCur}")
+			.replace(/#n#/g, js.toSrc n)
+			.replace(/#v#/g, 
 				@escapesReplace v, (t) -> if t=='.' then jsData else esc[t]
 			)
 		for escn, escvar of esc
