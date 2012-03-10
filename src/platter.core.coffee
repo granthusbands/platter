@@ -125,7 +125,8 @@ class templateCompiler
 							else
 								n2 = if @assigners[realn] then realn else '#default'
 								@doSimple ret, js, jsCur, jsData, realn, v, @assigners[n2]
-					@compileInner ret, js, jsCur, jsData
+					if jsCur.v.tagName.toLowerCase()!='textarea'
+						@compileInner ret, js, jsCur, jsData
 			else if jsCur.v.nodeType==8  # Comment
 				ct = jsCur.v.nodeValue
 				ct = unhideAttr ct
