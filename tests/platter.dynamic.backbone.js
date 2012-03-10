@@ -541,7 +541,7 @@ jQuery(function(){
 				h23: ruleElCount('h2', 3),
 				h2A: ruleElText('h2', 'A'),
 				h2AC: ruleElText('h2', 'AC'),
-				h2ABC: ruleElText('h2', 'ABC'),
+				h2ABC: ruleElText('h2', 'ABC')
 			},
 			testsstart: {h1:1, h20:1, h30:1},
 			template:
@@ -662,7 +662,7 @@ jQuery(function(){
 				h23: ruleElCount('h2', 3),
 				h2A: ruleElText('h2', 'A'),
 				h2AC: ruleElText('h2', 'AC'),
-				h2ABC: ruleElText('h2', 'ABC'),
+				h2ABC: ruleElText('h2', 'ABC')
 			},
 			testsstart: {h1:1, h20:1, h30:1},
 			template:
