@@ -86,7 +86,7 @@ class templateCompiler
 				  n: att.nodeName
 				  realn: unhideAttrName att.nodeName
 				  v: uncommentEscapes unhideAttr att.nodeValue
-				  } for att in jsCur.v.attributes)
+				  } for att in jsCur.v.attributes when isPlatterAttr att.nodeName)
 				if jsCur.v.tagName.toLowerCase()=='textarea' && hasEscape jsCur.v.value
 					attrs.push
 						n: 'value'
@@ -241,6 +241,9 @@ unhideAttr = (txt) ->
 	txt = txt.replace /data-platter-(?!type=)([a-z][-a-z0-9_]*=)/g, "$1"
 unhideAttrName = (txt) ->
 	txt = txt.replace /data-platter-(?!type(?:[^-a-z0-9_]|$))([a-z][-a-z0-9_]*)/g, "$1"
+# Old versions of IE like to introduce arbitrary extra attributes; we avoid them.
+isPlatterAttr = (txt) ->
+	txt=='type'||!!/data-platter-(?!type(?:[^-a-z0-9_]|$))([a-z][-a-z0-9_]*)/.exec(txt)
 
 # For the browser to parse our HTML, we need to make sure there's no strange text in odd places. Browsers love them some comments, though.
 commentEscapes = (txt) ->
