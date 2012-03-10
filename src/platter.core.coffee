@@ -1,3 +1,17 @@
+browser = {}
+
+do ->
+	div = document.createElement('div')
+	div.innerHTML = "<div> <span>a</span></div>"
+	if div.firstChild.firstChild==div.firstChild.lastChild
+		browser.brokenWhitespace = true
+	div.innerHTML = "a"
+	div.appendChild document.createTextNode "b"
+	div = div.cloneNode(true)
+	if div.firstChild==div.lastChild
+		browser.combinesTextNodes = true
+
+
 runDOMEvent = (el, ev, fn) ->
 	# TODO: Polyfill oninput:
 	# IE <=8: attachEvent onpropertychange, ev.propertyName=='value'
@@ -328,6 +342,7 @@ class undoer
 this.$undo = new undoer
 this.platter =
 	str: str
+	browser: browser
 	internal:
 		templateCompiler: templateCompiler
 		templateRunner: templateRunner

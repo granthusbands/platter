@@ -18,10 +18,13 @@ jQuery(function(){
 		equal(testdiv.innerHTML, "test", "removeAll");
 		equal(testdiv.firstChild, testdiv.lastChild, "removeAll");
 
-		var frag = platter.plain.htmlToFrag(" <div>blah</div> ");
-		equal(frag.firstChild.nodeValue, " ", "htmlToFrag whitespace");
-		equal(frag.lastChild.nodeValue, " ", "htmlToFrag whitespace");
-		equal(frag.firstChild.nextSibling.innerHTML, "blah", "htmltoFrag div");
+		// IE8 doesn't have whitespace textnodes in its DOM
+		if (!platter.browser.brokenWhitespace) {
+			var frag = platter.plain.htmlToFrag(" <div>blah</div> ");
+			equal(frag.firstChild.nodeValue, " ", "htmlToFrag whitespace");
+			equal(frag.lastChild.nodeValue, " ", "htmlToFrag whitespace");
+			equal(frag.firstChild.nextSibling.innerHTML, "blah", "htmltoFrag div");
+		}
 
 		var frag = platter.plain.tmplToFrag(" <div>blah</div> ");
 		equal(frag.firstChild.innerHTML, "blah", "tmpltoFrag trimmed pre");
