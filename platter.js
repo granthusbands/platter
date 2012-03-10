@@ -151,7 +151,7 @@
               _ref2 = attrs[_j], n = _ref2.n, realn = _ref2.realn, v = _ref2.v;
               if (realn !== n) jsCur.v.removeAttribute(n);
               if (!(hasEscape(v))) {
-                jsCur.v.setAttribute(realn, v);
+                if (realn !== n) jsCur.v.setAttribute(realn, v);
               } else {
                 if (isEvent(realn)) {
                   this.doEvent(ret, js, jsCur, jsData, realn, v);
@@ -161,7 +161,9 @@
                 }
               }
             }
-            this.compileInner(ret, js, jsCur, jsData);
+            if (jsCur.v.tagName.toLowerCase() !== 'textarea') {
+              this.compileInner(ret, js, jsCur, jsData);
+            }
           }
         } else if (jsCur.v.nodeType === 8) {
           ct = jsCur.v.nodeValue;
