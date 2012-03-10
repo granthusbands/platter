@@ -5,11 +5,20 @@ do ->
 	div.innerHTML = "<div> <span>a</span></div>"
 	if div.firstChild.firstChild==div.firstChild.lastChild
 		browser.brokenWhitespace = true
+
 	div.innerHTML = "a"
 	div.appendChild document.createTextNode "b"
 	div = div.cloneNode(true)
 	if div.firstChild==div.lastChild
 		browser.combinesTextNodes = true
+
+	div.innerHTML = '<div></div>'
+	div2 = div.firstChild
+	1 for att in div2.attributes
+	div2 = div2.cloneNode true
+	div2.setAttribute 'id', 'b'
+	if div2.getAttributeNode('id') && div2.getAttributeNode('id').nodeValue != 'b'
+		browser.attributeIterationBreaksClone = true
 
 
 runDOMEvent = (el, ev, fn) ->
@@ -96,11 +105,7 @@ class templateCompiler
 		while (jsCur.v)
 			if jsCur.v.nodeType==1  # Element
 				isSpecial = false
-				attrs = ({
-				  n: att.nodeName
-				  realn: unhideAttrName att.nodeName
-				  v: uncommentEscapes unhideAttr att.nodeValue
-				  } for att in jsCur.v.attributes when isPlatterAttr att.nodeName)
+				attrs = attrList jsCur.v
 				if jsCur.v.tagName.toLowerCase()=='textarea' && hasEscape jsCur.v.value
 					attrs.push
 						n: 'value'
@@ -268,6 +273,15 @@ hasEscape = (txt) ->
 
 str = (o) ->
 	o ? ''
+
+attrList = (node) ->
+	if browser.attributeIterationBreaksClone
+		node = node.cloneNode false
+	({
+		n: att.nodeName
+		realn: unhideAttrName att.nodeName
+		v: uncommentEscapes unhideAttr att.nodeValue
+	} for att in node.attributes when isPlatterAttr att.nodeName)
 
 pullNode = (node) ->
 	pre = document.createComment ""

@@ -1,5 +1,5 @@
 (function() {
-  var bigDebug, bigDebugRan, browser, clean, codegen, collprot, commentEscapes, defaultRunEvent, dynamicCompiler, dynamicRunner, exprvar, hasEscape, hideAttr, isEvent, isPlatterAttr, jskeywords, modprot, never_equal_to_anything, plainCompiler, plainRunner, pullNode, runDOMEvent, runJQueryEvent, stackTrace, str, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName,
+  var attrList, bigDebug, bigDebugRan, browser, clean, codegen, collprot, commentEscapes, defaultRunEvent, dynamicCompiler, dynamicRunner, exprvar, hasEscape, hideAttr, isEvent, isPlatterAttr, jskeywords, modprot, never_equal_to_anything, plainCompiler, plainRunner, pullNode, runDOMEvent, runJQueryEvent, stackTrace, str, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; },
     __slice = Array.prototype.slice;
@@ -7,7 +7,7 @@
   browser = {};
 
   (function() {
-    var div;
+    var att, div, div2, _i, _len, _ref;
     div = document.createElement('div');
     div.innerHTML = "<div> <span>a</span></div>";
     if (div.firstChild.firstChild === div.firstChild.lastChild) {
@@ -16,7 +16,19 @@
     div.innerHTML = "a";
     div.appendChild(document.createTextNode("b"));
     div = div.cloneNode(true);
-    if (div.firstChild === div.lastChild) return browser.combinesTextNodes = true;
+    if (div.firstChild === div.lastChild) browser.combinesTextNodes = true;
+    div.innerHTML = '<div></div>';
+    div2 = div.firstChild;
+    _ref = div2.attributes;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      att = _ref[_i];
+      1;
+    }
+    div2 = div2.cloneNode(true);
+    div2.setAttribute('id', 'b');
+    if (div2.getAttributeNode('id') && div2.getAttributeNode('id').nodeValue !== 'b') {
+      return browser.attributeIterationBreaksClone = true;
+    }
   })();
 
   runDOMEvent = function(el, ev, fn) {
@@ -107,29 +119,14 @@
     };
 
     templateCompiler.prototype.compileInner = function(ret, js, jsEl, jsData) {
-      var att, attrs, ct, isSpecial, jsCur, n, n2, realn, v, _i, _j, _len, _len2, _ref, _ref2, _results;
+      var attrs, ct, isSpecial, jsCur, n, n2, realn, v, _i, _j, _len, _len2, _ref, _ref2, _results;
       jsCur = js.addVar(jsEl + "_ch", "" + jsEl + ".firstChild", jsEl.v.firstChild);
       js.forceVar(jsCur);
       _results = [];
       while (jsCur.v) {
         if (jsCur.v.nodeType === 1) {
           isSpecial = false;
-          attrs = (function() {
-            var _i, _len, _ref, _results2;
-            _ref = jsCur.v.attributes;
-            _results2 = [];
-            for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-              att = _ref[_i];
-              if (isPlatterAttr(att.nodeName)) {
-                _results2.push({
-                  n: att.nodeName,
-                  realn: unhideAttrName(att.nodeName),
-                  v: uncommentEscapes(unhideAttr(att.nodeValue))
-                });
-              }
-            }
-            return _results2;
-          })();
+          attrs = attrList(jsCur.v);
           if (jsCur.v.tagName.toLowerCase() === 'textarea' && hasEscape(jsCur.v.value)) {
             attrs.push({
               n: 'value',
@@ -330,6 +327,24 @@
 
   str = function(o) {
     return o != null ? o : '';
+  };
+
+  attrList = function(node) {
+    var att, _i, _len, _ref, _results;
+    if (browser.attributeIterationBreaksClone) node = node.cloneNode(false);
+    _ref = node.attributes;
+    _results = [];
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      att = _ref[_i];
+      if (isPlatterAttr(att.nodeName)) {
+        _results.push({
+          n: att.nodeName,
+          realn: unhideAttrName(att.nodeName),
+          v: uncommentEscapes(unhideAttr(att.nodeValue))
+        });
+      }
+    }
+    return _results;
   };
 
   pullNode = function(node) {
@@ -719,7 +734,7 @@
     };
 
     plainCompiler.prototype.doSimple = function(ret, js, jsCur, jsData, n, v, expr) {
-      return js.addExpr(expr.replace("#el#", "" + jsCur).replace("#n#", js.toSrc(n)).replace("#v#", this.escapesReplace(v, function(t) {
+      return js.addExpr(expr.replace(/#el#/g, "" + jsCur).replace(/#n#/g, js.toSrc(n)).replace(/#v#/g, this.escapesReplace(v, function(t) {
         if (t === '.') {
           return "" + jsData;
         } else {
@@ -938,7 +953,7 @@
           return esc[t] = js.addForcedVar("" + jsCur + "_" + t, "null", t);
         }
       });
-      expr = expr.replace("#el#", "" + jsCur).replace("#n#", js.toSrc(n)).replace("#v#", this.escapesReplace(v, function(t) {
+      expr = expr.replace(/#el#/g, "" + jsCur).replace(/#n#/g, js.toSrc(n)).replace(/#v#/g, this.escapesReplace(v, function(t) {
         if (t === '.') {
           return jsData;
         } else {
