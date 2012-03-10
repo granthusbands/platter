@@ -283,7 +283,7 @@
       '#text': "#el#.nodeValue = #v#",
       '#default': "#el#.setAttribute(#n#, #v#)",
       'class': "#el#.className = #v#",
-      'checked': "#el#.checked = !!(#v#)",
+      'checked': "#el#.defaultChecked = #el#.checked = !!(#v#)",
       'value': "#el#.value = #v#"
     };
 
