@@ -4,13 +4,13 @@ do ->
 	div = document.createElement('div')
 	div.innerHTML = "<div> <span>a</span></div>"
 	if div.firstChild.firstChild==div.firstChild.lastChild
-		browser.brokenWhitespace = true
+		browser.brokenWhitespace = true  # IE8 and earlier, so far
 
 	div.innerHTML = "a"
 	div.appendChild document.createTextNode "b"
 	div = div.cloneNode(true)
 	if div.firstChild==div.lastChild
-		browser.combinesTextNodes = true
+		browser.combinesTextNodes = true  # IE8 and earlier, so far
 
 	div.innerHTML = '<div></div>'
 	div2 = div.firstChild
@@ -18,7 +18,7 @@ do ->
 	div2 = div2.cloneNode true
 	div2.setAttribute 'id', 'b'
 	if div2.getAttributeNode('id') && div2.getAttributeNode('id').nodeValue != 'b'
-		browser.attributeIterationBreaksClone = true
+		browser.attributeIterationBreaksClone = true  # Only IE7 affected, so far.
 
 
 runDOMEvent = (el, ev, fn) ->
