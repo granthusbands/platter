@@ -646,7 +646,7 @@ jQuery(function(){
 					name: "Replace objs with garbage",
 					go: function(data){ data.set('objs', 'garbage'); },
 					tests: {h2ABC:0, h22:0, h20:1}
-				},
+				}
 			]
 		},
 
@@ -767,7 +767,7 @@ jQuery(function(){
 					name: "Replace objs with garbage",
 					go: function(data){ data.set('a', {b: {objs:'garbage'}}); },
 					tests: {h2ABC:0, h22:0, h20:1}
-				},
+				}
 			]
 		}
 	];
