@@ -568,9 +568,17 @@
 
   inops['?'].pri = specpri;
 
+  inops[':'].match = '?';
+
+  inops[':'].newpri = 15;
+
   inops['('].pri = specpri;
 
+  inops[')'].match = '(';
+
   inops['['].pri = specpri;
+
+  inops[']'].match = '[';
 
   inops[':'].isSpecial = true;
 
@@ -601,7 +609,6 @@
         opstack.push(op);
       }
       m = valre.exec(txt);
-      op = null;
       if (m[1] || m[2] || m[4]) {
         lastval = JSON.stringify(JSON.parse(m[1] || m[2] || m[4]));
       } else if (m[3]) {
@@ -614,6 +621,7 @@
       }
       txt = m[6];
       while (true) {
+        op = null;
         m = inopre.exec(txt);
         if (!m) throw new Error("Unrecognised input");
         txt = m[2];
@@ -629,27 +637,6 @@
           opstack.pop();
         }
         if (opdef.isSpecial) {
-          if (optxt === ")") {
-            if (top.txt === "(") {
-              top.inner = lastval;
-              lastval = top;
-              opstack.pop();
-              continue;
-            } else {
-              throw new Error("Unmatched '" + optxt + "'");
-            }
-          }
-          if (optxt === ":") {
-            if (top.txt === "?") {
-              top.inner = lastval;
-              top.pri = 15;
-              op = top;
-              opstack.pop();
-              break;
-            } else {
-              throw new Error("Unmatched '" + optxt + "'");
-            }
-          }
           if (optxt === "()") {
             lastval = {
               left: lastval,
@@ -658,17 +645,15 @@
             };
             continue;
           }
-          if (optxt === "]") {
-            if (top.txt === "[") {
-              top.inner = lastval;
-              lastval = top;
-              opstack.pop();
-              continue;
-            } else {
-              throw new Error("Unmatched '" + optxt + "'");
-            }
+          if (opdef.match && opdef.match !== top.txt) {
+            throw new Error("Unmatched '" + optxt + "'");
           }
-          throw new Error("Unrecognised closing " + optxt);
+          top.inner = lastval;
+          opstack.pop();
+          op = top;
+          lastval = top;
+          if (!opdef.newpri) continue;
+          top.pri = opdef.newpri;
         }
         break;
       }

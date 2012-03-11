@@ -168,8 +168,12 @@ populate preopdefs, preops
 inops[''] = {upri:1000, isend:true}
 # These can't be unwound until a matching operator comes along
 inops['?'].pri = specpri
+inops[':'].match = '?'
+inops[':'].newpri = 15
 inops['('].pri = specpri
+inops[')'].match = '('
 inops['['].pri = specpri
+inops[']'].match = '['
 # An aforementioned matching operator
 inops[':'].isSpecial = true
 # Making -- and ++ unsupported. These need special handling because otherise 1++2 would parse as 1 + +2 and --2 would parse as - -2.
@@ -200,7 +204,6 @@ jslikeparse = (txt, fnexpr) ->
 			#alert "Expr:#{m[1]}\n#{JSON.stringify lastval}\n#{JSON.stringify opstack}"
 		# Expecting a value
 		m = valre.exec txt
-		op = null
 		if m[1]||m[2]||m[4] #ident,number,strdoub
 			lastval = JSON.stringify JSON.parse m[1]||m[2]||m[4]
 		else if m[3] # strsing: Convert to strdoub
@@ -214,6 +217,7 @@ jslikeparse = (txt, fnexpr) ->
 		txt = m[6]
 		# Expecting infix operator (I wish coffeescript had do-while)
 		while true
+			op = null
 			m = inopre.exec txt
 			if !m
 				throw new Error("Unrecognised input")
@@ -229,36 +233,21 @@ jslikeparse = (txt, fnexpr) ->
 				if (lastval.pri == specpri)
 					throw new Error("Unmatched '#{lastval.txt}'");
 				opstack.pop()
+			# Special things are those that aren't simply binary operators or open-brackets. Like close-brackets and :.
 			if opdef.isSpecial
-				if optxt==")"
-					if top.txt=="("
-						top.inner = lastval
-						lastval = top
-						opstack.pop()
-						continue # Stay in infix mode
-					else
-						throw new Error("Unmatched '#{optxt}'")
-				if optxt==":"
-					if top.txt=="?"
-						top.inner = lastval
-						top.pri = 15
-						op = top
-						opstack.pop()
-						break # Continue to expr mode
-					else
-						throw new Error("Unmatched '#{optxt}'")
 				if optxt=="()"
 					lastval = {left:lastval, pri:2, txt:"()"};
 					continue # Stay in infix mode
-				if optxt=="]"
-					if top.txt=="["
-						top.inner = lastval
-						lastval = top
-						opstack.pop()
-						continue # Stay in infix mode
-					else
-						throw new Error("Unmatched '#{optxt}'")
-				throw new Error("Unrecognised closing #{optxt}")
+				if opdef.match && opdef.match!=top.txt
+					throw new Error("Unmatched '#{optxt}'")
+				top.inner = lastval
+				opstack.pop()
+				op = top # Unused if we 'continue'
+				lastval = top #Unusued if we 'break'
+				if (!opdef.newpri)
+					continue # We want another operator, keep on infixing
+				# We got a new priority (currently used for ':') so we move on
+				top.pri = opdef.newpri
 			break
 		if opdef.isend
 			return lastval
