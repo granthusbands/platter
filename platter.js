@@ -1,5 +1,5 @@
 (function() {
-  var attrList, bigDebug, bigDebugRan, browser, clean, codegen, collprot, commentEscapes, defaultRunEvent, dynamicCompiler, dynamicRunner, e, expropdefs, exprvar, hasEscape, hideAttr, inopdefs, inopre, inops, isEvent, isPlatterAttr, jskeywords, jslikeparse, jslikeunparse, modprot, n, never_equal_to_anything, plainCompiler, plainRunner, populate, preopdefs, preopre, preops, pullNode, runDOMEvent, runJQueryEvent, stackTrace, str, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName, unsupported, valre,
+  var attrList, bigDebug, bigDebugRan, browser, clean, codegen, collprot, commentEscapes, defaultRunEvent, dynamicCompiler, dynamicRunner, e, expropdefs, exprvar, hasEscape, hideAttr, inopdefs, inopre, inops, isEvent, isPlatterAttr, jskeywords, jslikeparse, jslikeunparse, modprot, n, never_equal_to_anything, plainCompiler, plainRunner, populate, preopdefs, preopre, preops, pullNode, runDOMEvent, runJQueryEvent, specpri, stackTrace, str, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName, unsupported, valre,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; },
     __slice = Array.prototype.slice;
@@ -479,12 +479,15 @@
     }
   };
 
+  specpri = 101;
+
   preopdefs = {
     0.99: "new",
     3: "++ --",
-    3.99: "! ~ - + typeof void",
-    101: "("
+    3.99: "! ~ - + typeof void"
   };
+
+  preopdefs[specpri] = "(";
 
   inopdefs = {
     1: '[',
@@ -509,11 +512,11 @@
     100: ') ] ()'
   };
 
-  inopre = /^\s*(?:(\(\)|\)|\])|(\binstanceof\b|>>>|===|!==|\bin\b|>=|<=|\+\+|\-\-|==|!=|<<|>>|&&|\|\||\(|\+|\-|\[|\*|\/|<|&|\^|\||%|>|,|:|\?)(?=[^\[\*\/%<>=&\^\|,:\?]|$)|[\[\*\/%<>=&\^\|,:\?]+|$)(.*)/;
+  inopre = /^\s*(\(\)|\)|\]|(?:\binstanceof\b|>>>|===|!==|\bin\b|>=|<=|\+\+|\-\-|==|!=|<<|>>|&&|\|\||\(|\+|\-|\[|\*|\/|<|&|\^|\||%|>|,|:|\?)(?=[^\[\*\/%<>=&\^\|,:\?]|$)|[\+\-\(!~\\\[\*\/%<>=&\^\|,:\?\)\]]+|$)(.*)/;
 
   preopre = /^\s*(?:(\btypeof\b|\bvoid\b|\bnew\b|\+\+|\-\-|\(|!|~|\-|\+)(?=[^\[\*\/%<>=&\^\|,:\?])|[\[\(\+\-\*\/%<>=!&\^\|,:\?]+)(.*)/;
 
-  valre = /^(?:(true|false|null)|(\d+\.?\d*(?:e[-+]?\d+)?)|('(?:\\.|[^'])*')|("(?:\\.|[^"])*")|(.*?))(\s*(?:(\(\)|\)|\])|(\binstanceof\b|>>>|===|!==|\bin\b|>=|<=|\+\+|\-\-|==|!=|<<|>>|&&|\|\||\(|\+|\-|\[|\*|\/|<|&|\^|\||%|>|,|:|\?)(?=[^\[\*\/%<>=&\^\|,:\?]|$)|[\[\*\/%<>=&\^\|,:\?]+|$)(.*))/;
+  valre = /^(?:(\btrue\b|\bfalse\b|\bnull\b)|(\d+\.?\d*(?:e[-+]?\d+)?)|('(?:\\.|[^'])*')|("(?:\\.|[^"])*")|(.*?))\s*((\(\)|\)|\]|(?:\binstanceof\b|>>>|===|!==|\bin\b|>=|<=|\+\+|\-\-|==|!=|<<|>>|&&|\|\||\(|\+|\-|\[|\*|\/|<|&|\^|\||%|>|,|:|\?)(?=[^\[\*\/%<>=&\^\|,:\?]|$)|[\+\-\(!~\\\[\*\/%<>=&\^\|,:\?\)\]]+|$).*)/;
 
   inops = {};
 
@@ -563,11 +566,11 @@
     isend: true
   };
 
-  inops['?'].pri = 101;
+  inops['?'].pri = specpri;
 
-  inops['('].pri = 101;
+  inops['('].pri = specpri;
 
-  inops['['].pri = 101;
+  inops['['].pri = specpri;
 
   inops[':'].isSpecial = true;
 
@@ -612,13 +615,17 @@
       txt = m[6];
       while (true) {
         m = inopre.exec(txt);
-        txt = m[3];
-        optxt = m[1] || m[2] || '';
+        if (!m) throw new Error("Unrecognised input");
+        txt = m[2];
+        optxt = m[1] || '';
         opdef = inops[optxt];
         if (!opdef) throw new Error("" + optxt + " operator not supported");
         while ((top = opstack.length && opstack[opstack.length - 1]).pri <= opdef.upri) {
           top.right = lastval;
           lastval = top;
+          if (lastval.pri === specpri) {
+            throw new Error("Unmatched '" + lastval.txt + "'");
+          }
           opstack.pop();
         }
         if (opdef.isSpecial) {
@@ -629,7 +636,7 @@
               opstack.pop();
               continue;
             } else {
-              throw new Error("Unmatched round bracket");
+              throw new Error("Unmatched '" + optxt + "'");
             }
           }
           if (optxt === ":") {
@@ -640,7 +647,7 @@
               opstack.pop();
               break;
             } else {
-              throw new Error("Cannot find '?' for ':'");
+              throw new Error("Unmatched '" + optxt + "'");
             }
           }
           if (optxt === "()") {
@@ -658,7 +665,7 @@
               opstack.pop();
               continue;
             } else {
-              throw new Error("Unmatched square bracket");
+              throw new Error("Unmatched '" + optxt + "'");
             }
           }
           throw new Error("Unrecognised closing " + optxt);

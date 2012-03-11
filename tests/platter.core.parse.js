@@ -86,11 +86,21 @@ jQuery(function(){
 		roundTrip("a()", "#a#()");
 		roundTrip("a(b)", "#a#(#b#)");
 		roundTrip("a(b,c)", "#a#(#b#, #c#)");
+	});
+	test("Bad ops", function(){
 		expectKaboom("--a", "-- operator not supported");
 		expectKaboom("++a", "++ operator not supported");
-		expectKaboom("a--", "-- operator not supported");
-		expectKaboom("a++", "++ operator not supported");
-		// TODO: Test other unsupported ops, like +=, ^&^&^ and so on.
+		knownbad = ['=', '+=', '-=', '*=', '/=', '%=', '<<=', '>>=', '>>>=', '&=', '^=', '|=']
+		for (var i=0; i<knownbad.length; ++i)
+			expectKaboom("a"+knownbad[i]+"b", knownbad[i]+" operator not supported");
+		expectKaboom("a&^b", "&^ operator not supported");
+		expectKaboom("1)", "Unmatched ')'");
+		expectKaboom("(1", "Unmatched '('");
+		expectKaboom("1[1", "Unmatched '['");
+		expectKaboom("1]", "Unmatched ']'");
+		expectKaboom("1:", "Unmatched ':'");
+		expectKaboom("(a[1)", "Unmatched ')'");
+		expectKaboom("a[(1]", "Unmatched ']'");
 	});
 	test("Binop Precedence", function(){
 		module("Parser");
