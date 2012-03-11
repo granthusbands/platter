@@ -13,6 +13,7 @@ task 'build', 'Build platter.js', (options) ->
     '-j'
     'platter.js'
     'src/platter.core.coffee'
+    'src/platter.core.parse.coffee'
     'src/platter.core.codegen.coffee'
     'src/platter.plain.coffee'
     'src/platter.dynamic.coffee'

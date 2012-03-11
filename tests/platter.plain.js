@@ -48,6 +48,8 @@ jQuery(function(){
 			textIs("<h1>{{zero}}</h1>", data, "0", "Zero");
 			// TODO: What should {{no}} insert? "false" or ""?
 			textIs("<h1>{{yes}}</h1>", data, "true", "True");
+			textIs("<h1>{{1+2}}</h1>", data, "3", "1+2==3");
+			textIs("<h1>{{one+two.too}}</h1>", data, "FirstSecond", "String addition");
 		});
 
 		// TODO: Test tokens inside comments
@@ -125,6 +127,8 @@ jQuery(function(){
 			// TODO: Maybe empty arrays should be false. Probably not, though.
 			hasJQ("<h1 if='{{empty}}'>Hey</h1>", data, "h1", "Empty array");
 			// TODO: Maybe decide on and test what if="{{a}} {{b}}" should do
+			hasJQ("<h1 if='{{one<\"ZZZ\"}}'>Hey</h1>", data, "h1", "Comparison true");
+			hasNotJQ("<h1 if='{{one>=\"ZZZ\"}}'>Hey</h1>", data, "h1", "Comparison false");
 		});
 
 		test("Attribute: unless", function(){

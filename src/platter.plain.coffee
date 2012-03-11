@@ -20,19 +20,19 @@ class plainCompiler extends platter.internal.templateCompiler
 			.replace(/#el#/g, "#{jsCur}")
 			.replace(/#n#/g, js.toSrc n)
 			.replace(/#v#/g, 
-				@escapesReplace v, (t) -> if t=='.' then "#{jsData}" else "this.runGetMulti(#{jsData}, #{js.toSrc t.split '.'})"
+				@escapesParse v, (t) -> if t=='.' then "#{jsData}" else "this.runGetMulti(#{jsData}, #{js.toSrc t.split '.'})"
 			)
 	
 	doIf: (ret, js, jsCur, jsPost, jsData, val, inner) ->
-		val = @escapesReplace val, (t) => "this.runGetMulti(#{jsData}, #{js.toSrc t.split '.'})"
+		val = @escapesParse val, (t) => "this.runGetMulti(#{jsData}, #{js.toSrc t.split '.'})"
 		js.addExpr "if (#{val}) #{jsPost}.parentNode.insertBefore(this.#{jsCur}.run(#{jsData}, false), #{jsPost})"
 
 	doUnless: (ret, js, jsCur, jsPost, jsData, val, inner) ->
-		val = @escapesReplace val, (t) => "this.runGetMulti(#{jsData}, #{js.toSrc t.split '.'})"
+		val = @escapesParse val, (t) => "this.runGetMulti(#{jsData}, #{js.toSrc t.split '.'})"
 		js.addExpr "if (!(#{val})) #{jsPost}.parentNode.insertBefore(this.#{jsCur}.run(#{jsData}, false), #{jsPost})"
 
 	doForEach: (ret, js, jsCur, jsPost, jsData, val, inner) ->
-		val = @escapesReplace val, (t) => "this.runGetMulti(#{jsData}, #{js.toSrc t.split '.'})"
+		val = @escapesParse val, (t) => "this.runGetMulti(#{jsData}, #{js.toSrc t.split '.'})"
 		jsFor = js.addVar "#{jsCur}_for", val
 		js.forceVar jsPost
 		js.addExpr """

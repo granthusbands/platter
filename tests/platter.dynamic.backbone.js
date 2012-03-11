@@ -459,9 +459,10 @@ jQuery(function(){
 				h4: ruleElExists('h4'),
 				h5: ruleElExists('h5'),
 				h6: ruleElExists('h6'),
-				p: ruleElExists('p')
+				p: ruleElExists('p'),
+				div: ruleElExists('div')
 			},
-			testsstart: {'h1':1},
+			testsstart: {h1:1},
 			template:
 				"<h1 if='bogus'>a</h1>"+
 				"<h2 if='{{one}}'>b</h2>"+
@@ -469,8 +470,9 @@ jQuery(function(){
 				"<h4 if='{{three.tree.tee}}'>d</h4>"+
 				"<h5 if='{{yes}}'>e</h5>"+
 				"<h6 if='{{no}}'>f</h6>"+
-				"<p if='{{zero}}'></p>",
-			actions: onetwothreetests({h2:1}, {h3:1}, {h4:1}).concat([
+				"<p if='{{zero}}'></p>"+
+				"<div if='{{one==\"First\"}}'>h</div>",
+			actions: onetwothreetests({h2:1, div:1}, {h3:1}, {h4:1}).concat([
 				{
 					name: "Set zero to 0",
 					go: function(data){ data.set('zero', 0); },

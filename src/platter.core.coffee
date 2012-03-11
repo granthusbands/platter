@@ -231,6 +231,11 @@ class templateCompiler
 		if (last<txt.length)
 			s += '+"' + txt.substring(last, txt.length).replace(/[\\\"]/g, "\\$1") + '"'
 		s.slice(1)
+
+	escapesParse: (txt, fn) ->
+		@escapesReplace txt, (v) ->
+			op = platter.internal.jslikeparse v, (t2) -> ""+fn(t2)
+			platter.internal.jslikeunparse op
 	
 	assigners:
 		'#text': "#el#.nodeValue = #v#"

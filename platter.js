@@ -1,5 +1,5 @@
 (function() {
-  var attrList, bigDebug, bigDebugRan, browser, clean, codegen, collprot, commentEscapes, defaultRunEvent, dynamicCompiler, dynamicRunner, exprvar, hasEscape, hideAttr, isEvent, isPlatterAttr, jskeywords, modprot, never_equal_to_anything, plainCompiler, plainRunner, pullNode, runDOMEvent, runJQueryEvent, stackTrace, str, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName,
+  var attrList, bigDebug, bigDebugRan, browser, clean, codegen, collprot, commentEscapes, defaultRunEvent, dynamicCompiler, dynamicRunner, e, expropdefs, exprvar, hasEscape, hideAttr, inopdefs, inopre, inops, isEvent, isPlatterAttr, jskeywords, jslikeparse, jslikeunparse, modprot, n, never_equal_to_anything, plainCompiler, plainRunner, populate, preopdefs, preopre, preops, pullNode, runDOMEvent, runJQueryEvent, stackTrace, str, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName, unsupported, valre,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; },
     __slice = Array.prototype.slice;
@@ -279,6 +279,16 @@
       return s.slice(1);
     };
 
+    templateCompiler.prototype.escapesParse = function(txt, fn) {
+      return this.escapesReplace(txt, function(v) {
+        var op;
+        op = platter.internal.jslikeparse(v, function(t2) {
+          return "" + fn(t2);
+        });
+        return platter.internal.jslikeunparse(op);
+      });
+    };
+
     templateCompiler.prototype.assigners = {
       '#text': "#el#.nodeValue = #v#",
       '#default': "#el#.setAttribute(#n#, #v#)",
@@ -467,6 +477,240 @@
       subs: {},
       bigDebug: bigDebug
     }
+  };
+
+  preopdefs = {
+    0.99: "new",
+    3: "++ --",
+    3.99: "! ~ - + typeof void",
+    101: "("
+  };
+
+  inopdefs = {
+    1: '[',
+    2: '(',
+    3: '++ --',
+    5: '* / %',
+    6: '+ -',
+    7: '<< >> >>>',
+    8: '< <= > >= in instanceof',
+    9: '== != === !==',
+    10: '&',
+    11: '^',
+    12: '|',
+    13: '&&',
+    14: '||',
+    14.99: '?',
+    17: ',',
+    100: ':'
+  };
+
+  expropdefs = {
+    100: ') ] ()'
+  };
+
+  inopre = /^\s*(?:(\(\)|\)|\])|(\binstanceof\b|>>>|===|!==|\bin\b|>=|<=|\+\+|\-\-|==|!=|<<|>>|&&|\|\||\(|\+|\-|\[|\*|\/|<|&|\^|\||%|>|,|:|\?)(?=[^\[\*\/%<>=&\^\|,:\?]|$)|[\[\*\/%<>=&\^\|,:\?]+|$)(.*)/;
+
+  preopre = /^\s*(?:(\btypeof\b|\bvoid\b|\bnew\b|\+\+|\-\-|\(|!|~|\-|\+)(?=[^\[\*\/%<>=&\^\|,:\?])|[\[\(\+\-\*\/%<>=!&\^\|,:\?]+)(.*)/;
+
+  valre = /^(?:(true|false|null)|(\d+\.?\d*(?:e[-+]?\d+)?)|('(?:\\.|[^'])*')|("(?:\\.|[^"])*")|(.*?))(\s*(?:(\(\)|\)|\])|(\binstanceof\b|>>>|===|!==|\bin\b|>=|<=|\+\+|\-\-|==|!=|<<|>>|&&|\|\||\(|\+|\-|\[|\*|\/|<|&|\^|\||%|>|,|:|\?)(?=[^\[\*\/%<>=&\^\|,:\?]|$)|[\[\*\/%<>=&\^\|,:\?]+|$)(.*))/;
+
+  inops = {};
+
+  preops = {};
+
+  unsupported = {
+    alter: function(op) {
+      throw new Error(op.txt + " operator not supported");
+    }
+  };
+
+  populate = function(opdefs, opout) {
+    var op, ops, pri, _results;
+    _results = [];
+    for (pri in opdefs) {
+      ops = opdefs[pri];
+      ops = ops.split(/\ /g);
+      _results.push((function() {
+        var _i, _len, _results2;
+        _results2 = [];
+        for (_i = 0, _len = ops.length; _i < _len; _i++) {
+          op = ops[_i];
+          _results2.push(opout[op] = {
+            pri: +pri,
+            upri: Math.round(pri)
+          });
+        }
+        return _results2;
+      })());
+    }
+    return _results;
+  };
+
+  populate(expropdefs, inops);
+
+  for (n in inops) {
+    e = inops[n];
+    e.isSpecial = true;
+  }
+
+  populate(inopdefs, inops);
+
+  populate(preopdefs, preops);
+
+  inops[''] = {
+    upri: 1000,
+    isend: true
+  };
+
+  inops['?'].pri = 101;
+
+  inops['('].pri = 101;
+
+  inops['['].pri = 101;
+
+  inops[':'].isSpecial = true;
+
+  preops['--'] = unsupported;
+
+  preops['++'] = unsupported;
+
+  delete inops['--'];
+
+  delete inops['++'];
+
+  jslikeparse = function(txt, fnexpr) {
+    var lastval, m, op, opdef, opstack, optxt, origtxt, top;
+    origtxt = txt;
+    opstack = [];
+    lastval = null;
+    while (true) {
+      while (true) {
+        if (m = /^\s+(.*)/.exec(txt)) txt = m[1];
+        if (!(m = preopre.exec(txt))) break;
+        txt = m[2];
+        opdef = preops[m[1]] || unsupported;
+        op = {
+          pri: opdef.pri,
+          txt: m[1]
+        };
+        if (opdef.alter) op = opdef.alter(op);
+        opstack.push(op);
+      }
+      m = valre.exec(txt);
+      op = null;
+      if (m[1] || m[2] || m[4]) {
+        lastval = JSON.stringify(JSON.parse(m[1] || m[2] || m[4]));
+      } else if (m[3]) {
+        lastval = m[3].slice(1, m[3].length - 1).replace(/(?:(\\.)|(")|(.))/g, function($0, $1, $2, $3) {
+          return $1 || $3 || ("\\" + $2);
+        });
+        lastval = JSON.stringify(JSON.parse("\"" + lastval + "\""));
+      } else {
+        lastval = fnexpr(m[5]);
+      }
+      txt = m[6];
+      while (true) {
+        m = inopre.exec(txt);
+        txt = m[3];
+        optxt = m[1] || m[2] || '';
+        opdef = inops[optxt];
+        if (!opdef) throw new Error("" + optxt + " operator not supported");
+        while ((top = opstack.length && opstack[opstack.length - 1]).pri <= opdef.upri) {
+          top.right = lastval;
+          lastval = top;
+          opstack.pop();
+        }
+        if (opdef.isSpecial) {
+          if (optxt === ")") {
+            if (top.txt === "(") {
+              top.inner = lastval;
+              lastval = top;
+              opstack.pop();
+              continue;
+            } else {
+              throw new Error("Unmatched round bracket");
+            }
+          }
+          if (optxt === ":") {
+            if (top.txt === "?") {
+              top.inner = lastval;
+              top.pri = 15;
+              op = top;
+              opstack.pop();
+              break;
+            } else {
+              throw new Error("Cannot find '?' for ':'");
+            }
+          }
+          if (optxt === "()") {
+            lastval = {
+              left: lastval,
+              pri: 2,
+              txt: "()"
+            };
+            continue;
+          }
+          if (optxt === "]") {
+            if (top.txt === "[") {
+              top.inner = lastval;
+              lastval = top;
+              opstack.pop();
+              continue;
+            } else {
+              throw new Error("Unmatched square bracket");
+            }
+          }
+          throw new Error("Unrecognised closing " + optxt);
+        }
+        break;
+      }
+      if (opdef.isend) return lastval;
+      op = op || {
+        left: lastval,
+        pri: opdef.pri,
+        txt: optxt
+      };
+      opstack.push(op);
+      lastval = null;
+    }
+  };
+
+  jslikeunparse = function(op) {
+    var inner, left, right;
+    if (typeof op === 'string') return op;
+    if (op.left) left = jslikeunparse(op.left);
+    if (op.right) right = jslikeunparse(op.right);
+    if (op.inner) inner = jslikeunparse(op.inner);
+    if (op.txt === '(' && op.left) {
+      return "" + left + "(" + inner + ")";
+    } else if (op.txt === '(') {
+      return "(" + inner + ")";
+    } else if (op.txt === '[') {
+      return "" + left + "[" + inner + "]";
+    } else if (op.txt === '()') {
+      return "" + left + "()";
+    } else if (op.txt === 'a(b)') {
+      return "" + left + "(" + inner + ")";
+    } else if (op.txt === '?') {
+      return "" + left + " ? " + inner + " : " + right;
+    } else if (!op.left) {
+      return "" + op.txt + " " + right;
+    } else if (op.txt === ',') {
+      return "" + left + ", " + right;
+    } else {
+      return "" + left + " " + op.txt + " " + right;
+    }
+  };
+
+  platter.internal.jslikeparse = jslikeparse;
+
+  platter.internal.jslikeunparse = jslikeunparse;
+
+  platter.internal.jsmunge = function(txt, valfn) {
+    var op;
+    op = jslikeparse(txt, valfn);
+    return jslikeunparse(op);
   };
 
   clean = function(n) {
@@ -734,7 +978,7 @@
     };
 
     plainCompiler.prototype.doSimple = function(ret, js, jsCur, jsData, n, v, expr) {
-      return js.addExpr(expr.replace(/#el#/g, "" + jsCur).replace(/#n#/g, js.toSrc(n)).replace(/#v#/g, this.escapesReplace(v, function(t) {
+      return js.addExpr(expr.replace(/#el#/g, "" + jsCur).replace(/#n#/g, js.toSrc(n)).replace(/#v#/g, this.escapesParse(v, function(t) {
         if (t === '.') {
           return "" + jsData;
         } else {
@@ -745,7 +989,7 @@
 
     plainCompiler.prototype.doIf = function(ret, js, jsCur, jsPost, jsData, val, inner) {
       var _this = this;
-      val = this.escapesReplace(val, function(t) {
+      val = this.escapesParse(val, function(t) {
         return "this.runGetMulti(" + jsData + ", " + (js.toSrc(t.split('.'))) + ")";
       });
       return js.addExpr("if (" + val + ") " + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + jsData + ", false), " + jsPost + ")");
@@ -753,7 +997,7 @@
 
     plainCompiler.prototype.doUnless = function(ret, js, jsCur, jsPost, jsData, val, inner) {
       var _this = this;
-      val = this.escapesReplace(val, function(t) {
+      val = this.escapesParse(val, function(t) {
         return "this.runGetMulti(" + jsData + ", " + (js.toSrc(t.split('.'))) + ")";
       });
       return js.addExpr("if (!(" + val + ")) " + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + jsData + ", false), " + jsPost + ")");
@@ -762,7 +1006,7 @@
     plainCompiler.prototype.doForEach = function(ret, js, jsCur, jsPost, jsData, val, inner) {
       var jsFor,
         _this = this;
-      val = this.escapesReplace(val, function(t) {
+      val = this.escapesParse(val, function(t) {
         return "this.runGetMulti(" + jsData + ", " + (js.toSrc(t.split('.'))) + ")";
       });
       jsFor = js.addVar("" + jsCur + "_for", val);
@@ -948,16 +1192,16 @@
       var esc, escn, escvar, jsChange;
       esc = {};
       jsChange = js.addVar("" + jsCur + "_change", "null");
-      this.escapesReplace(v, function(t) {
+      this.escapesParse(v, function(t) {
         if (t !== '.') {
           return esc[t] = js.addForcedVar("" + jsCur + "_" + t, "null", t);
         }
       });
-      expr = expr.replace(/#el#/g, "" + jsCur).replace(/#n#/g, js.toSrc(n)).replace(/#v#/g, this.escapesReplace(v, function(t) {
-        if (t === '.') {
-          return jsData;
-        } else {
+      expr = expr.replace(/#el#/g, "" + jsCur).replace(/#n#/g, js.toSrc(n)).replace(/#v#/g, this.escapesParse(v, function(t) {
+        if (t !== '.') {
           return esc[t];
+        } else {
+          return jsData;
         }
       }));
       for (escn in esc) {
