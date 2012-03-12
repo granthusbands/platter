@@ -197,7 +197,7 @@ jslikeparse = (txt, fnexpr) ->
 				break;
 			txt = m[2]
 			opdef = preops[m[1]]||unsupported
-			op = {pri:opdef.pri, txt:m[1]}
+			op = {upri: opdef.upri, pri:opdef.pri, txt:m[1]}
 			if opdef.alter
 				op = opdef.alter op
 			opstack.push op
@@ -251,7 +251,7 @@ jslikeparse = (txt, fnexpr) ->
 			break
 		if opdef.isend
 			return lastval
-		op = op||{left:lastval, pri:opdef.pri, txt:optxt}
+		op = op||{left:lastval, upri:opdef.upri, pri:opdef.pri, txt:optxt}
 		opstack.push op
 		lastval = null
 		#alert "Op:#{optxt}\n#{JSON.stringify lastval}\n#{JSON.stringify opstack}"
