@@ -140,7 +140,8 @@ class templateCompiler
 					#TODO: Handle the block command therein
 			else if jsCur.v.nodeType==3 || jsCur.v.nodeType==4  # Text/CData
 				jsCur.v.nodeValue = unhideAttr jsCur.v.nodeValue
-				@doSimple ret, js, jsCur, jsData, 'text', jsCur.v.nodeValue, @assigners['#text']
+				if jsCur.v.nodeValue.indexOf('{{')!=-1
+					@doSimple ret, js, jsCur, jsDatas, 'text', jsCur.v.nodeValue, @assigners['#text']
 			jsCur = js.addVar "#{jsEl}_ch", "#{jsCur}.nextSibling", jsCur.v.nextSibling
 
 	doEvent: (ret, js, jsCur, jsData, realn, v) ->
