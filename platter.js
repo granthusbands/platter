@@ -130,7 +130,7 @@
     };
 
     templateCompiler.prototype.compileInner = function(ret, js, jsEl, jsDatas) {
-      var attrs, ct, isSpecial, jsCur, n, n2, realn, v, _ref, _ref2, _results;
+      var attrs, ct, fn, isSpecial, jsCur, n, n2, realn, v, _i, _len, _ref, _ref2, _ref3, _results;
       jsCur = js.addVar(jsEl + "_ch", "" + jsEl + ".firstChild", jsEl.v.firstChild);
       js.forceVar(jsCur);
       _results = [];
@@ -145,18 +145,19 @@
               v: uncommentEscapes(unhideAttr(jsCur.v.value))
             };
           }
-          for (realn in attrs) {
-            _ref = attrs[realn], n = _ref.n, realn = _ref.realn, v = _ref.v;
-            if (realn && this["special_" + realn] && hasEscape(v)) {
+          _ref = this.specAttrs;
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            _ref2 = _ref[_i], n = _ref2.n, fn = _ref2.fn;
+            if (attrs.hasOwnProperty(n) && hasEscape(attrs[n].v)) {
               isSpecial = true;
-              jsCur.v.removeAttribute(n);
-              jsCur = this["special_" + realn](ret, js, jsCur, jsDatas, v);
+              jsCur.v.removeAttribute(attrs[n].n);
+              jsCur = fn(this, ret, js, jsCur, jsDatas, attrs[n].v);
               break;
             }
           }
           if (!isSpecial) {
             for (realn in attrs) {
-              _ref2 = attrs[realn], n = _ref2.n, realn = _ref2.realn, v = _ref2.v;
+              _ref3 = attrs[realn], n = _ref3.n, realn = _ref3.realn, v = _ref3.v;
               if (realn !== n) jsCur.v.removeAttribute(n);
               if (!(hasEscape(v))) {
                 if (realn !== n) jsCur.v.setAttribute(realn, v);
@@ -208,35 +209,45 @@
       });
     };
 
-    templateCompiler.prototype.special_if = function(ret, js, jsCur, jsDatas, val) {
-      var frag, inner, jsPost, post, _ref;
-      _ref = pullNode(jsCur.v), jsCur.v = _ref[0], post = _ref[1], frag = _ref[2];
-      inner = this.compileFrag(frag, jsDatas.length);
-      ret[jsCur.n] = inner;
-      jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
-      this.doIf(ret, js, jsCur, jsPost, jsDatas, val, inner);
-      return jsPost;
-    };
-
-    templateCompiler.prototype.special_unless = function(ret, js, jsCur, jsDatas, val) {
-      var frag, inner, jsPost, post, _ref;
-      _ref = pullNode(jsCur.v), jsCur.v = _ref[0], post = _ref[1], frag = _ref[2];
-      inner = this.compileFrag(frag, jsDatas.length);
-      ret[jsCur.n] = inner;
-      jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
-      this.doUnless(ret, js, jsCur, jsPost, jsDatas, val, inner);
-      return jsPost;
-    };
-
-    templateCompiler.prototype.special_foreach = function(ret, js, jsCur, jsDatas, val) {
-      var frag, inner, jsPost, post, _ref;
-      _ref = pullNode(jsCur.v), jsCur.v = _ref[0], post = _ref[1], frag = _ref[2];
-      inner = this.compileFrag(frag, jsDatas.length + 1);
-      ret[jsCur.n] = inner;
-      jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
-      this.doForEach(ret, js, jsCur, jsPost, jsDatas, val, inner);
-      return jsPost;
-    };
+    templateCompiler.prototype.specAttrs = [
+      {
+        pri: 100,
+        n: 'foreach',
+        fn: function(comp, ret, js, jsCur, jsDatas, val) {
+          var frag, inner, jsPost, post, _ref;
+          _ref = pullNode(jsCur.v), jsCur.v = _ref[0], post = _ref[1], frag = _ref[2];
+          inner = comp.compileFrag(frag, jsDatas.length + 1);
+          ret[jsCur.n] = inner;
+          jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
+          comp.doForEach(ret, js, jsCur, jsPost, jsDatas, val, inner);
+          return jsPost;
+        }
+      }, {
+        pri: 60,
+        n: 'if',
+        fn: function(comp, ret, js, jsCur, jsDatas, val) {
+          var frag, inner, jsPost, post, _ref;
+          _ref = pullNode(jsCur.v), jsCur.v = _ref[0], post = _ref[1], frag = _ref[2];
+          inner = comp.compileFrag(frag, jsDatas.length);
+          ret[jsCur.n] = inner;
+          jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
+          comp.doIf(ret, js, jsCur, jsPost, jsDatas, val, inner);
+          return jsPost;
+        }
+      }, {
+        pri: 60,
+        n: 'unless',
+        fn: function(comp, ret, js, jsCur, jsDatas, val) {
+          var frag, inner, jsPost, post, _ref;
+          _ref = pullNode(jsCur.v), jsCur.v = _ref[0], post = _ref[1], frag = _ref[2];
+          inner = comp.compileFrag(frag, jsDatas.length);
+          ret[jsCur.n] = inner;
+          jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
+          comp.doUnless(ret, js, jsCur, jsPost, jsDatas, val, inner);
+          return jsPost;
+        }
+      }
+    ];
 
     templateCompiler.prototype.tmplToFrag = function(txt) {
       txt = hideAttr(commentEscapes(trim(txt)));

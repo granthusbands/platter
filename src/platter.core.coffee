@@ -113,11 +113,11 @@ class templateCompiler
 						n: 'value'
 						realn: 'value'
 						v: uncommentEscapes unhideAttr jsCur.v.value
-				for realn, {n, realn, v} of attrs
-					if (realn && this["special_#{realn}"] && hasEscape v)
+				for {n, fn} in @specAttrs
+					if attrs.hasOwnProperty(n) && hasEscape(attrs[n].v)
 						isSpecial = true
-						jsCur.v.removeAttribute n
-						jsCur = this["special_#{realn}"](ret, js, jsCur, jsDatas, v)
+						jsCur.v.removeAttribute attrs[n].n
+						jsCur = fn @, ret, js, jsCur, jsDatas, attrs[n].v
 						break
 				if !isSpecial
 					for realn, {n, realn, v} of attrs
@@ -162,30 +162,37 @@ class templateCompiler
 			else
 				js.addExpr "this.runEvent(#{jsCur}, #{js.toSrc ev}, function(ev){ return #{js.index jsDatas[0], t}(ev, #{js.toSrc ev}, #{jsCur}); })"
 
-	# TODO: Put these special things somewhere better
-	special_if: (ret, js, jsCur, jsDatas, val) ->
-		[jsCur.v, post, frag] = pullNode jsCur.v
-		inner = @compileFrag frag, jsDatas.length
-		ret[jsCur.n] = inner
-		jsPost = js.addVar "#{jsCur}_end", "#{jsCur}.nextSibling", post
-		@doIf ret, js, jsCur, jsPost, jsDatas, val, inner
-		jsPost
-
-	special_unless: (ret, js, jsCur, jsDatas, val) ->
-		[jsCur.v, post, frag] = pullNode jsCur.v
-		inner = @compileFrag frag, jsDatas.length
-		ret[jsCur.n] = inner
-		jsPost = js.addVar "#{jsCur}_end", "#{jsCur}.nextSibling", post
-		@doUnless ret, js, jsCur, jsPost, jsDatas, val, inner
-		jsPost
-
-	special_foreach: (ret, js, jsCur, jsDatas, val) ->
-		[jsCur.v, post, frag] = pullNode jsCur.v
-		inner = @compileFrag frag, jsDatas.length+1
-		ret[jsCur.n] = inner
-		jsPost = js.addVar "#{jsCur}_end", "#{jsCur}.nextSibling", post
-		@doForEach ret, js, jsCur, jsPost, jsDatas, val, inner
-		jsPost
+	specAttrs: [
+			pri: 100
+			n: 'foreach'
+			fn: (comp, ret, js, jsCur, jsDatas, val) ->
+				[jsCur.v, post, frag] = pullNode jsCur.v
+				inner = comp.compileFrag frag, jsDatas.length+1
+				ret[jsCur.n] = inner
+				jsPost = js.addVar "#{jsCur}_end", "#{jsCur}.nextSibling", post
+				comp.doForEach ret, js, jsCur, jsPost, jsDatas, val, inner
+				jsPost
+		,
+			pri:60
+			n: 'if'
+			fn: (comp, ret, js, jsCur, jsDatas, val) ->
+				[jsCur.v, post, frag] = pullNode jsCur.v
+				inner = comp.compileFrag frag, jsDatas.length
+				ret[jsCur.n] = inner
+				jsPost = js.addVar "#{jsCur}_end", "#{jsCur}.nextSibling", post
+				comp.doIf ret, js, jsCur, jsPost, jsDatas, val, inner
+				jsPost
+		,
+			pri:60
+			n: 'unless'
+			fn: (comp, ret, js, jsCur, jsDatas, val) ->
+				[jsCur.v, post, frag] = pullNode jsCur.v
+				inner = comp.compileFrag frag, jsDatas.length
+				ret[jsCur.n] = inner
+				jsPost = js.addVar "#{jsCur}_end", "#{jsCur}.nextSibling", post
+				comp.doUnless ret, js, jsCur, jsPost, jsDatas, val, inner
+				jsPost
+	]
 
 	# Below here, it's utility functions, which maybe should be moved.
 	tmplToFrag: (txt) ->
