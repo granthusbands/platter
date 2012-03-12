@@ -167,6 +167,40 @@ jQuery(function(){
 
 			// TODO: Maybe decide on and test what foreach="{{a}} {{b}}" should do
 		});
+		test("Block: if", function(){
+			hasNotJQ("{{#if bo}}<h1>Hey</h1>{{/if}}", data, "h1", "Missing value");
+			hasNotJQ("{{#if two.bo}}<h1>Hey</h1>{{/if}}", data, "h1", "Missing second-level value");
+			hasJQ("{{#if one}}<h1>Hey</h1>{{/if}}", data, "h1", "One-level value");
+			hasJQ("{{#if two.too}}<h1>Hey</h1>{{/if}}", data, "h1", "Two-level value");
+			hasJQ("{{#if three.tree.tee}}<h1>Hey</h1>{{/if}}", data, "h1", "Three-level value");
+			hasJQ("{{#if yes}}<h1>Hey</h1>{{/if}}", data, "h1", "Boolean true");
+			hasNotJQ("{{#if no}}<h1>Hey</h1>{{/if}}", data, "h1", "Boolean false");
+			hasNotJQ("{{#if zero}}<h1>Hey</h1>{{/if}}", data, "h1", "Zero");
+			// TODO: Maybe empty arrays should be false. Probably not, though.
+			hasJQ("{{#if empty}}<h1>Hey</h1>{{/if}}", data, "h1", "Empty array");
+			// TODO: Maybe decide on and test what if="{{a}} {{b}}" should do
+			hasJQ("{{#if one<\"ZZZ\"}}<h1>Hey</h1>{{/if}}", data, "h1", "Comparison true");
+			hasNotJQ("{{#if one>=\"ZZZ\"}}<h1>Hey</h1>{{/if}}", data, "h1", "Comparison false");
+		});
+		test("Block: foreach", function(){
+			hasNotJQ("{{#foreach bo}}<h1>Hey</h1>{{/foreach}}", data, "h1", "Missing value");
+			hasNotJQ("{{#foreach two.bo}}<h1>Hey</h1>{{/foreach}}", data, "h1", "Missing second-level value");
+			hasNotJQ("{{#foreach empty}}<h1>Hey</h1>{{/foreach}}", data, "h1", "Empty array");
+			hasJQ("{{#foreach nums}}<h1>{{.}}</h1>{{/foreach}}", data, "h1", "Nums");
+			has("{{#foreach nums}}<h1>{{.}}</h1>{{/foreach}}", data, "5", "Nums has 5");
+			hasNot("{{#foreach nums}}<h1>{{.}}</h1>{{/foreach}}", data, "6", "Nums lacks 6");
+			has("{{#foreach nums}}<h1>{{.}}</h1>{{/foreach}}", data, "7", "Nums has 7");
+			hasJQ("{{#foreach objs}}<h1>{{.}}</h1>{{/foreach}}", data, "h1", "Objs");
+			has("{{#foreach objs}}<h1>{{txt}}</h1>{{/foreach}}", data, "C", "Objs has C");
+			hasNot("{{#foreach objs}}<h1>{{txt}}</h1>{{/foreach}}", data, "D", "Objs lacks D");
+			has("{{#foreach objs}}<h1>{{txt}}</h1>{{/foreach}}", data, "E", "Objs has E");
+			hasJQ("{{#foreach deep.derp.nums}}<h1>{{.}}</h1>{{/foreach}}", data, "h1", "Deep Nums");
+			has("{{#foreach deep.derp.nums}}<h1>{{.}}</h1>{{/foreach}}", data, "5", "Deep Nums has 5");
+			hasNot("{{#foreach deep.derp.nums}}<h1>{{.}}</h1>{{/foreach}}", data, "6", "Deep Nums lacks 6");
+			has("{{#foreach deep.derp.nums}}<h1>{{.}}</h1>{{/foreach}}", data, "7", "Deep Nums has 7");
+
+			// TODO: Maybe decide on and test what foreach="{{a}} {{b}}" should do
+		});
 
 		test("Contexts", function(){
 			var tpl = 
@@ -188,6 +222,11 @@ jQuery(function(){
 			has(tpl, data, "[FirstEA]", "Contexts nest well");
 			has(tpl, data, "[FirstEC]", "Contexts nest well");
 			has(tpl, data, "[FirstEE]", "Contexts nest well");
+		});
+
+		test("Combined attributes", function(){
+			var tpl = '<div foreach="{{objs}}" if="{{txt!=\'C\'}}">{{txt}}</div>';
+			textIs(tpl, data, "AE", "foreach and if combine in right order");
 		});
 
 		// TODO: Events (add/remove/count/parameters)

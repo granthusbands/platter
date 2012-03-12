@@ -42,6 +42,31 @@ if window.jQuery
 	defaultRunEvent = runJQueryEvent
 # TODO: Maybe support ext, Prototype and other event libraries
 
+specAttrs = []
+specBlocks = {}
+
+# Add a block that extracts its dom nodes
+addBlockExtract = (n, fn) ->
+	fn2 = (comp, ret, js, jsCur, jsDatas, val) ->
+		[jsCur.v, post, frag] = pullBlock n, jsCur.v
+		fn comp, frag, ret, js, jsCur, post, jsDatas, val
+	specBlocks[n] = fn2
+
+# Add a special attribute that extracts the node
+addSpecialAttrExtract = (n, pri, fn) ->
+	fn2 = (comp, ret, js, jsCur, jsDatas, val) ->
+		[jsCur.v, post, frag] = pullNode jsCur.v
+		fn comp, frag, ret, js, jsCur, post, jsDatas, val
+	specAttrs.push pri: pri, n: n, fn: fn2
+	specAttrs.sort (a,b) ->
+		if (a.pri<b.pri) then 1 else if (a.pri>b.pri) then -1 else 0
+
+# Add a block and special attribute that both extract the nodes of interest
+addBlockAndAttrExtract = (n, pri, fn) ->
+	addBlockExtract n, fn
+	addSpecialAttrExtract n, pri, fn
+
+
 class templateRunner
 	constructor: (node) ->
 		@node = node
@@ -113,7 +138,7 @@ class templateCompiler
 						n: 'value'
 						realn: 'value'
 						v: uncommentEscapes unhideAttr jsCur.v.value
-				for {n, fn} in @specAttrs
+				for {n, fn} in specAttrs
 					if attrs.hasOwnProperty(n) && hasEscape(attrs[n].v)
 						isSpecial = true
 						jsCur.v.removeAttribute attrs[n].n
@@ -137,9 +162,13 @@ class templateCompiler
 			else if jsCur.v.nodeType==8  # Comment
 				ct = jsCur.v.nodeValue
 				ct = unhideAttr ct
-				# We know our comment nodes can only contain one {{...}}
-				#if /^\{\{.*\}\}$/.exec(ct)
-					#TODO: Handle the block command therein
+				# We know our comment nodes can only contain one {{#...}}
+				if m=/^\{\{([#\/])([^\s\}]+)\s*(.*?)\}\}$/.exec(ct)
+					if m[1]=='/'
+						throw new Error("Unmatched end-block "+ct);
+					if !specBlocks.hasOwnProperty m[2]
+						throw new Error("Unrecognised block "+ct);
+					jsCur = specBlocks[m[2]] @, ret, js, jsCur, jsDatas, "{{#{m[3]}}}"
 			else if jsCur.v.nodeType==3 || jsCur.v.nodeType==4  # Text/CData
 				jsCur.v.nodeValue = unhideAttr jsCur.v.nodeValue
 				if jsCur.v.nodeValue.indexOf('{{')!=-1
@@ -161,38 +190,6 @@ class templateCompiler
 				js.addExpr "this.runEvent(#{jsCur}, #{js.toSrc ev}, function(ev){ #{jsThis}.doSet(#{jsDatas[0]}, #{js.toSrc t}, #{js.index jsCur, prop}); })"
 			else
 				js.addExpr "this.runEvent(#{jsCur}, #{js.toSrc ev}, function(ev){ return #{js.index jsDatas[0], t}(ev, #{js.toSrc ev}, #{jsCur}); })"
-
-	specAttrs: [
-			pri: 100
-			n: 'foreach'
-			fn: (comp, ret, js, jsCur, jsDatas, val) ->
-				[jsCur.v, post, frag] = pullNode jsCur.v
-				inner = comp.compileFrag frag, jsDatas.length+1
-				ret[jsCur.n] = inner
-				jsPost = js.addVar "#{jsCur}_end", "#{jsCur}.nextSibling", post
-				comp.doForEach ret, js, jsCur, jsPost, jsDatas, val, inner
-				jsPost
-		,
-			pri:60
-			n: 'if'
-			fn: (comp, ret, js, jsCur, jsDatas, val) ->
-				[jsCur.v, post, frag] = pullNode jsCur.v
-				inner = comp.compileFrag frag, jsDatas.length
-				ret[jsCur.n] = inner
-				jsPost = js.addVar "#{jsCur}_end", "#{jsCur}.nextSibling", post
-				comp.doIf ret, js, jsCur, jsPost, jsDatas, val, inner
-				jsPost
-		,
-			pri:60
-			n: 'unless'
-			fn: (comp, ret, js, jsCur, jsDatas, val) ->
-				[jsCur.v, post, frag] = pullNode jsCur.v
-				inner = comp.compileFrag frag, jsDatas.length
-				ret[jsCur.n] = inner
-				jsPost = js.addVar "#{jsCur}_end", "#{jsCur}.nextSibling", post
-				comp.doUnless ret, js, jsCur, jsPost, jsDatas, val, inner
-				jsPost
-	]
 
 	# Below here, it's utility functions, which maybe should be moved.
 	tmplToFrag: (txt) ->
@@ -319,6 +316,40 @@ pullNode = (node) ->
 	frag.appendChild node
 	[pre, post, frag]
 
+
+pullBlock = (endtext, node) ->
+	end = node
+	stack = [endtext]
+	while true
+		matched = false
+		end = end.nextSibling
+		if (!end) then break
+		if (end.nodeType!=8) then continue
+		m = /^\{\{([#\/])([^\s\}]*)(.*?)\}\}$/.exec end.nodeValue
+		if (m[1]=='#')
+			stack.push m[2]
+			continue
+		while stack.length && stack[stack.length-1]!=m[2]
+			stack.pop()
+		if stack.length && stack[stack.length-1]==m[2]
+			matched = true
+			stack.pop()
+		if stack.length==0
+			break
+	# end now points just beyond the end (and hence might be null)
+	frag = document.createDocumentFragment()
+	while node.nextSibling!=end
+		frag.appendChild node.nextSibling
+	if matched
+		end.parentNode.removeChild end
+	pre = document.createComment ""
+	post = document.createComment ""
+	node.parentNode.insertBefore pre, node
+	node.parentNode.insertBefore post, node
+	node.parentNode.removeChild node
+	[pre, post, frag]
+
+
 isEvent = (name) ->
 	name[0]=='o' && name[1]=='n'
 
@@ -387,3 +418,26 @@ this.platter =
 		subscount: 0
 		subs: {}
 		bigDebug: bigDebug
+
+
+# TODO: Move these into a separate file
+addBlockAndAttrExtract 'foreach', 100, (comp, frag, ret, js, jsCur, post, jsDatas, val) ->
+	inner = comp.compileFrag frag, jsDatas.length+1
+	ret[jsCur.n] = inner
+	jsPost = js.addVar "#{jsCur}_end", "#{jsCur}.nextSibling", post
+	comp.doForEach ret, js, jsCur, jsPost, jsDatas, val, inner
+	jsPost
+
+addBlockAndAttrExtract 'if', 60, (comp, frag, ret, js, jsCur, post, jsDatas, val) ->
+	inner = comp.compileFrag frag, jsDatas.length
+	ret[jsCur.n] = inner
+	jsPost = js.addVar "#{jsCur}_end", "#{jsCur}.nextSibling", post
+	comp.doIf ret, js, jsCur, jsPost, jsDatas, val, inner
+	jsPost
+
+addBlockAndAttrExtract 'unless', 60, (comp, frag, ret, js, jsCur, post, jsDatas, val) ->
+	inner = comp.compileFrag frag, jsDatas.length
+	ret[jsCur.n] = inner
+	jsPost = js.addVar "#{jsCur}_end", "#{jsCur}.nextSibling", post
+	comp.doUnless ret, js, jsCur, jsPost, jsDatas, val, inner
+	jsPost
