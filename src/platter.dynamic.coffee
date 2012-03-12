@@ -53,7 +53,7 @@ class dynamicRunner extends platter.internal.templateRunner
 			data[ident]
 
 	# Runtime: A conditional section, automatically filled/removed as fn changes.
-	runIf: (data, tmpl, start, end) ->
+	runIf: (datas, tmpl, start, end) ->
 		shown = false
 		undo = null
 		$undo.add -> undo() if undo
@@ -64,7 +64,7 @@ class dynamicRunner extends platter.internal.templateRunner
 			shown = show
 			if (show)
 				$undo.start()
-				end.parentNode.insertBefore tmpl.run(data, false), end
+				end.parentNode.insertBefore tmpl.run(datas..., false), end
 				undo = $undo.claim()
 			else
 				@removeBetween start, end
@@ -72,7 +72,7 @@ class dynamicRunner extends platter.internal.templateRunner
 				undo = null
 
 	# Runtime: Provide a callback for doing foreach
-	runForEach: (tmpl, start, end) ->
+	runForEach: (tmpl, datas, start, end) ->
 		undo = null
 		$undo.add ->
 			undo() if undo
@@ -81,11 +81,11 @@ class dynamicRunner extends platter.internal.templateRunner
 				undo()
 				@removeBetween start, end
 			$undo.start()
-			@runForEachInner coll, tmpl, start, end, ret
+			@runForEachInner coll, tmpl, datas, start, end, ret
 			undo = $undo.claim()
 
 	# Runtime: A collection of models, automatically expanded/collapsed as members get added/removed
-	runForEachInner: (coll, tmpl, start, end, replaceMe) ->
+	runForEachInner: (coll, tmpl, datas, start, end, replaceMe) ->
 		ends = [start, end]
 		undo = []
 		add = (model, coll, opts) =>
@@ -95,7 +95,7 @@ class dynamicRunner extends platter.internal.templateRunner
 			par = start.parentNode
 			par.insertBefore newend, ends[at].nextSibling
 			$undo.start()
-			par.insertBefore tmpl.run(model, false), newend
+			par.insertBefore tmpl.run(model, datas..., false), newend
 			undo.splice(at, 0, $undo.claim())
 		rem = (model, coll, opts) =>
 			at = opts.index
@@ -113,24 +113,24 @@ class dynamicCompiler extends platter.internal.templateCompiler
 		new dynamicRunner(node)
 
 	# Compiler: Handle simple value-assignments with escapes.
-	doSimple: (ret, js, jsCur, jsData, n, v, expr) ->
+	doSimple: (ret, js, jsCur, jsDatas, n, v, expr) ->
 		esc = {}
 		jsChange = js.addVar "#{jsCur}_change", "null"
-		@escapesParse v, (t) ->
+		@escapesParse v, jsDatas, (id, t, jsData) ->
 			if t!='.'
-				esc[t] = js.addForcedVar "#{jsCur}_#{t}", "null", t
+				esc[id] = js.addForcedVar "#{jsCur}_#{t}", "null", [t, jsData]
 		expr = expr
 			.replace(/#el#/g, "#{jsCur}")
 			.replace(/#n#/g, js.toSrc n)
 			.replace(/#v#/g, 
-				@escapesParse v, (t) -> if t!='.' then esc[t] else jsData
+				@escapesParse v, jsDatas, (id, t, jsData) -> if t!='.' then esc[id] else jsData
 			)
 		for escn, escvar of esc
 			js.addExpr """
 				this.runGetMulti(function(val){
 					#{escvar} = val;
 					if (#{jsChange}) #{jsChange}();
-				}, #{jsData}, #{js.toSrc escn.split '.'})
+				}, #{escvar.v[1]}, #{js.toSrc escvar.v[0].split '.'})
 			"""
 		js.addExpr """
 			#{jsChange} = function() {
@@ -140,19 +140,19 @@ class dynamicCompiler extends platter.internal.templateCompiler
 		js.addExpr "#{jsChange}()"
 
 	# Compiler: Conditional section
-	doIf: (ret, js, jsPre, jsPost, jsData, val, inner) ->
-		jsChange = js.addForcedVar "#{jsPre}_ifchange", "this.runIf(#{jsData}, this.#{jsPre}, #{jsPre}, #{jsPost})"
-		@doSimple ret, js, jsPre, jsData, null, val, "#{jsChange}(#v#)"
+	doIf: (ret, js, jsPre, jsPost, jsDatas, val, inner) ->
+		jsChange = js.addForcedVar "#{jsPre}_ifchange", "this.runIf([#{jsDatas.join ', '}], this.#{jsPre}, #{jsPre}, #{jsPost})"
+		@doSimple ret, js, jsPre, jsDatas, null, val, "#{jsChange}(#v#)"
 
 	# Compiler: Conditional section
-	doUnless: (ret, js, jsPre, jsPost, jsData, val, inner) ->
-		jsChange = js.addForcedVar "#{jsPre}_ifchange", "this.runIf(#{jsData}, this.#{jsPre}, #{jsPre}, #{jsPost})"
-		@doSimple ret, js, jsPre, jsData, null, val, "#{jsChange}(!(#v#))"
+	doUnless: (ret, js, jsPre, jsPost, jsDatas, val, inner) ->
+		jsChange = js.addForcedVar "#{jsPre}_ifchange", "this.runIf([#{jsDatas.join ', '}], this.#{jsPre}, #{jsPre}, #{jsPost})"
+		@doSimple ret, js, jsPre, jsDatas, null, val, "#{jsChange}(!(#v#))"
 
 	# Compiler:
-	doForEach: (ret, js, jsPre, jsPost, jsData, val, inner) ->
-		jsChange = js.addForcedVar "#{jsPre}_forchange", "this.runForEach(this.#{jsPre}, #{jsPre}, #{jsPost})"
-		@doSimple ret, js, jsPre, jsData, null, val, "#{jsChange}(#v#)"
+	doForEach: (ret, js, jsPre, jsPost, jsDatas, val, inner) ->
+		jsChange = js.addForcedVar "#{jsPre}_forchange", "this.runForEach(this.#{jsPre}, [#{jsDatas.join ', '}], #{jsPre}, #{jsPost})"
+		@doSimple ret, js, jsPre, jsDatas, null, val, "#{jsChange}(#v#)"
 
 platter.internal.dynamicRunner = dynamicRunner
 platter.internal.dynamicCompiler = dynamicCompiler

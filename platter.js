@@ -1,5 +1,5 @@
 (function() {
-  var attrList, bigDebug, bigDebugRan, browser, clean, codegen, collprot, commentEscapes, defaultRunEvent, dynamicCompiler, dynamicRunner, e, expropdefs, exprvar, hasEscape, hideAttr, inopdefs, inopre, inops, isEvent, isPlatterAttr, jskeywords, jslikeparse, jslikeunparse, modprot, n, never_equal_to_anything, plainCompiler, plainRunner, populate, preopdefs, preopre, preops, pullNode, runDOMEvent, runJQueryEvent, specpri, stackTrace, str, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName, unsupported, valre,
+  var attrList, bigDebug, bigDebugRan, browser, clean, codegen, collprot, commentEscapes, defaultRunEvent, dynamicCompiler, dynamicRunner, e, expropdefs, exprvar, hasEscape, hideAttr, inopdefs, inopre, inops, isEvent, isPlatterAttr, jskeywords, jslikeparse, jslikeunparse, modprot, n, never_equal_to_anything, plainCompiler, plainGet, plainRunner, populate, preopdefs, preopre, preops, pullNode, runDOMEvent, runJQueryEvent, specpri, stackTrace, str, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName, unsupported, valre,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; },
     __slice = Array.prototype.slice;
@@ -94,17 +94,20 @@
     };
 
     templateCompiler.prototype.compile = function(txt) {
-      return this.compileFrag(this.tmplToFrag(txt));
+      return this.compileFrag(this.tmplToFrag(txt), 1);
     };
 
-    templateCompiler.prototype.compileFrag = function(frag) {
-      var js, jsAutoRemove, jsData, jsEl, jsFirstChild, jsLastChild, jsSelf, ret;
+    templateCompiler.prototype.compileFrag = function(frag, ctxCnt) {
+      var d, i, js, jsAutoRemove, jsDatas, jsEl, jsFirstChild, jsLastChild, jsSelf, ret;
       js = new platter.internal.codegen;
-      jsData = js.existingVar('data');
+      jsDatas = [];
+      for (i = 0; 0 <= ctxCnt ? i < ctxCnt : i > ctxCnt; 0 <= ctxCnt ? i++ : i--) {
+        jsDatas.push(js.existingVar('data' + i));
+      }
       jsAutoRemove = js.existingVar('autoRemove');
       jsEl = js.addVar('el', 'this.node.cloneNode(true)', frag);
       ret = this.makeRet(frag);
-      this.compileInner(ret, js, jsEl, jsData);
+      this.compileInner(ret, js, jsEl, jsDatas);
       jsFirstChild = js.addForcedVar("firstChild", "" + jsEl + ".firstChild");
       jsLastChild = js.addForcedVar("lastChild", "" + jsEl + ".lastChild");
       jsSelf = js.addForcedVar("self", "this");
@@ -114,11 +117,19 @@
       } else {
         js.addExpr("return " + jsEl);
       }
-      ret.run = new Function('data', 'autoRemove', "" + js);
+      ret.run = new Function(((function() {
+        var _i, _len, _results;
+        _results = [];
+        for (_i = 0, _len = jsDatas.length; _i < _len; _i++) {
+          d = jsDatas[_i];
+          _results.push(d.n);
+        }
+        return _results;
+      })()).join(', '), 'autoRemove', "" + js);
       return ret;
     };
 
-    templateCompiler.prototype.compileInner = function(ret, js, jsEl, jsData) {
+    templateCompiler.prototype.compileInner = function(ret, js, jsEl, jsDatas) {
       var attrs, ct, isSpecial, jsCur, n, n2, realn, v, _i, _j, _len, _len2, _ref, _ref2, _results;
       jsCur = js.addVar(jsEl + "_ch", "" + jsEl + ".firstChild", jsEl.v.firstChild);
       js.forceVar(jsCur);
@@ -139,7 +150,7 @@
             if (realn && this["special_" + realn] && hasEscape(v)) {
               isSpecial = true;
               jsCur.v.removeAttribute(n);
-              jsCur = this["special_" + realn](ret, js, jsCur, jsData, v);
+              jsCur = this["special_" + realn](ret, js, jsCur, jsDatas, v);
               break;
             }
           }
@@ -151,15 +162,15 @@
                 if (realn !== n) jsCur.v.setAttribute(realn, v);
               } else {
                 if (isEvent(realn)) {
-                  this.doEvent(ret, js, jsCur, jsData, realn, v);
+                  this.doEvent(ret, js, jsCur, jsDatas, realn, v);
                 } else {
                   n2 = this.assigners[realn] ? realn : '#default';
-                  this.doSimple(ret, js, jsCur, jsData, realn, v, this.assigners[n2]);
+                  this.doSimple(ret, js, jsCur, jsDatas, realn, v, this.assigners[n2]);
                 }
               }
             }
             if (jsCur.v.tagName.toLowerCase() !== 'textarea') {
-              this.compileInner(ret, js, jsCur, jsData);
+              this.compileInner(ret, js, jsCur, jsDatas);
             }
           }
         } else if (jsCur.v.nodeType === 8) {
@@ -167,14 +178,16 @@
           ct = unhideAttr(ct);
         } else if (jsCur.v.nodeType === 3 || jsCur.v.nodeType === 4) {
           jsCur.v.nodeValue = unhideAttr(jsCur.v.nodeValue);
-          this.doSimple(ret, js, jsCur, jsData, 'text', jsCur.v.nodeValue, this.assigners['#text']);
+          if (jsCur.v.nodeValue.indexOf('{{') !== -1) {
+            this.doSimple(ret, js, jsCur, jsDatas, 'text', jsCur.v.nodeValue, this.assigners['#text']);
+          }
         }
         _results.push(jsCur = js.addVar("" + jsEl + "_ch", "" + jsCur + ".nextSibling", jsCur.v.nextSibling));
       }
       return _results;
     };
 
-    templateCompiler.prototype.doEvent = function(ret, js, jsCur, jsData, realn, v) {
+    templateCompiler.prototype.doEvent = function(ret, js, jsCur, jsDatas, realn, v) {
       var ev;
       ev = realn.substr(2);
       return this.escapesReplace(v, function(t) {
@@ -188,40 +201,40 @@
           } else {
             prop = 'value';
           }
-          return js.addExpr("this.runEvent(" + jsCur + ", " + (js.toSrc(ev)) + ", function(ev){ " + jsThis + ".doSet(" + jsData + ", " + (js.toSrc(t)) + ", " + (js.index(jsCur, prop)) + "); })");
+          return js.addExpr("this.runEvent(" + jsCur + ", " + (js.toSrc(ev)) + ", function(ev){ " + jsThis + ".doSet(" + jsDatas[0] + ", " + (js.toSrc(t)) + ", " + (js.index(jsCur, prop)) + "); })");
         } else {
-          return js.addExpr("this.runEvent(" + jsCur + ", " + (js.toSrc(ev)) + ", function(ev){ return " + (js.index(jsData, t)) + "(ev, " + (js.toSrc(ev)) + ", " + jsCur + "); })");
+          return js.addExpr("this.runEvent(" + jsCur + ", " + (js.toSrc(ev)) + ", function(ev){ return " + (js.index(jsDatas[0], t)) + "(ev, " + (js.toSrc(ev)) + ", " + jsCur + "); })");
         }
       });
     };
 
-    templateCompiler.prototype.special_if = function(ret, js, jsCur, jsData, val) {
+    templateCompiler.prototype.special_if = function(ret, js, jsCur, jsDatas, val) {
       var frag, inner, jsPost, post, _ref;
       _ref = pullNode(jsCur.v), jsCur.v = _ref[0], post = _ref[1], frag = _ref[2];
-      inner = this.compileFrag(frag);
+      inner = this.compileFrag(frag, jsDatas.length);
       ret[jsCur.n] = inner;
       jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
-      this.doIf(ret, js, jsCur, jsPost, jsData, val, inner);
+      this.doIf(ret, js, jsCur, jsPost, jsDatas, val, inner);
       return jsPost;
     };
 
-    templateCompiler.prototype.special_unless = function(ret, js, jsCur, jsData, val) {
+    templateCompiler.prototype.special_unless = function(ret, js, jsCur, jsDatas, val) {
       var frag, inner, jsPost, post, _ref;
       _ref = pullNode(jsCur.v), jsCur.v = _ref[0], post = _ref[1], frag = _ref[2];
-      inner = this.compileFrag(frag);
+      inner = this.compileFrag(frag, jsDatas.length);
       ret[jsCur.n] = inner;
       jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
-      this.doUnless(ret, js, jsCur, jsPost, jsData, val, inner);
+      this.doUnless(ret, js, jsCur, jsPost, jsDatas, val, inner);
       return jsPost;
     };
 
-    templateCompiler.prototype.special_foreach = function(ret, js, jsCur, jsData, val) {
+    templateCompiler.prototype.special_foreach = function(ret, js, jsCur, jsDatas, val) {
       var frag, inner, jsPost, post, _ref;
       _ref = pullNode(jsCur.v), jsCur.v = _ref[0], post = _ref[1], frag = _ref[2];
-      inner = this.compileFrag(frag);
+      inner = this.compileFrag(frag, jsDatas.length + 1);
       ret[jsCur.n] = inner;
       jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
-      this.doForEach(ret, js, jsCur, jsPost, jsData, val, inner);
+      this.doForEach(ret, js, jsCur, jsPost, jsDatas, val, inner);
       return jsPost;
     };
 
@@ -279,11 +292,21 @@
       return s.slice(1);
     };
 
-    templateCompiler.prototype.escapesParse = function(txt, fn) {
+    templateCompiler.prototype.escapesParse = function(txt, jsDatas, fn) {
       return this.escapesReplace(txt, function(v) {
         var op;
-        op = platter.internal.jslikeparse(v, function(t2) {
-          return "" + fn(t2);
+        op = platter.internal.jslikeparse(v, function(ex) {
+          var dref, ex2, m;
+          ex2 = ex;
+          dref = 0;
+          if (m = /^(\.+)(.*?)$/.exec(ex)) {
+            if (m[1].length > jsDatas.length) {
+              throw new Error("" + ex + " has too many dots");
+            }
+            dref = m[1].length - 1;
+            ex2 = m[2] || '.';
+          }
+          return "" + fn(ex, ex2, jsDatas[dref]);
         });
         return platter.internal.jslikeunparse(op);
       });
@@ -602,6 +625,7 @@
         txt = m[2];
         opdef = preops[m[1]] || unsupported;
         op = {
+          upri: opdef.upri,
           pri: opdef.pri,
           txt: m[1]
         };
@@ -660,6 +684,7 @@
       if (opdef.isend) return lastval;
       op = op || {
         left: lastval,
+        upri: opdef.upri,
         pri: opdef.pri,
         txt: optxt
       };
@@ -931,6 +956,16 @@
 
   platter.internal.codegen = codegen;
 
+  plainGet = function(js) {
+    return function(id, t, jsData) {
+      if (t === '.') {
+        return "" + jsData;
+      } else {
+        return "this.runGetMulti(" + jsData + ", " + (js.toSrc(t.split('.'))) + ")";
+      }
+    };
+  };
+
   plainRunner = (function(_super) {
 
     __extends(plainRunner, _super);
@@ -969,41 +1004,26 @@
       return new plainRunner(node);
     };
 
-    plainCompiler.prototype.doSimple = function(ret, js, jsCur, jsData, n, v, expr) {
-      return js.addExpr(expr.replace(/#el#/g, "" + jsCur).replace(/#n#/g, js.toSrc(n)).replace(/#v#/g, this.escapesParse(v, function(t) {
-        if (t === '.') {
-          return "" + jsData;
-        } else {
-          return "this.runGetMulti(" + jsData + ", " + (js.toSrc(t.split('.'))) + ")";
-        }
-      })));
+    plainCompiler.prototype.doSimple = function(ret, js, jsCur, jsDatas, n, v, expr) {
+      return js.addExpr(expr.replace(/#el#/g, "" + jsCur).replace(/#n#/g, js.toSrc(n)).replace(/#v#/g, this.escapesParse(v, jsDatas, plainGet(js))));
     };
 
-    plainCompiler.prototype.doIf = function(ret, js, jsCur, jsPost, jsData, val, inner) {
-      var _this = this;
-      val = this.escapesParse(val, function(t) {
-        return "this.runGetMulti(" + jsData + ", " + (js.toSrc(t.split('.'))) + ")";
-      });
-      return js.addExpr("if (" + val + ") " + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + jsData + ", false), " + jsPost + ")");
+    plainCompiler.prototype.doIf = function(ret, js, jsCur, jsPost, jsDatas, val, inner) {
+      val = this.escapesParse(val, jsDatas, plainGet(js));
+      return js.addExpr("if (" + val + ") " + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + (jsDatas.join(', ')) + ", false), " + jsPost + ")");
     };
 
-    plainCompiler.prototype.doUnless = function(ret, js, jsCur, jsPost, jsData, val, inner) {
-      var _this = this;
-      val = this.escapesParse(val, function(t) {
-        return "this.runGetMulti(" + jsData + ", " + (js.toSrc(t.split('.'))) + ")";
-      });
-      return js.addExpr("if (!(" + val + ")) " + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + jsData + ", false), " + jsPost + ")");
+    plainCompiler.prototype.doUnless = function(ret, js, jsCur, jsPost, jsDatas, val, inner) {
+      val = this.escapesParse(val, jsDatas, plainGet(js));
+      return js.addExpr("if (!(" + val + ")) " + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + (jsDatas.join(', ')) + ", false), " + jsPost + ")");
     };
 
-    plainCompiler.prototype.doForEach = function(ret, js, jsCur, jsPost, jsData, val, inner) {
-      var jsFor,
-        _this = this;
-      val = this.escapesParse(val, function(t) {
-        return "this.runGetMulti(" + jsData + ", " + (js.toSrc(t.split('.'))) + ")";
-      });
+    plainCompiler.prototype.doForEach = function(ret, js, jsCur, jsPost, jsDatas, val, inner) {
+      var jsFor;
+      val = this.escapesParse(val, jsDatas, plainGet(js));
       jsFor = js.addVar("" + jsCur + "_for", val);
       js.forceVar(jsPost);
-      return js.addExpr("for (var i=0;i<" + jsFor + ".length; ++i)\n	" + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + jsFor + "[i], false), " + jsPost + ")");
+      return js.addExpr("for (var i=0;i<" + jsFor + ".length; ++i)\n	" + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + jsFor + "[i], " + (jsDatas.join(',')) + ", false), " + jsPost + ")");
     };
 
     return plainCompiler;
@@ -1086,7 +1106,7 @@
       }
     };
 
-    dynamicRunner.prototype.runIf = function(data, tmpl, start, end) {
+    dynamicRunner.prototype.runIf = function(datas, tmpl, start, end) {
       var shown, undo,
         _this = this;
       shown = false;
@@ -1100,7 +1120,7 @@
         shown = show;
         if (show) {
           $undo.start();
-          end.parentNode.insertBefore(tmpl.run(data, false), end);
+          end.parentNode.insertBefore(tmpl.run.apply(tmpl, __slice.call(datas).concat([false])), end);
           return undo = $undo.claim();
         } else {
           _this.removeBetween(start, end);
@@ -1110,7 +1130,7 @@
       };
     };
 
-    dynamicRunner.prototype.runForEach = function(tmpl, start, end) {
+    dynamicRunner.prototype.runForEach = function(tmpl, datas, start, end) {
       var ret, undo,
         _this = this;
       undo = null;
@@ -1123,12 +1143,12 @@
           _this.removeBetween(start, end);
         }
         $undo.start();
-        _this.runForEachInner(coll, tmpl, start, end, ret);
+        _this.runForEachInner(coll, tmpl, datas, start, end, ret);
         return undo = $undo.claim();
       };
     };
 
-    dynamicRunner.prototype.runForEachInner = function(coll, tmpl, start, end, replaceMe) {
+    dynamicRunner.prototype.runForEachInner = function(coll, tmpl, datas, start, end, replaceMe) {
       var add, ends, rem, undo,
         _this = this;
       ends = [start, end];
@@ -1141,7 +1161,7 @@
         par = start.parentNode;
         par.insertBefore(newend, ends[at].nextSibling);
         $undo.start();
-        par.insertBefore(tmpl.run(model, false), newend);
+        par.insertBefore(tmpl.run.apply(tmpl, [model].concat(__slice.call(datas), [false])), newend);
         return undo.splice(at, 0, $undo.claim());
       };
       rem = function(model, coll, opts) {
@@ -1180,46 +1200,46 @@
       return new dynamicRunner(node);
     };
 
-    dynamicCompiler.prototype.doSimple = function(ret, js, jsCur, jsData, n, v, expr) {
+    dynamicCompiler.prototype.doSimple = function(ret, js, jsCur, jsDatas, n, v, expr) {
       var esc, escn, escvar, jsChange;
       esc = {};
       jsChange = js.addVar("" + jsCur + "_change", "null");
-      this.escapesParse(v, function(t) {
+      this.escapesParse(v, jsDatas, function(id, t, jsData) {
         if (t !== '.') {
-          return esc[t] = js.addForcedVar("" + jsCur + "_" + t, "null", t);
+          return esc[id] = js.addForcedVar("" + jsCur + "_" + t, "null", [t, jsData]);
         }
       });
-      expr = expr.replace(/#el#/g, "" + jsCur).replace(/#n#/g, js.toSrc(n)).replace(/#v#/g, this.escapesParse(v, function(t) {
+      expr = expr.replace(/#el#/g, "" + jsCur).replace(/#n#/g, js.toSrc(n)).replace(/#v#/g, this.escapesParse(v, jsDatas, function(id, t, jsData) {
         if (t !== '.') {
-          return esc[t];
+          return esc[id];
         } else {
           return jsData;
         }
       }));
       for (escn in esc) {
         escvar = esc[escn];
-        js.addExpr("this.runGetMulti(function(val){\n	" + escvar + " = val;\n	if (" + jsChange + ") " + jsChange + "();\n}, " + jsData + ", " + (js.toSrc(escn.split('.'))) + ")");
+        js.addExpr("this.runGetMulti(function(val){\n	" + escvar + " = val;\n	if (" + jsChange + ") " + jsChange + "();\n}, " + escvar.v[1] + ", " + (js.toSrc(escvar.v[0].split('.'))) + ")");
       }
       js.addExpr("" + jsChange + " = function() {\n	" + expr + ";\n}");
       return js.addExpr("" + jsChange + "()");
     };
 
-    dynamicCompiler.prototype.doIf = function(ret, js, jsPre, jsPost, jsData, val, inner) {
+    dynamicCompiler.prototype.doIf = function(ret, js, jsPre, jsPost, jsDatas, val, inner) {
       var jsChange;
-      jsChange = js.addForcedVar("" + jsPre + "_ifchange", "this.runIf(" + jsData + ", this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
-      return this.doSimple(ret, js, jsPre, jsData, null, val, "" + jsChange + "(#v#)");
+      jsChange = js.addForcedVar("" + jsPre + "_ifchange", "this.runIf([" + (jsDatas.join(', ')) + "], this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
+      return this.doSimple(ret, js, jsPre, jsDatas, null, val, "" + jsChange + "(#v#)");
     };
 
-    dynamicCompiler.prototype.doUnless = function(ret, js, jsPre, jsPost, jsData, val, inner) {
+    dynamicCompiler.prototype.doUnless = function(ret, js, jsPre, jsPost, jsDatas, val, inner) {
       var jsChange;
-      jsChange = js.addForcedVar("" + jsPre + "_ifchange", "this.runIf(" + jsData + ", this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
-      return this.doSimple(ret, js, jsPre, jsData, null, val, "" + jsChange + "(!(#v#))");
+      jsChange = js.addForcedVar("" + jsPre + "_ifchange", "this.runIf([" + (jsDatas.join(', ')) + "], this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
+      return this.doSimple(ret, js, jsPre, jsDatas, null, val, "" + jsChange + "(!(#v#))");
     };
 
-    dynamicCompiler.prototype.doForEach = function(ret, js, jsPre, jsPost, jsData, val, inner) {
+    dynamicCompiler.prototype.doForEach = function(ret, js, jsPre, jsPost, jsDatas, val, inner) {
       var jsChange;
-      jsChange = js.addForcedVar("" + jsPre + "_forchange", "this.runForEach(this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
-      return this.doSimple(ret, js, jsPre, jsData, null, val, "" + jsChange + "(#v#)");
+      jsChange = js.addForcedVar("" + jsPre + "_forchange", "this.runForEach(this." + jsPre + ", [" + (jsDatas.join(', ')) + "], " + jsPre + ", " + jsPost + ")");
+      return this.doSimple(ret, js, jsPre, jsDatas, null, val, "" + jsChange + "(#v#)");
     };
 
     return dynamicCompiler;

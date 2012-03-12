@@ -168,6 +168,28 @@ jQuery(function(){
 			// TODO: Maybe decide on and test what foreach="{{a}} {{b}}" should do
 		});
 
+		test("Contexts", function(){
+			var tpl = 
+				'<ul>'+
+					'<li foreach="{{objs}}">'+
+						'<ul>'+
+							'<li foreach="{{..objs}}">'+
+								'[{{...one}}{{..txt}}{{.txt}}]'+
+							'</li>'+
+						'</ul>'+
+					'</li>'+
+				'</ul>';
+			has(tpl, data, "[FirstAA]", "Contexts nest well");
+			has(tpl, data, "[FirstAC]", "Contexts nest well");
+			has(tpl, data, "[FirstAE]", "Contexts nest well");
+			has(tpl, data, "[FirstCA]", "Contexts nest well");
+			has(tpl, data, "[FirstCC]", "Contexts nest well");
+			has(tpl, data, "[FirstCE]", "Contexts nest well");
+			has(tpl, data, "[FirstEA]", "Contexts nest well");
+			has(tpl, data, "[FirstEC]", "Contexts nest well");
+			has(tpl, data, "[FirstEE]", "Contexts nest well");
+		});
+
 		// TODO: Events (add/remove/count/parameters)
 		// TODO: oninput="{{>blah}}"
 		// TODO: value="{{>blah}}"

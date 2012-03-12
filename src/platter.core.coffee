@@ -71,17 +71,19 @@ class templateCompiler
 
 	# Below here, I doubt anyone will override anything
 	compile: (txt) ->
-		@compileFrag @tmplToFrag txt
+		@compileFrag @tmplToFrag(txt), 1
 	
-	compileFrag: (frag) ->
+	compileFrag: (frag, ctxCnt) ->
 		js = new platter.internal.codegen
 		# TODO: Confirm that we can change this variable name without issue
-		jsData = js.existingVar 'data'
+		jsDatas = []
+		for i in [0...ctxCnt]
+			jsDatas.push js.existingVar 'data'+i
 		# TODO: Confirm that we can change this variable name without issue
 		jsAutoRemove = js.existingVar 'autoRemove'
 		jsEl = js.addVar 'el', 'this.node.cloneNode(true)', frag
 		ret = @makeRet(frag)
-		@compileInner ret, js, jsEl, jsData
+		@compileInner ret, js, jsEl, jsDatas
 		jsFirstChild = js.addForcedVar "firstChild", "#{jsEl}.firstChild"
 		jsLastChild = js.addForcedVar "lastChild", "#{jsEl}.lastChild"
 		jsSelf = js.addForcedVar "self", "this"
@@ -95,11 +97,11 @@ class templateCompiler
 			js.addExpr "return #{jsFirstChild}"
 		else
 			js.addExpr "return #{jsEl}"
-		#alert js
-		ret.run = new Function('data', 'autoRemove', ""+js)
+		#alert "function(#{(d.n for d in jsDatas).join ', '}, autoRemove) {\n#{js}\n}"
+		ret.run = new Function((d.n for d in jsDatas).join(', '), 'autoRemove', ""+js)
 		ret
 	
-	compileInner: (ret, js, jsEl, jsData) ->
+	compileInner: (ret, js, jsEl, jsDatas) ->
 		jsCur = js.addVar jsEl+"_ch", "#{jsEl}.firstChild", jsEl.v.firstChild
 		js.forceVar jsCur
 		while (jsCur.v)
@@ -115,7 +117,7 @@ class templateCompiler
 					if (realn && this["special_#{realn}"] && hasEscape v)
 						isSpecial = true
 						jsCur.v.removeAttribute n
-						jsCur = this["special_#{realn}"](ret, js, jsCur, jsData, v)
+						jsCur = this["special_#{realn}"](ret, js, jsCur, jsDatas, v)
 						break
 				if !isSpecial
 					for {n, realn, v} in attrs
@@ -126,12 +128,12 @@ class templateCompiler
 								jsCur.v.setAttribute realn, v
 						else
 							if isEvent realn
-								@doEvent ret, js, jsCur, jsData, realn, v
+								@doEvent ret, js, jsCur, jsDatas, realn, v
 							else
 								n2 = if @assigners[realn] then realn else '#default'
-								@doSimple ret, js, jsCur, jsData, realn, v, @assigners[n2]
+								@doSimple ret, js, jsCur, jsDatas, realn, v, @assigners[n2]
 					if jsCur.v.tagName.toLowerCase()!='textarea'
-						@compileInner ret, js, jsCur, jsData
+						@compileInner ret, js, jsCur, jsDatas
 			else if jsCur.v.nodeType==8  # Comment
 				ct = jsCur.v.nodeValue
 				ct = unhideAttr ct
@@ -144,7 +146,7 @@ class templateCompiler
 					@doSimple ret, js, jsCur, jsDatas, 'text', jsCur.v.nodeValue, @assigners['#text']
 			jsCur = js.addVar "#{jsEl}_ch", "#{jsCur}.nextSibling", jsCur.v.nextSibling
 
-	doEvent: (ret, js, jsCur, jsData, realn, v) ->
+	doEvent: (ret, js, jsCur, jsDatas, realn, v) ->
 		ev = realn.substr(2)
 		@escapesReplace v, (t) ->
 			if (t[0]=='>')
@@ -156,33 +158,33 @@ class templateCompiler
 				else
 					prop = 'value'
 				# TODO: Support radio buttons, select-boxes and maybe others
-				js.addExpr "this.runEvent(#{jsCur}, #{js.toSrc ev}, function(ev){ #{jsThis}.doSet(#{jsData}, #{js.toSrc t}, #{js.index jsCur, prop}); })"
+				js.addExpr "this.runEvent(#{jsCur}, #{js.toSrc ev}, function(ev){ #{jsThis}.doSet(#{jsDatas[0]}, #{js.toSrc t}, #{js.index jsCur, prop}); })"
 			else
-				js.addExpr "this.runEvent(#{jsCur}, #{js.toSrc ev}, function(ev){ return #{js.index jsData, t}(ev, #{js.toSrc ev}, #{jsCur}); })"
+				js.addExpr "this.runEvent(#{jsCur}, #{js.toSrc ev}, function(ev){ return #{js.index jsDatas[0], t}(ev, #{js.toSrc ev}, #{jsCur}); })"
 
 	# TODO: Put these special things somewhere better
-	special_if: (ret, js, jsCur, jsData, val) ->
+	special_if: (ret, js, jsCur, jsDatas, val) ->
 		[jsCur.v, post, frag] = pullNode jsCur.v
-		inner = @compileFrag frag
+		inner = @compileFrag frag, jsDatas.length
 		ret[jsCur.n] = inner
 		jsPost = js.addVar "#{jsCur}_end", "#{jsCur}.nextSibling", post
-		@doIf ret, js, jsCur, jsPost, jsData, val, inner
+		@doIf ret, js, jsCur, jsPost, jsDatas, val, inner
 		jsPost
 
-	special_unless: (ret, js, jsCur, jsData, val) ->
+	special_unless: (ret, js, jsCur, jsDatas, val) ->
 		[jsCur.v, post, frag] = pullNode jsCur.v
-		inner = @compileFrag frag
+		inner = @compileFrag frag, jsDatas.length
 		ret[jsCur.n] = inner
 		jsPost = js.addVar "#{jsCur}_end", "#{jsCur}.nextSibling", post
-		@doUnless ret, js, jsCur, jsPost, jsData, val, inner
+		@doUnless ret, js, jsCur, jsPost, jsDatas, val, inner
 		jsPost
 
-	special_foreach: (ret, js, jsCur, jsData, val) ->
+	special_foreach: (ret, js, jsCur, jsDatas, val) ->
 		[jsCur.v, post, frag] = pullNode jsCur.v
-		inner = @compileFrag frag
+		inner = @compileFrag frag, jsDatas.length+1
 		ret[jsCur.n] = inner
 		jsPost = js.addVar "#{jsCur}_end", "#{jsCur}.nextSibling", post
-		@doForEach ret, js, jsCur, jsPost, jsData, val, inner
+		@doForEach ret, js, jsCur, jsPost, jsDatas, val, inner
 		jsPost
 
 	# Below here, it's utility functions, which maybe should be moved.
@@ -233,9 +235,17 @@ class templateCompiler
 			s += '+"' + txt.substring(last, txt.length).replace(/[\\\"]/g, "\\$1") + '"'
 		s.slice(1)
 
-	escapesParse: (txt, fn) ->
+	escapesParse: (txt, jsDatas, fn) ->
 		@escapesReplace txt, (v) ->
-			op = platter.internal.jslikeparse v, (t2) -> ""+fn(t2)
+			op = platter.internal.jslikeparse v, (ex) ->
+				ex2 = ex
+				dref = 0;
+				if m=/^(\.+)(.*?)$/.exec(ex)
+					if (m[1].length>jsDatas.length)
+						throw new Error("#{ex} has too many dots")
+					dref = m[1].length-1
+					ex2 = m[2]||'.'
+				""+fn(ex, ex2, jsDatas[dref])
 			platter.internal.jslikeunparse op
 	
 	assigners:
