@@ -130,7 +130,7 @@
     };
 
     templateCompiler.prototype.compileInner = function(ret, js, jsEl, jsDatas) {
-      var attrs, ct, isSpecial, jsCur, n, n2, realn, v, _i, _j, _len, _len2, _ref, _ref2, _results;
+      var attrs, ct, isSpecial, jsCur, n, n2, realn, v, _ref, _ref2, _results;
       jsCur = js.addVar(jsEl + "_ch", "" + jsEl + ".firstChild", jsEl.v.firstChild);
       js.forceVar(jsCur);
       _results = [];
@@ -139,14 +139,14 @@
           isSpecial = false;
           attrs = attrList(jsCur.v);
           if (jsCur.v.tagName.toLowerCase() === 'textarea' && hasEscape(jsCur.v.value)) {
-            attrs.push({
+            attrs.value = {
               n: 'value',
               realn: 'value',
               v: uncommentEscapes(unhideAttr(jsCur.v.value))
-            });
+            };
           }
-          for (_i = 0, _len = attrs.length; _i < _len; _i++) {
-            _ref = attrs[_i], n = _ref.n, realn = _ref.realn, v = _ref.v;
+          for (realn in attrs) {
+            _ref = attrs[realn], n = _ref.n, realn = _ref.realn, v = _ref.v;
             if (realn && this["special_" + realn] && hasEscape(v)) {
               isSpecial = true;
               jsCur.v.removeAttribute(n);
@@ -155,8 +155,8 @@
             }
           }
           if (!isSpecial) {
-            for (_j = 0, _len2 = attrs.length; _j < _len2; _j++) {
-              _ref2 = attrs[_j], n = _ref2.n, realn = _ref2.realn, v = _ref2.v;
+            for (realn in attrs) {
+              _ref2 = attrs[realn], n = _ref2.n, realn = _ref2.realn, v = _ref2.v;
               if (realn !== n) jsCur.v.removeAttribute(n);
               if (!(hasEscape(v))) {
                 if (realn !== n) jsCur.v.setAttribute(realn, v);
@@ -363,21 +363,21 @@
   };
 
   attrList = function(node) {
-    var att, _i, _len, _ref, _results;
+    var att, realn, ret, _i, _len, _ref;
     if (browser.attributeIterationBreaksClone) node = node.cloneNode(false);
+    ret = {};
     _ref = node.attributes;
-    _results = [];
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       att = _ref[_i];
-      if (isPlatterAttr(att.nodeName)) {
-        _results.push({
-          n: att.nodeName,
-          realn: unhideAttrName(att.nodeName),
-          v: uncommentEscapes(unhideAttr(att.nodeValue))
-        });
-      }
+      if (!(isPlatterAttr(att.nodeName))) continue;
+      realn = unhideAttrName(att.nodeName);
+      ret[realn] = {
+        n: att.nodeName,
+        realn: realn,
+        v: uncommentEscapes(unhideAttr(att.nodeValue))
+      };
     }
-    return _results;
+    return ret;
   };
 
   pullNode = function(node) {

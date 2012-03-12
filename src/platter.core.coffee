@@ -109,18 +109,18 @@ class templateCompiler
 				isSpecial = false
 				attrs = attrList jsCur.v
 				if jsCur.v.tagName.toLowerCase()=='textarea' && hasEscape jsCur.v.value
-					attrs.push
+					attrs.value =
 						n: 'value'
 						realn: 'value'
 						v: uncommentEscapes unhideAttr jsCur.v.value
-				for {n, realn, v} in attrs
+				for realn, {n, realn, v} of attrs
 					if (realn && this["special_#{realn}"] && hasEscape v)
 						isSpecial = true
 						jsCur.v.removeAttribute n
 						jsCur = this["special_#{realn}"](ret, js, jsCur, jsDatas, v)
 						break
 				if !isSpecial
-					for {n, realn, v} in attrs
+					for realn, {n, realn, v} of attrs
 						if (realn!=n)
 							jsCur.v.removeAttribute n
 						if !(hasEscape v)
@@ -294,11 +294,14 @@ str = (o) ->
 attrList = (node) ->
 	if browser.attributeIterationBreaksClone
 		node = node.cloneNode false
-	({
-		n: att.nodeName
-		realn: unhideAttrName att.nodeName
-		v: uncommentEscapes unhideAttr att.nodeValue
-	} for att in node.attributes when isPlatterAttr att.nodeName)
+	ret = {}
+	for att in node.attributes when isPlatterAttr att.nodeName
+		realn = unhideAttrName att.nodeName
+		ret[realn] = 
+			n: att.nodeName
+			realn: realn
+			v: uncommentEscapes unhideAttr att.nodeValue
+	ret
 
 pullNode = (node) ->
 	pre = document.createComment ""
