@@ -115,7 +115,7 @@ jQuery(function(){
 		});
 
 		test("Attribute: if", function(){
-			hasJQ('<h1 if="bogus">Hey</h1>', data, "h1", "Non-special attribute ignored");
+			hasJQ('<h1 if="bogus">Hey</h1>', data, "h1[if]", "Non-special attribute ignored");
 			hasNotJQ("<h1 if='{{bo}}'>Hey</h1>", data, "h1", "Missing value");
 			hasNotJQ("<h1 if='{{two.bo}}'>Hey</h1>", data, "h1", "Missing second-level value");
 			hasJQ("<h1 if='{{one}}'>Hey</h1>", data, "h1", "One-level value");
@@ -133,7 +133,7 @@ jQuery(function(){
 		});
 
 		test("Attribute: unless", function(){
-			hasJQ('<h1 unless="bogus">Hey</h1>', data, "h1", "Non-special attribute ignored");
+			hasJQ('<h1 unless="bogus">Hey</h1>', data, "h1[unless]", "Non-special attribute ignored");
 			hasJQ("<h1 unless='{{bo}}'>Hey</h1>", data, "h1", "Missing value");
 			hasJQ("<h1 unless='{{two.bo}}'>Hey</h1>", data, "h1", "Missing second-level value");
 			hasNotJQ("<h1 unless='{{one}}'>Hey</h1>", data, "h1", "One-level value");
