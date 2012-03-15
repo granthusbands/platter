@@ -87,6 +87,16 @@ jQuery(function(){
 			equal(js.toSrc("'\\'"), '"\'\\\\\'"', '"\'\\\\\'"');
 		else
 			equal(js.toSrc("'\\'"), "'\\'\\\\\\''", '"\'\\\\\'"');
+
+		if (js.toSrc('\n')=='"\\n"')
+			equal(js.toSrc('\n'), '"\\n"', '"\\n"')
+		else
+			equal(js.toSrc('\n'), "'\\n'", "'\\n'")
+
+		if (js.toSrc('\r')=='"\\r"')
+			equal(js.toSrc('\r'), '"\\r"', '"\\r"')
+		else
+			equal(js.toSrc('\r'), "'\\r'", "'\\r'")
 	})
 
 	// TODO: Test HTML->document fragment

@@ -885,6 +885,7 @@
   };
 
   codegen = (function() {
+    var singrep;
 
     function codegen() {
       this._code = [];
@@ -1004,10 +1005,19 @@
       return name;
     };
 
+    singrep = {
+      "'": "\\'",
+      "\\": "\\\\",
+      "\r": "\\r",
+      "\n": "\\n"
+    };
+
     codegen.prototype.toSrc = function(o) {
       var a;
       if (typeof o === 'string') {
-        return "'" + (o.replace(/([\\'])/g, "\\$1")) + "'";
+        return "'" + (o.replace(/[\\'\r\n]/g, function(t) {
+          return singrep[t];
+        })) + "'";
       }
       if (typeof o === 'number' || !o) return o + '';
       if (o instanceof Array) {

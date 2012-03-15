@@ -95,9 +95,15 @@ class codegen
 		name
 
 	# JSON library not guaranteed, and this is easy enough. Limited to types generated in the library.
+	singrep = 
+		"'": "\\'"
+		"\\": "\\\\"
+		"\r": "\\r"
+		"\n": "\\n"
+
 	toSrc: (o) ->
 		if typeof o == 'string'
-			return "'#{o.replace /([\\'])/g, "\\$1"}'"
+			return "'#{o.replace /[\\'\r\n]/g, (t)->singrep[t]}'"
 		if typeof o == 'number' || !o
 			return o+''
 		if o instanceof Array
