@@ -585,6 +585,15 @@
     return jsPost;
   });
 
+  addBlockAndAttrExtract('with', 60, function(comp, frag, ret, js, jsCur, post, jsDatas, val) {
+    var inner, jsPost;
+    inner = comp.compileFrag(frag, jsDatas.length + 1);
+    ret[jsCur.n] = inner;
+    jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
+    comp.doWith(ret, js, jsCur, jsPost, jsDatas, val, inner);
+    return jsPost;
+  });
+
   specpri = 101;
 
   preopdefs = {
@@ -1119,6 +1128,11 @@
       return js.addExpr("for (var i=0;i<" + jsFor + ".length; ++i)\n	" + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + jsFor + "[i], " + (jsDatas.join(',')) + ", false), " + jsPost + ")");
     };
 
+    plainCompiler.prototype.doWith = function(ret, js, jsCur, jsPost, jsDatas, val, inner) {
+      val = this.escapesParse(val, jsDatas, plainGet(js));
+      return js.addExpr("" + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + val + ", " + (jsDatas.join(', ')) + ", false), " + jsPost + ")");
+    };
+
     return plainCompiler;
 
   })(platter.internal.templateCompiler);
@@ -1277,6 +1291,22 @@
       });
     };
 
+    dynamicRunner.prototype.runWith = function(datas, tmpl, start, end) {
+      var undo,
+        _this = this;
+      undo = null;
+      $undo.add(function() {
+        if (undo) return undo();
+      });
+      return function(val) {
+        _this.removeBetween(start, end);
+        if (undo) undo();
+        $undo.start();
+        end.parentNode.insertBefore(tmpl.run.apply(tmpl, [val].concat(__slice.call(datas), [false])), end);
+        return undo = $undo.claim();
+      };
+    };
+
     return dynamicRunner;
 
   })(platter.internal.templateRunner);
@@ -1332,6 +1362,12 @@
     dynamicCompiler.prototype.doForEach = function(ret, js, jsPre, jsPost, jsDatas, val, inner) {
       var jsChange;
       jsChange = js.addForcedVar("" + jsPre + "_forchange", "this.runForEach(this." + jsPre + ", [" + (jsDatas.join(', ')) + "], " + jsPre + ", " + jsPost + ")");
+      return this.doSimple(ret, js, jsPre, jsDatas, null, val, "" + jsChange + "(#v#)");
+    };
+
+    dynamicCompiler.prototype.doWith = function(ret, js, jsPre, jsPost, jsDatas, val, inner) {
+      var jsChange;
+      jsChange = js.addForcedVar("" + jsPre + "_ifchange", "this.runWith([" + (jsDatas.join(', ')) + "], this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
       return this.doSimple(ret, js, jsPre, jsDatas, null, val, "" + jsChange + "(#v#)");
     };
 

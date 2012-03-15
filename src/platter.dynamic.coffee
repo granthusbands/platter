@@ -108,6 +108,16 @@ class dynamicRunner extends platter.internal.templateRunner
 			for undoer in undo
 				undoer()
 
+	runWith: (datas, tmpl, start, end) ->
+		undo = null
+		$undo.add -> undo() if undo
+		(val) =>
+			@removeBetween start, end
+			if undo then undo()
+			$undo.start()
+			end.parentNode.insertBefore tmpl.run(val, datas..., false), end
+			undo = $undo.claim()
+
 class dynamicCompiler extends platter.internal.templateCompiler
 	makeRet: (node) ->
 		new dynamicRunner(node)
@@ -152,6 +162,11 @@ class dynamicCompiler extends platter.internal.templateCompiler
 	# Compiler:
 	doForEach: (ret, js, jsPre, jsPost, jsDatas, val, inner) ->
 		jsChange = js.addForcedVar "#{jsPre}_forchange", "this.runForEach(this.#{jsPre}, [#{jsDatas.join ', '}], #{jsPre}, #{jsPost})"
+		@doSimple ret, js, jsPre, jsDatas, null, val, "#{jsChange}(#v#)"
+
+	# Compiler: Conditional section
+	doWith: (ret, js, jsPre, jsPost, jsDatas, val, inner) ->
+		jsChange = js.addForcedVar "#{jsPre}_ifchange", "this.runWith([#{jsDatas.join ', '}], this.#{jsPre}, #{jsPre}, #{jsPost})"
 		@doSimple ret, js, jsPre, jsDatas, null, val, "#{jsChange}(#v#)"
 
 platter.internal.dynamicRunner = dynamicRunner

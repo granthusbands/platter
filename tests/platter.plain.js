@@ -168,6 +168,15 @@ jQuery(function(){
 
 			// TODO: Maybe decide on and test what foreach="{{a}} {{b}}" should do
 		});
+		test("Attribute: with", function(){
+			hasJQ('<h1 with="bogus">Hey</h1>', data, "h1[with]", "Non-special attribute ignored");
+			hasJQ("<h1 with='{{bo}}'>Hey</h1>", data, "h1", "Missing value");
+			hasJQ("<h1 with='{{two.bo}}'>Hey</h1>", data, "h1", "Missing second-level value");
+			has("<h1 with='{{one}}'>{{.}}</h1>", data, "First", "Simple value");
+			has("<h1 with='{{two}}'>{{too}}</h1>", data, "Second", "Two-level value");
+			has("<h1 with='{{three.tree}}'>{{tee}}</h1>", data, "Third", "Three-level value");
+			has("<h1 with='{{three}}'><span with='{{tree}}'>{{tee}}</span></h1>", data, "Third", "All-level value");
+		});
 		test("Block: if", function(){
 			hasNotJQ("{{#if bo}}<h1>Hey</h1>{{/if}}", data, "h1", "Missing value");
 			hasNotJQ("{{#if two.bo}}<h1>Hey</h1>{{/if}}", data, "h1", "Missing second-level value");

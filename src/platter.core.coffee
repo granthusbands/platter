@@ -442,3 +442,10 @@ addBlockAndAttrExtract 'unless', 60, (comp, frag, ret, js, jsCur, post, jsDatas,
 	jsPost = js.addVar "#{jsCur}_end", "#{jsCur}.nextSibling", post
 	comp.doUnless ret, js, jsCur, jsPost, jsDatas, val, inner
 	jsPost
+
+addBlockAndAttrExtract 'with', 60, (comp, frag, ret, js, jsCur, post, jsDatas, val) ->
+	inner = comp.compileFrag frag, jsDatas.length+1
+	ret[jsCur.n] = inner
+	jsPost = js.addVar "#{jsCur}_end", "#{jsCur}.nextSibling", post
+	comp.doWith ret, js, jsCur, jsPost, jsDatas, val, inner
+	jsPost

@@ -47,6 +47,11 @@ class plainCompiler extends platter.internal.templateCompiler
 				#{jsPost}.parentNode.insertBefore(this.#{jsCur}.run(#{jsFor}[i], #{jsDatas.join ','}, false), #{jsPost})
 		"""
 
+	doWith: (ret, js, jsCur, jsPost, jsDatas, val, inner) ->
+		val = @escapesParse val, jsDatas, plainGet(js)
+		js.addExpr "#{jsPost}.parentNode.insertBefore(this.#{jsCur}.run(#{val}, #{jsDatas.join ', '}, false), #{jsPost})"
+
+
 platter.internal.plainRunner = plainRunner
 platter.internal.plainCompiler = plainCompiler
 platter.plain = new plainCompiler

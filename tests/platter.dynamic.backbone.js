@@ -532,6 +532,26 @@ jQuery(function(){
 		},
 
 
+		{
+			name:"Attribute: with",
+			tests: { // TODO: Should empty array be false and tested? Probably not.
+				h1: ruleElExists('h1[with]'),
+				h2: ruleElText('h2', 'First', ''),
+				h3: ruleElText('h3', 'Second', ''),
+				h4: ruleElText('h4 span', 'Third', ''),
+				h5: ruleElText('h5', 'First', '')
+			},
+			testsstart: {'h1':1},
+			template:
+				"<h1 with='bogus'>a</h1>"+
+				"<h2 with='{{one}}'>{{.}}</h2>"+
+				"<h3 with='{{two}}'>{{too}}</h3>"+
+				"<h4 with='{{three}}'><span with='{{tree}}'>{{tee}}</span></h4>"+
+				"<h5 with='{{three}}'><span with='{{tree}}'>{{...one}}</span></h5>",
+			actions: onetwothreetests({h2:1, h5:1}, {h3:1}, {h4:1})
+		},
+
+
 		// Backbone collection entries have to be models, so we can't have nums.
 		{
 			name:"Attribute: foreach",
