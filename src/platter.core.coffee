@@ -123,7 +123,10 @@ class templateCompiler
 		else
 			js.addExpr "return #{jsEl}"
 		#alert "function(#{(d.n for d in jsDatas).join ', '}, autoRemove) {\n#{js}\n}"
-		ret.run = new Function((d.n for d in jsDatas).join(', '), 'autoRemove', ""+js)
+		try
+			ret.run = new Function((d.n for d in jsDatas).join(', '), 'autoRemove', ""+js)
+		catch e
+			throw new Error("Internal error: Function compilation failed: #{e.message}\n\n#{js}")
 		ret
 	
 	compileInner: (ret, js, jsEl, jsDatas) ->

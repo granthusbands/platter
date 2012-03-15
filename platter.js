@@ -159,15 +159,19 @@
       } else {
         js.addExpr("return " + jsEl);
       }
-      ret.run = new Function(((function() {
-        var _i, _len, _results;
-        _results = [];
-        for (_i = 0, _len = jsDatas.length; _i < _len; _i++) {
-          d = jsDatas[_i];
-          _results.push(d.n);
-        }
-        return _results;
-      })()).join(', '), 'autoRemove', "" + js);
+      try {
+        ret.run = new Function(((function() {
+          var _i, _len, _results;
+          _results = [];
+          for (_i = 0, _len = jsDatas.length; _i < _len; _i++) {
+            d = jsDatas[_i];
+            _results.push(d.n);
+          }
+          return _results;
+        })()).join(', '), 'autoRemove', "" + js);
+      } catch (e) {
+        throw new Error("Internal error: Function compilation failed: " + e.message + "\n\n" + js);
+      }
       return ret;
     };
 
