@@ -420,6 +420,7 @@
       if (!end) break;
       if (end.nodeType !== 8) continue;
       m = /^\{\{([#\/])([^\s\}]*)(.*?)\}\}$/.exec(end.nodeValue);
+      if (!m) continue;
       if (m[1] === '#') {
         stack.push(m[2]);
         continue;

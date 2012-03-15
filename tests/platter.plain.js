@@ -36,6 +36,7 @@ jQuery(function(){
 			has("<h1>data-platter-type=Hi</h1>", data, ">data-platter-type=", "data-platter-type text untouched");
 			has("<h1>test=Hi</h1>", data, ">test=", "test text untouched");
 			has("<h1>type=Hi</h1>", data, ">type=", "type text untouched");
+			has("<h1>{{#if 0}}<!-- blah -->{{/if}}</h1>", data, "", "Comments in blocks don't explode");
 		});
 
 		test("Text tokens", function(){

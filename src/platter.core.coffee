@@ -326,6 +326,7 @@ pullBlock = (endtext, node) ->
 		if (!end) then break
 		if (end.nodeType!=8) then continue
 		m = /^\{\{([#\/])([^\s\}]*)(.*?)\}\}$/.exec end.nodeValue
+		if !m then continue
 		if (m[1]=='#')
 			stack.push m[2]
 			continue
