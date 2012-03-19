@@ -121,10 +121,10 @@ jQuery(function(){
 	// The given elements has the given count1 or count2 (or just not count1, if count2 is not given)
 	function ruleElCount(el, cnt1, cnt2) {
 		return [
-			function(div, n){ok(jQuery(el, div).length==cnt1, n+" "+el+" has count "+cnt1);},
+			function(div, n){equal(jQuery(el, div).length, cnt1, n+" "+el+" has count "+cnt1);},
 			cnt2==null
-				? function(div, n){ok(jQuery(el, div).length!=cnt1, n+" "+el+" does not have count "+cnt1);}
-				: function(div, n){ok(jQuery(el, div).length==cnt2, n+" "+el+" has count "+cnt2);},
+				? function(div, n){notEqual(jQuery(el, div).length, cnt1, n+" "+el+" does not have count "+cnt1);}
+				: function(div, n){equal(jQuery(el, div).length, cnt2, n+" "+el+" has count "+cnt2);},
 		];
 	}
 
