@@ -115,7 +115,9 @@ class dynamicRunner extends platter.internal.templateRunner
 			@removeBetween start, end
 			if undo then undo()
 			$undo.start()
-			end.parentNode.insertBefore tmpl.run(val, datas..., false), end
+			# In some transitions, we can end up removed from the page but wanting to process the event that caused that, so we need to cope with a lack of a parentNode.
+			if (end.parentNode)
+				end.parentNode.insertBefore tmpl.run(val, datas..., false), end
 			undo = $undo.claim()
 
 class dynamicCompiler extends platter.internal.templateCompiler

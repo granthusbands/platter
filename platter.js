@@ -1,5 +1,5 @@
 (function() {
-  var addBlockAndAttrExtract, addBlockExtract, addSpecialAttrExtract, attrList, bigDebug, bigDebugRan, browser, clean, codegen, collprot, commentEscapes, defaultRunEvent, dynamicCompiler, dynamicRunner, e, expropdefs, exprvar, hasEscape, hideAttr, inopdefs, inopre, inops, isEvent, isPlatterAttr, jskeywords, jslikeparse, jslikeunparse, modprot, n, never_equal_to_anything, plainCompiler, plainGet, plainRunner, populate, preopdefs, preopre, preops, pullBlock, pullNode, runDOMEvent, runJQueryEvent, specAttrs, specBlocks, specpri, stackTrace, str, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName, unsupported, valre,
+  var addBlockAndAttrExtract, addBlockExtract, addSpecialAttrExtract, attrList, bigDebug, bigDebugRan, browser, clean, codegen, collprot, commentEscapes, defaultRunEvent, dynamicCompiler, dynamicRunner, e, expropdefs, exprvar, hasEscape, hideAttr, inopdefs, inopre, inops, isEvent, isNat, isPlatterAttr, jskeywords, jslikeparse, jslikeunparse, modprot, n, never_equal_to_anything, plainCompiler, plainGet, plainRunner, populate, preopdefs, preopre, preops, pullBlock, pullNode, runDOMEvent, runJQueryEvent, specAttrs, specBlocks, specpri, stackTrace, str, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName, unsupported, valre,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; },
     __slice = Array.prototype.slice;
@@ -589,7 +589,7 @@
     return jsPost;
   });
 
-  addBlockAndAttrExtract('with', 60, function(comp, frag, ret, js, jsCur, post, jsDatas, val) {
+  addBlockAndAttrExtract('with', 40, function(comp, frag, ret, js, jsCur, post, jsDatas, val) {
     var inner, jsPost;
     inner = comp.compileFrag(frag, jsDatas.length + 1);
     ret[jsCur.n] = inner;
@@ -1306,7 +1306,9 @@
         _this.removeBetween(start, end);
         if (undo) undo();
         $undo.start();
-        end.parentNode.insertBefore(tmpl.run.apply(tmpl, [val].concat(__slice.call(datas), [false])), end);
+        if (end.parentNode) {
+          end.parentNode.insertBefore(tmpl.run.apply(tmpl, [val].concat(__slice.call(datas), [false])), end);
+        }
         return undo = $undo.claim();
       };
     };
@@ -1385,6 +1387,10 @@
 
   platter.dynamic = new dynamicCompiler;
 
+  isNat = function(n) {
+    return !!/^[0-9]+$/.exec(n);
+  };
+
   if (window.Backbone) {
     modprot = Backbone.Model.prototype;
     collprot = Backbone.Collection.prototype;
@@ -1410,6 +1416,58 @@
     modprot.platter_set = function(n, v) {
       return this.set(n, v);
     };
+    collprot.platter_hasKey = function(n) {
+      return n === 'length' || isNat(n);
+    };
+    collprot.platter_watch = function(n, fn) {
+      var add, rem,
+        _this = this;
+      if (n === 'length') {
+        this.on('add remove reset', fn);
+        return $undo.add(function() {
+          return _this.off('add remove reset', fn);
+        });
+      } else if (isNat(n)) {
+        add = function(el, coll, opts) {
+          if (opts.index <= n) return fn();
+        };
+        rem = function(el, coll, opts) {
+          if (opts.index <= n) return fn();
+        };
+        this.on('add', add);
+        this.on('remove', rem);
+        this.on('reset', fn);
+        return $undo.add(function() {
+          _this.off('add', add);
+          _this.off('remove', rem);
+          return _this.off('reset', fn);
+        });
+      }
+    };
+    collprot.platter_get = function(n) {
+      if (isNat(n)) {
+        return this.at(n);
+      } else {
+        return this[n];
+      }
+    };
+    collprot.platter_set = function(n, v) {
+      var _results;
+      if (isNat(n)) {
+        this.remove(this.at(n));
+        return this.add(v, {
+          index: n
+        });
+      } else if (n === 'length' && isNat(v)) {
+        _results = [];
+        while (this.length > n && this.length > 0) {
+          _results.push(this.remove(this.at(this.length - 1)));
+        }
+        return _results;
+      } else {
+        return this[n] = v;
+      }
+    };
     collprot.platter_watchcoll = function(add, remove, replaceMe) {
       var doRep, i, _ref,
         _this = this;
@@ -1434,7 +1492,13 @@
       platter_haskey: modprot,
       platter_watch: modprot,
       platter_get: modprot,
-      platter_set: modprot,
+      platter_set: modprot
+    });
+    platter.internal.debuglist.push({
+      platter_haskey: collprot,
+      platter_watch: collprot,
+      platter_get: collprot,
+      platter_set: collprot,
       platter_watchcoll: collprot
     });
     platter.backbone = platter.dynamic;
