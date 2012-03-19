@@ -578,7 +578,7 @@ jQuery(function(){
 				{
 					name: "Set objs to empty collection",
 					go: function(data){ data.set('objs', new Backbone.Collection()); },
-					tests: {h5:1}
+					tests: {}
 				},
 				{
 					name: "Insert empty model into objs",
