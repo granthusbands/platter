@@ -1,24 +1,3 @@
-browser = {}
-
-do ->
-	div = document.createElement('div')
-	div.innerHTML = "<div> <span>a</span></div>"
-	if div.firstChild.firstChild==div.firstChild.lastChild
-		browser.brokenWhitespace = true  # IE8 and earlier, so far
-
-	div.innerHTML = "a"
-	div.appendChild document.createTextNode "b"
-	div = div.cloneNode(true)
-	if div.firstChild==div.lastChild
-		browser.combinesTextNodes = true  # IE8 and earlier, so far
-
-	div.innerHTML = '<div></div>'
-	div2 = div.firstChild
-	1 for att in div2.attributes
-	div2 = div2.cloneNode true
-	div2.setAttribute 'id', 'b'
-	if div2.getAttributeNode('id') && div2.getAttributeNode('id').nodeValue != 'b'
-		browser.attributeIterationBreaksClone = true  # Only IE7 affected, so far.
 
 
 runDOMEvent = (el, ev, fn) ->
@@ -299,7 +278,7 @@ str = (o) ->
 	o ? ''
 
 attrList = (node) ->
-	if browser.attributeIterationBreaksClone
+	if platter.browser.attributeIterationBreaksClone
 		node = node.cloneNode false
 	ret = {}
 	for att in node.attributes when isPlatterAttr att.nodeName
@@ -357,39 +336,6 @@ pullBlock = (endtext, node) ->
 isEvent = (name) ->
 	name[0]=='o' && name[1]=='n'
 
-stackTrace = ->
-	try
-		throw new Error
-	catch e
-		e.stack
-
-bigDebugRan = false
-bigDebug = ->
-	return if bigDebugRan
-	bigDebugRan = true
-	for o in platter.internal.debuglist
-		do (o) ->
-			if o.platter_watch
-				id = Math.random()
-				orig = o.platter_watch.platter_watch
-				o.platter_watch.platter_watch = (n, fn) ->
-					platter.internal.subscount++
-					platter.internal.subs[id] = stackTrace()
-					$undo.add ->
-						platter.internal.subscount--
-						delete platter.internal.subs[id]
-					orig.call @, n, fn
-			if o.platter_watchcoll
-				id2 = Math.random()
-				orig2 = o.platter_watchcoll.platter_watchcoll
-				o.platter_watchcoll.platter_watchcoll = (add, remove, replaceMe) ->
-					platter.internal.subscount++
-					platter.internal.subs[id2] = stackTrace()
-					$undo.add ->
-						platter.internal.subscount--
-						delete platter.internal.subs[id2]
-					orig2.call @, add, remove, replaceMe
-
 class undoer
 	cur:
 		push: ->
@@ -414,14 +360,11 @@ class undoer
 this.$undo = new undoer
 this.platter =
 	str: str
-	browser: browser
 	internal:
 		templateCompiler: templateCompiler
 		templateRunner: templateRunner
-		debuglist: []
 		subscount: 0
 		subs: {}
-		bigDebug: bigDebug
 
 
 # TODO: Move these into a separate file

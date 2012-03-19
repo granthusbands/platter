@@ -4,33 +4,6 @@
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; },
     __slice = Array.prototype.slice;
 
-  browser = {};
-
-  (function() {
-    var att, div, div2, _i, _len, _ref;
-    div = document.createElement('div');
-    div.innerHTML = "<div> <span>a</span></div>";
-    if (div.firstChild.firstChild === div.firstChild.lastChild) {
-      browser.brokenWhitespace = true;
-    }
-    div.innerHTML = "a";
-    div.appendChild(document.createTextNode("b"));
-    div = div.cloneNode(true);
-    if (div.firstChild === div.lastChild) browser.combinesTextNodes = true;
-    div.innerHTML = '<div></div>';
-    div2 = div.firstChild;
-    _ref = div2.attributes;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      att = _ref[_i];
-      1;
-    }
-    div2 = div2.cloneNode(true);
-    div2.setAttribute('id', 'b');
-    if (div2.getAttributeNode('id') && div2.getAttributeNode('id').nodeValue !== 'b') {
-      return browser.attributeIterationBreaksClone = true;
-    }
-  })();
-
   runDOMEvent = function(el, ev, fn) {
     el.addEventListener(ev, fn);
     return $undo.add(function() {
@@ -387,7 +360,9 @@
 
   attrList = function(node) {
     var att, realn, ret, _i, _len, _ref;
-    if (browser.attributeIterationBreaksClone) node = node.cloneNode(false);
+    if (platter.browser.attributeIterationBreaksClone) {
+      node = node.cloneNode(false);
+    }
     ret = {};
     _ref = node.attributes;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -455,6 +430,124 @@
     return name[0] === 'o' && name[1] === 'n';
   };
 
+  undoer = (function() {
+
+    undoer.prototype.cur = {
+      push: function() {}
+    };
+
+    function undoer() {
+      this.stack = [];
+    }
+
+    undoer.prototype.add = function(fn) {
+      return this.cur.push(fn);
+    };
+
+    undoer.prototype.start = function() {
+      this.stack.push(this.cur);
+      return this.cur = [];
+    };
+
+    undoer.prototype.claim = function() {
+      var cur;
+      cur = this.cur;
+      this.cur = this.stack.pop();
+      return function() {
+        var fn, _i, _len;
+        for (_i = 0, _len = cur.length; _i < _len; _i++) {
+          fn = cur[_i];
+          fn();
+        }
+        return cur = [];
+      };
+    };
+
+    undoer.prototype.undoToStart = function() {
+      return this.claim()();
+    };
+
+    return undoer;
+
+  })();
+
+  this.$undo = new undoer;
+
+  this.platter = {
+    str: str,
+    internal: {
+      templateCompiler: templateCompiler,
+      templateRunner: templateRunner,
+      subscount: 0,
+      subs: {}
+    }
+  };
+
+  addBlockAndAttrExtract('foreach', 100, function(comp, frag, ret, js, jsCur, post, jsDatas, val) {
+    var inner, jsPost;
+    inner = comp.compileFrag(frag, jsDatas.length + 1);
+    ret[jsCur.n] = inner;
+    jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
+    comp.doForEach(ret, js, jsCur, jsPost, jsDatas, val, inner);
+    return jsPost;
+  });
+
+  addBlockAndAttrExtract('if', 60, function(comp, frag, ret, js, jsCur, post, jsDatas, val) {
+    var inner, jsPost;
+    inner = comp.compileFrag(frag, jsDatas.length);
+    ret[jsCur.n] = inner;
+    jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
+    comp.doIf(ret, js, jsCur, jsPost, jsDatas, val, inner);
+    return jsPost;
+  });
+
+  addBlockAndAttrExtract('unless', 60, function(comp, frag, ret, js, jsCur, post, jsDatas, val) {
+    var inner, jsPost;
+    inner = comp.compileFrag(frag, jsDatas.length);
+    ret[jsCur.n] = inner;
+    jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
+    comp.doUnless(ret, js, jsCur, jsPost, jsDatas, val, inner);
+    return jsPost;
+  });
+
+  addBlockAndAttrExtract('with', 40, function(comp, frag, ret, js, jsCur, post, jsDatas, val) {
+    var inner, jsPost;
+    inner = comp.compileFrag(frag, jsDatas.length + 1);
+    ret[jsCur.n] = inner;
+    jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
+    comp.doWith(ret, js, jsCur, jsPost, jsDatas, val, inner);
+    return jsPost;
+  });
+
+  browser = {};
+
+  (function() {
+    var att, div, div2, _i, _len, _ref;
+    div = document.createElement('div');
+    div.innerHTML = "<div> <span>a</span></div>";
+    if (div.firstChild.firstChild === div.firstChild.lastChild) {
+      browser.brokenWhitespace = true;
+    }
+    div.innerHTML = "a";
+    div.appendChild(document.createTextNode("b"));
+    div = div.cloneNode(true);
+    if (div.firstChild === div.lastChild) browser.combinesTextNodes = true;
+    div.innerHTML = '<div></div>';
+    div2 = div.firstChild;
+    _ref = div2.attributes;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      att = _ref[_i];
+      1;
+    }
+    div2 = div2.cloneNode(true);
+    div2.setAttribute('id', 'b');
+    if (div2.getAttributeNode('id') && div2.getAttributeNode('id').nodeValue !== 'b') {
+      return browser.attributeIterationBreaksClone = true;
+    }
+  })();
+
+  platter.browser = browser;
+
   stackTrace = function() {
     try {
       throw new Error;
@@ -506,97 +599,9 @@
     return _results;
   };
 
-  undoer = (function() {
+  platter.internal.debuglist = [];
 
-    undoer.prototype.cur = {
-      push: function() {}
-    };
-
-    function undoer() {
-      this.stack = [];
-    }
-
-    undoer.prototype.add = function(fn) {
-      return this.cur.push(fn);
-    };
-
-    undoer.prototype.start = function() {
-      this.stack.push(this.cur);
-      return this.cur = [];
-    };
-
-    undoer.prototype.claim = function() {
-      var cur;
-      cur = this.cur;
-      this.cur = this.stack.pop();
-      return function() {
-        var fn, _i, _len;
-        for (_i = 0, _len = cur.length; _i < _len; _i++) {
-          fn = cur[_i];
-          fn();
-        }
-        return cur = [];
-      };
-    };
-
-    undoer.prototype.undoToStart = function() {
-      return this.claim()();
-    };
-
-    return undoer;
-
-  })();
-
-  this.$undo = new undoer;
-
-  this.platter = {
-    str: str,
-    browser: browser,
-    internal: {
-      templateCompiler: templateCompiler,
-      templateRunner: templateRunner,
-      debuglist: [],
-      subscount: 0,
-      subs: {},
-      bigDebug: bigDebug
-    }
-  };
-
-  addBlockAndAttrExtract('foreach', 100, function(comp, frag, ret, js, jsCur, post, jsDatas, val) {
-    var inner, jsPost;
-    inner = comp.compileFrag(frag, jsDatas.length + 1);
-    ret[jsCur.n] = inner;
-    jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
-    comp.doForEach(ret, js, jsCur, jsPost, jsDatas, val, inner);
-    return jsPost;
-  });
-
-  addBlockAndAttrExtract('if', 60, function(comp, frag, ret, js, jsCur, post, jsDatas, val) {
-    var inner, jsPost;
-    inner = comp.compileFrag(frag, jsDatas.length);
-    ret[jsCur.n] = inner;
-    jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
-    comp.doIf(ret, js, jsCur, jsPost, jsDatas, val, inner);
-    return jsPost;
-  });
-
-  addBlockAndAttrExtract('unless', 60, function(comp, frag, ret, js, jsCur, post, jsDatas, val) {
-    var inner, jsPost;
-    inner = comp.compileFrag(frag, jsDatas.length);
-    ret[jsCur.n] = inner;
-    jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
-    comp.doUnless(ret, js, jsCur, jsPost, jsDatas, val, inner);
-    return jsPost;
-  });
-
-  addBlockAndAttrExtract('with', 40, function(comp, frag, ret, js, jsCur, post, jsDatas, val) {
-    var inner, jsPost;
-    inner = comp.compileFrag(frag, jsDatas.length + 1);
-    ret[jsCur.n] = inner;
-    jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
-    comp.doWith(ret, js, jsCur, jsPost, jsDatas, val, inner);
-    return jsPost;
-  });
+  platter.internal.bigDebug = bigDebug;
 
   specpri = 101;
 
