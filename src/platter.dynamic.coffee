@@ -125,17 +125,21 @@ class dynamicCompiler extends platter.internal.templateCompiler
 		new dynamicRunner(node)
 
 	# Compiler: Handle simple value-assignments with escapes.
-	doSimple: (ret, js, jsCur, jsDatas, n, v, expr) ->
+	doBase: (ret, js, jsCur, jsDatas, n, v, expr, sep) ->
+		if (sep==true)
+			parse = escapesStringParse
+		else
+			parse = (txt, jsDatas, fn) -> escapesNoStringParse txt, sep, jsDatas, fn 
 		esc = {}
 		jsChange = js.addVar "#{jsCur}_change", "null"
-		@escapesParse v, jsDatas, (id, t, jsData) ->
+		parse v, jsDatas, (id, t, jsData) ->
 			if t!='.'
 				esc[id] = js.addForcedVar "#{jsCur}_#{t}", "null", [t, jsData]
 		expr = expr
 			.replace(/#el#/g, "#{jsCur}")
 			.replace(/#n#/g, js.toSrc n)
 			.replace(/#v#/g, 
-				@escapesParse v, jsDatas, (id, t, jsData) -> if t!='.' then esc[id] else jsData
+				parse v, jsDatas, (id, t, jsData) -> if t!='.' then esc[id] else jsData
 			)
 		for escn, escvar of esc
 			js.addExpr """
@@ -151,25 +155,28 @@ class dynamicCompiler extends platter.internal.templateCompiler
 		"""
 		js.addExpr "#{jsChange}()"
 
+	doSimple: (ret, js, jsCur, jsDatas, n, v, expr) ->
+		@doBase ret, js, jsCur, jsDatas, n, v, expr, true
+
 	# Compiler: Conditional section
 	doIf: (ret, js, jsPre, jsPost, jsDatas, val, inner) ->
 		jsChange = js.addForcedVar "#{jsPre}_ifchange", "this.runIf([#{jsDatas.join ', '}], this.#{jsPre}, #{jsPre}, #{jsPost})"
-		@doSimple ret, js, jsPre, jsDatas, null, val, "#{jsChange}(#v#)"
+		@doBase ret, js, jsPre, jsDatas, null, val, "#{jsChange}(#v#)", "&&"
 
 	# Compiler: Conditional section
 	doUnless: (ret, js, jsPre, jsPost, jsDatas, val, inner) ->
 		jsChange = js.addForcedVar "#{jsPre}_ifchange", "this.runIf([#{jsDatas.join ', '}], this.#{jsPre}, #{jsPre}, #{jsPost})"
-		@doSimple ret, js, jsPre, jsDatas, null, val, "#{jsChange}(!(#v#))"
+		@doBase ret, js, jsPre, jsDatas, null, val, "#{jsChange}(!(#v#))", "&&"
 
 	# Compiler:
 	doForEach: (ret, js, jsPre, jsPost, jsDatas, val, inner) ->
 		jsChange = js.addForcedVar "#{jsPre}_forchange", "this.runForEach(this.#{jsPre}, [#{jsDatas.join ', '}], #{jsPre}, #{jsPost})"
-		@doSimple ret, js, jsPre, jsDatas, null, val, "#{jsChange}(#v#)"
+		@doBase ret, js, jsPre, jsDatas, null, val, "#{jsChange}(#v#)", null
 
 	# Compiler: Conditional section
 	doWith: (ret, js, jsPre, jsPost, jsDatas, val, inner) ->
 		jsChange = js.addForcedVar "#{jsPre}_ifchange", "this.runWith([#{jsDatas.join ', '}], this.#{jsPre}, #{jsPre}, #{jsPost})"
-		@doSimple ret, js, jsPre, jsDatas, null, val, "#{jsChange}(#v#)"
+		@doBase ret, js, jsPre, jsDatas, null, val, "#{jsChange}(#v#)", null
 
 platter.internal.dynamicRunner = dynamicRunner
 platter.internal.dynamicCompiler = dynamicCompiler

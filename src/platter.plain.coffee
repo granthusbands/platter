@@ -1,9 +1,12 @@
 plainGet = (js) ->
 	(id, t, jsData) -> 
 		if t=='.'
-			"#{jsData}"
+			return "#{jsData}"
+		t = t.split '.'
+		if (t.length==1)
+			"(#{jsData} ? #{jsData}[#{js.toSrc t[0]}] : #{jsData})"
 		else
-			"this.runGetMulti(#{jsData}, #{js.toSrc t.split '.'})"
+			"this.runGetMulti(#{jsData}, #{js.toSrc t})"
 
 class plainRunner extends platter.internal.templateRunner
 	doSet: (data, n, v) ->
@@ -27,28 +30,29 @@ class plainCompiler extends platter.internal.templateCompiler
 			.replace(/#el#/g, "#{jsCur}")
 			.replace(/#n#/g, js.toSrc n)
 			.replace(/#v#/g, 
-				@escapesParse v, jsDatas, plainGet(js)
+				escapesStringParse v, jsDatas, plainGet(js)
 			)
 	
 	doIf: (ret, js, jsCur, jsPost, jsDatas, val, inner) ->
-		val = @escapesParse val, jsDatas, plainGet(js)
+		val = escapesNoStringParse val, "&&", jsDatas, plainGet(js)
 		js.addExpr "if (#{val}) #{jsPost}.parentNode.insertBefore(this.#{jsCur}.run(#{jsDatas.join ', '}, false), #{jsPost})"
 
 	doUnless: (ret, js, jsCur, jsPost, jsDatas, val, inner) ->
-		val = @escapesParse val, jsDatas, plainGet(js)
+		val = escapesNoStringParse val, "&&", jsDatas, plainGet(js)
 		js.addExpr "if (!(#{val})) #{jsPost}.parentNode.insertBefore(this.#{jsCur}.run(#{jsDatas.join ', '}, false), #{jsPost})"
 
 	doForEach: (ret, js, jsCur, jsPost, jsDatas, val, inner) ->
-		val = @escapesParse val, jsDatas, plainGet(js)
+		val = escapesNoStringParse val, null, jsDatas, plainGet(js)
 		jsFor = js.addVar "#{jsCur}_for", val
 		js.forceVar jsPost
 		js.addExpr """
-			for (var i=0;i<#{jsFor}.length; ++i)
-				#{jsPost}.parentNode.insertBefore(this.#{jsCur}.run(#{jsFor}[i], #{jsDatas.join ','}, false), #{jsPost})
+			if (#{jsFor})
+				for (var i=0;i<#{jsFor}.length; ++i)
+					#{jsPost}.parentNode.insertBefore(this.#{jsCur}.run(#{jsFor}[i], #{jsDatas.join ','}, false), #{jsPost})
 		"""
 
 	doWith: (ret, js, jsCur, jsPost, jsDatas, val, inner) ->
-		val = @escapesParse val, jsDatas, plainGet(js)
+		val = escapesNoStringParse val, null, jsDatas, plainGet(js)
 		js.addExpr "#{jsPost}.parentNode.insertBefore(this.#{jsCur}.run(#{val}, #{jsDatas.join ', '}, false), #{jsPost})"
 
 

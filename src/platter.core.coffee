@@ -75,7 +75,7 @@ class templateCompiler
 
 	# Below here, I doubt anyone will override anything
 	compile: (txt) ->
-		@compileFrag @tmplToFrag(txt), 1
+		@compileFrag tmplToFrag(txt), 1
 	
 	compileFrag: (frag, ctxCnt) ->
 		js = new platter.internal.codegen
@@ -134,7 +134,7 @@ class templateCompiler
 							if realn!=n
 								jsCur.v.setAttribute realn, v
 						else
-							if isEvent realn
+							if isEventAttr realn
 								@doEvent ret, js, jsCur, jsDatas, realn, v
 							else
 								n2 = if @assigners[realn] then realn else '#default'
@@ -159,7 +159,7 @@ class templateCompiler
 
 	doEvent: (ret, js, jsCur, jsDatas, realn, v) ->
 		ev = realn.substr(2)
-		@escapesReplace v, (t) ->
+		@escapesString v, (t) ->
 			if (t[0]=='>')
 				t = t.substr 1
 				jsThis = js.addVar "#{jsCur}_this", "this"
@@ -173,67 +173,6 @@ class templateCompiler
 			else
 				js.addExpr "this.runEvent(#{jsCur}, #{js.toSrc ev}, function(ev){ return #{js.index jsDatas[0], t}(ev, #{js.toSrc ev}, #{jsCur}); })"
 
-	# Below here, it's utility functions, which maybe should be moved.
-	tmplToFrag: (txt) ->
-		txt = hideAttr commentEscapes trim txt
-		# Clones to avoid any transient nodes.
-		@htmlToFrag(txt).cloneNode(true).cloneNode(true)
-	
-	htmlToFrag: (html) ->
-		firsttag = /<(\w+)/.exec(html)[1].toLowerCase()
-		wrap = @nodeWraps[firsttag]||@nodeWraps['#other']
-		el = document.createElement "div"
-		el.innerHTML = wrap[1]+html+wrap[2];
-		depth = wrap[0]
-		while depth--
-			el = el.firstChild
-		frag = document.createDocumentFragment()
-		while el.firstChild
-			frag.appendChild el.firstChild
-		frag
-
-	# For innerHTML to work properly, it has to be in the right context; this table lists them. #other wraps in so much because otherwise IE will lose whitespace/link nodes.
-	# Note: Callers will need to be careful with scripts. They'll still be there.
-	nodeWraps:
-		'#other': [4, '<table><tbody><tr><td>', '</td></tr></tbody></table>']
-		td: [ 3, '<table><tbody><tr>', '</tr></tbody></table>']
-		tr: [ 2, '<table><tbody>', '</tbody></table>']
-		tbody: [1, '<table>', '</table>']
-		tfoot: [1, '<table>', '</table>']
-		thead: [1, '<table>', '</table>']
-		option: [1, '<select multiple="multiple">', '</select>']
-		optgroup: [1, '<select multiple="multiple">', '</select>']
-		li: [1, '<ul>', '</ul>']
-		legend: [1, '<fieldset>', '</fieldset>']
-
-	escapesReplace: (txt, fn) ->
-		# I would put this outside, but JS regexps alter propeties of the regexp object and so aren't reentrant.
-		escape = /\{\{(.*?)\}\}/g;
-		m = undefined
-		last = 0
-		s = ""
-		while m = escape.exec(txt)
-			if m.index>last
-				s += '+"' + txt.substring(last, m.index).replace(/[\\\"]/g, "\\$1") + '"'
-			s += '+platter.str(' + fn(m[1]) + ')'
-			last = m.index+m[0].length
-		if (last<txt.length)
-			s += '+"' + txt.substring(last, txt.length).replace(/[\\\"]/g, "\\$1") + '"'
-		s.slice(1)
-
-	escapesParse: (txt, jsDatas, fn) ->
-		@escapesReplace txt, (v) ->
-			op = platter.internal.jslikeparse v, (ex) ->
-				ex2 = ex
-				dref = 0;
-				if m=/^(\.+)(.*?)$/.exec(ex)
-					if (m[1].length>jsDatas.length)
-						throw new Error("#{ex} has too many dots")
-					dref = m[1].length-1
-					ex2 = m[2]||'.'
-				""+fn(ex, ex2, jsDatas[dref])
-			platter.internal.jslikeunparse op
-	
 	assigners:
 		'#text': "#el#.nodeValue = #v#"
 		'#default': "#el#.setAttribute(#n#, #v#)"
@@ -245,126 +184,13 @@ class templateCompiler
 		#TODO: type in IE -> recreate the node, somehow
 
 
-# People don't want the whitespace that accidentally surrounds their template.
-# Whitespace nodes _within_ the template are maintained.
-trim = (txt) ->
-	txt = txt.replace /^\s+/, ""
-	txt = txt.replace /\s+$/, ""
-
-# For Firefox to not do crazy things (and, to be fair, maybe other 
-# browsers), we need to disguise some attributes.
-# However, IE doesn't like type being messed with.
-hideAttr = (txt) ->
-	txt = txt.replace /([a-z][-a-z0-9_]*=)/ig, "data-platter-$1"
-	txt = txt.replace /data-platter-type=/g, "type="
-unhideAttr = (txt) ->
-	txt = txt.replace /data-platter-(?!type=)([a-z][-a-z0-9_]*=)/g, "$1"
-unhideAttrName = (txt) ->
-	txt = txt.replace /data-platter-(?!type(?:[^-a-z0-9_]|$))([a-z][-a-z0-9_]*)/g, "$1"
-# Old versions of IE like to introduce arbitrary extra attributes; we avoid them.
-isPlatterAttr = (txt) ->
-	txt=='type'||!!/data-platter-(?!type(?:[^-a-z0-9_]|$))([a-z][-a-z0-9_]*)/.exec(txt)
-
-# For the browser to parse our HTML, we need to make sure there's no strange text in odd places. Browsers love them some comments, though.
-commentEscapes = (txt) ->
-	txt = txt.replace /\{\{([#\/].*?)\}\}/g, "<!--{{$1}}-->"
-uncommentEscapes = (txt) ->
-	txt = txt.replace /<!--\{\{([#\/].*?)\}\}-->/g, "{{$1}}"
-
-hasEscape = (txt) ->
-	!!/\{\{/.exec txt
-
-str = (o) ->
-	o ? ''
-
-attrList = (node) ->
-	if platter.browser.attributeIterationBreaksClone
-		node = node.cloneNode false
-	ret = {}
-	for att in node.attributes when isPlatterAttr att.nodeName
-		realn = unhideAttrName att.nodeName
-		ret[realn] = 
-			n: att.nodeName
-			realn: realn
-			v: uncommentEscapes unhideAttr att.nodeValue
-	ret
-
-pullNode = (node) ->
-	pre = document.createComment ""
-	post = document.createComment ""
-	node.parentNode.insertBefore pre, node
-	node.parentNode.insertBefore post, node
-	frag = document.createDocumentFragment()
-	frag.appendChild node
-	[pre, post, frag]
-
-
-pullBlock = (endtext, node) ->
-	end = node
-	stack = [endtext]
-	while true
-		matched = false
-		end = end.nextSibling
-		if (!end) then break
-		if (end.nodeType!=8) then continue
-		m = /^\{\{([#\/])([^\s\}]*)(.*?)\}\}$/.exec end.nodeValue
-		if !m then continue
-		if (m[1]=='#')
-			stack.push m[2]
-			continue
-		while stack.length && stack[stack.length-1]!=m[2]
-			stack.pop()
-		if stack.length && stack[stack.length-1]==m[2]
-			matched = true
-			stack.pop()
-		if stack.length==0
-			break
-	# end now points just beyond the end (and hence might be null)
-	frag = document.createDocumentFragment()
-	while node.nextSibling!=end
-		frag.appendChild node.nextSibling
-	if matched
-		end.parentNode.removeChild end
-	pre = document.createComment ""
-	post = document.createComment ""
-	node.parentNode.insertBefore pre, node
-	node.parentNode.insertBefore post, node
-	node.parentNode.removeChild node
-	[pre, post, frag]
-
-
-isEvent = (name) ->
-	name[0]=='o' && name[1]=='n'
-
-class undoer
-	cur:
-		push: ->
-			# By default, we just discard undoers, since nobody's collecting them.
-	constructor: ->
-		@stack = []
-	add: (fn) ->
-		@cur.push fn
-	start: () ->
-		@stack.push @cur
-		@cur = []
-	claim: () ->
-		cur = @cur
-		@cur = @stack.pop()
-		return () ->
-			for fn in cur
-				fn()
-			cur = []
-	undoToStart: () ->
-		@claim()()
-
-this.$undo = new undoer
 this.platter =
-	str: str
 	internal:
 		templateCompiler: templateCompiler
 		templateRunner: templateRunner
 		subscount: 0
 		subs: {}
+	helper: {}
 
 
 # TODO: Move these into a separate file

@@ -1,5 +1,5 @@
 (function() {
-  var addBlockAndAttrExtract, addBlockExtract, addSpecialAttrExtract, attrList, bigDebug, bigDebugRan, browser, clean, codegen, collprot, commentEscapes, defaultRunEvent, dynamicCompiler, dynamicRunner, e, expropdefs, exprvar, hasEscape, hideAttr, inopdefs, inopre, inops, isEvent, isNat, isPlatterAttr, jskeywords, jslikeparse, jslikeunparse, modprot, n, never_equal_to_anything, plainCompiler, plainGet, plainRunner, populate, preopdefs, preopre, preops, pullBlock, pullNode, runDOMEvent, runJQueryEvent, specAttrs, specBlocks, specpri, stackTrace, str, templateCompiler, templateRunner, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName, unsupported, valre,
+  var addBlockAndAttrExtract, addBlockExtract, addSpecialAttrExtract, attrList, bigDebug, bigDebugRan, browser, clean, codegen, collprot, commentEscapes, defaultRunEvent, dynamicCompiler, dynamicRunner, e, escapesHandle, escapesNoString, escapesNoStringParse, escapesString, escapesStringParse, expropdefs, exprvar, hasEscape, hideAttr, htmlToFrag, inopdefs, inopre, inops, isEventAttr, isNat, isPlatterAttr, jsParser, jskeywords, jslikeparse, jslikeunparse, modprot, n, never_equal_to_anything, nodeWraps, plainCompiler, plainGet, plainRunner, populate, preopdefs, preopre, preops, pullBlock, pullNode, runDOMEvent, runJQueryEvent, singrep, specAttrs, specBlocks, specpri, stackTrace, str, templateCompiler, templateRunner, tmplToFrag, toSrc, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName, unsupported, valre,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; },
     __slice = Array.prototype.slice;
@@ -109,7 +109,7 @@
     };
 
     templateCompiler.prototype.compile = function(txt) {
-      return this.compileFrag(this.tmplToFrag(txt), 1);
+      return this.compileFrag(tmplToFrag(txt), 1);
     };
 
     templateCompiler.prototype.compileFrag = function(frag, ctxCnt) {
@@ -180,7 +180,7 @@
               if (!(hasEscape(v))) {
                 if (realn !== n) jsCur.v.setAttribute(realn, v);
               } else {
-                if (isEvent(realn)) {
+                if (isEventAttr(realn)) {
                   this.doEvent(ret, js, jsCur, jsDatas, realn, v);
                 } else {
                   n2 = this.assigners[realn] ? realn : '#default';
@@ -216,7 +216,7 @@
     templateCompiler.prototype.doEvent = function(ret, js, jsCur, jsDatas, realn, v) {
       var ev;
       ev = realn.substr(2);
-      return this.escapesReplace(v, function(t) {
+      return this.escapesString(v, function(t) {
         var jsThis, prop;
         if (t[0] === '>') {
           t = t.substr(1);
@@ -234,80 +234,6 @@
       });
     };
 
-    templateCompiler.prototype.tmplToFrag = function(txt) {
-      txt = hideAttr(commentEscapes(trim(txt)));
-      return this.htmlToFrag(txt).cloneNode(true).cloneNode(true);
-    };
-
-    templateCompiler.prototype.htmlToFrag = function(html) {
-      var depth, el, firsttag, frag, wrap;
-      firsttag = /<(\w+)/.exec(html)[1].toLowerCase();
-      wrap = this.nodeWraps[firsttag] || this.nodeWraps['#other'];
-      el = document.createElement("div");
-      el.innerHTML = wrap[1] + html + wrap[2];
-      depth = wrap[0];
-      while (depth--) {
-        el = el.firstChild;
-      }
-      frag = document.createDocumentFragment();
-      while (el.firstChild) {
-        frag.appendChild(el.firstChild);
-      }
-      return frag;
-    };
-
-    templateCompiler.prototype.nodeWraps = {
-      '#other': [4, '<table><tbody><tr><td>', '</td></tr></tbody></table>'],
-      td: [3, '<table><tbody><tr>', '</tr></tbody></table>'],
-      tr: [2, '<table><tbody>', '</tbody></table>'],
-      tbody: [1, '<table>', '</table>'],
-      tfoot: [1, '<table>', '</table>'],
-      thead: [1, '<table>', '</table>'],
-      option: [1, '<select multiple="multiple">', '</select>'],
-      optgroup: [1, '<select multiple="multiple">', '</select>'],
-      li: [1, '<ul>', '</ul>'],
-      legend: [1, '<fieldset>', '</fieldset>']
-    };
-
-    templateCompiler.prototype.escapesReplace = function(txt, fn) {
-      var escape, last, m, s;
-      escape = /\{\{(.*?)\}\}/g;
-      m = void 0;
-      last = 0;
-      s = "";
-      while (m = escape.exec(txt)) {
-        if (m.index > last) {
-          s += '+"' + txt.substring(last, m.index).replace(/[\\\"]/g, "\\$1") + '"';
-        }
-        s += '+platter.str(' + fn(m[1]) + ')';
-        last = m.index + m[0].length;
-      }
-      if (last < txt.length) {
-        s += '+"' + txt.substring(last, txt.length).replace(/[\\\"]/g, "\\$1") + '"';
-      }
-      return s.slice(1);
-    };
-
-    templateCompiler.prototype.escapesParse = function(txt, jsDatas, fn) {
-      return this.escapesReplace(txt, function(v) {
-        var op;
-        op = platter.internal.jslikeparse(v, function(ex) {
-          var dref, ex2, m;
-          ex2 = ex;
-          dref = 0;
-          if (m = /^(\.+)(.*?)$/.exec(ex)) {
-            if (m[1].length > jsDatas.length) {
-              throw new Error("" + ex + " has too many dots");
-            }
-            dref = m[1].length - 1;
-            ex2 = m[2] || '.';
-          }
-          return "" + fn(ex, ex2, jsDatas[dref]);
-        });
-        return platter.internal.jslikeunparse(op);
-      });
-    };
-
     templateCompiler.prototype.assigners = {
       '#text': "#el#.nodeValue = #v#",
       '#default': "#el#.setAttribute(#n#, #v#)",
@@ -319,6 +245,52 @@
     return templateCompiler;
 
   })();
+
+  this.platter = {
+    internal: {
+      templateCompiler: templateCompiler,
+      templateRunner: templateRunner,
+      subscount: 0,
+      subs: {}
+    },
+    helper: {}
+  };
+
+  addBlockAndAttrExtract('foreach', 100, function(comp, frag, ret, js, jsCur, post, jsDatas, val) {
+    var inner, jsPost;
+    inner = comp.compileFrag(frag, jsDatas.length + 1);
+    ret[jsCur.n] = inner;
+    jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
+    comp.doForEach(ret, js, jsCur, jsPost, jsDatas, val, inner);
+    return jsPost;
+  });
+
+  addBlockAndAttrExtract('if', 60, function(comp, frag, ret, js, jsCur, post, jsDatas, val) {
+    var inner, jsPost;
+    inner = comp.compileFrag(frag, jsDatas.length);
+    ret[jsCur.n] = inner;
+    jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
+    comp.doIf(ret, js, jsCur, jsPost, jsDatas, val, inner);
+    return jsPost;
+  });
+
+  addBlockAndAttrExtract('unless', 60, function(comp, frag, ret, js, jsCur, post, jsDatas, val) {
+    var inner, jsPost;
+    inner = comp.compileFrag(frag, jsDatas.length);
+    ret[jsCur.n] = inner;
+    jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
+    comp.doUnless(ret, js, jsCur, jsPost, jsDatas, val, inner);
+    return jsPost;
+  });
+
+  addBlockAndAttrExtract('with', 40, function(comp, frag, ret, js, jsCur, post, jsDatas, val) {
+    var inner, jsPost;
+    inner = comp.compileFrag(frag, jsDatas.length + 1);
+    ret[jsCur.n] = inner;
+    jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
+    comp.doWith(ret, js, jsCur, jsPost, jsDatas, val, inner);
+    return jsPost;
+  });
 
   trim = function(txt) {
     txt = txt.replace(/^\s+/, "");
@@ -338,10 +310,6 @@
     return txt = txt.replace(/data-platter-(?!type(?:[^-a-z0-9_]|$))([a-z][-a-z0-9_]*)/g, "$1");
   };
 
-  isPlatterAttr = function(txt) {
-    return txt === 'type' || !!/data-platter-(?!type(?:[^-a-z0-9_]|$))([a-z][-a-z0-9_]*)/.exec(txt);
-  };
-
   commentEscapes = function(txt) {
     return txt = txt.replace(/\{\{([#\/].*?)\}\}/g, "<!--{{$1}}-->");
   };
@@ -354,8 +322,120 @@
     return !!/\{\{/.exec(txt);
   };
 
+  isPlatterAttr = function(txt) {
+    return txt === 'type' || !!/data-platter-(?!type(?:[^-a-z0-9_]|$))([a-z][-a-z0-9_]*)/.exec(txt);
+  };
+
   str = function(o) {
-    return o != null ? o : '';
+    if (o != null) {
+      return '' + o;
+    } else {
+      return '';
+    }
+  };
+
+  escapesHandle = function(txt, tfn, efn) {
+    var escape, last, m, ret, v;
+    escape = /\{\{(.*?)\}\}/g;
+    m = void 0;
+    last = 0;
+    ret = [];
+    while (m = escape.exec(txt)) {
+      if (m.index > last) {
+        v = tfn(txt.substring(last, m.index));
+        if (v != null) ret.push(v);
+      }
+      v = efn(m[1]);
+      if (v != null) ret.push(v);
+      last = m.index + m[0].length;
+    }
+    if (last < txt.length) {
+      v = tfn(txt.substring(last, txt.length));
+      if (v != null) ret.push(v);
+    }
+    return ret;
+  };
+
+  escapesString = function(txt, fn) {
+    var ret;
+    ret = escapesHandle(txt, platter.internal.toSrc, function(bit) {
+      return "platter.str(" + (fn(bit)) + ")";
+    });
+    return ret.join('+');
+  };
+
+  escapesNoString = function(txt, join, fn) {
+    var ret;
+    ret = escapesHandle(txt, function(txt) {
+      if (/\S/.exec(txt)) throw new Error(txt + " not allowed here");
+    }, fn);
+    if (ret.length > 1 && !join) throw new Error("Only one escape allowed here");
+    return ret.join(join);
+  };
+
+  escapesStringParse = function(txt, jsDatas, fn) {
+    return escapesString(txt, jsParser(jsDatas, fn));
+  };
+
+  escapesNoStringParse = function(txt, join, jsDatas, fn) {
+    return escapesNoString(txt, join, jsParser(jsDatas, fn));
+  };
+
+  jsParser = function(jsDatas, fn) {
+    return function(v) {
+      var op;
+      op = platter.internal.jslikeparse(v, function(ex) {
+        var dref, ex2, m;
+        ex2 = ex;
+        dref = 0;
+        if (m = /^(\.+)(.*?)$/.exec(ex)) {
+          if (m[1].length > jsDatas.length) {
+            throw new Error("" + ex + " has too many dots");
+          }
+          dref = m[1].length - 1;
+          ex2 = m[2] || '.';
+        }
+        return "" + fn(ex, ex2, jsDatas[dref]);
+      });
+      return platter.internal.jslikeunparse(op);
+    };
+  };
+
+  platter.str = str;
+
+  nodeWraps = {
+    '#other': [4, '<table><tbody><tr><td>', '</td></tr></tbody></table>'],
+    td: [3, '<table><tbody><tr>', '</tr></tbody></table>'],
+    tr: [2, '<table><tbody>', '</tbody></table>'],
+    tbody: [1, '<table>', '</table>'],
+    tfoot: [1, '<table>', '</table>'],
+    thead: [1, '<table>', '</table>'],
+    option: [1, '<select multiple="multiple">', '</select>'],
+    optgroup: [1, '<select multiple="multiple">', '</select>'],
+    li: [1, '<ul>', '</ul>'],
+    legend: [1, '<fieldset>', '</fieldset>']
+  };
+
+  htmlToFrag = function(html) {
+    var depth, el, firsttag, frag, wrap;
+    firsttag = /<(\w+)/.exec(html)[1].toLowerCase();
+    wrap = nodeWraps[firsttag] || nodeWraps['#other'];
+    el = document.createElement("div");
+    el.innerHTML = wrap[1] + html + wrap[2];
+    depth = wrap[0];
+    while (depth--) {
+      el = el.firstChild;
+    }
+    frag = document.createDocumentFragment();
+    while (el.firstChild) {
+      frag.appendChild(el.firstChild);
+    }
+    return frag;
+  };
+
+  tmplToFrag = function(txt) {
+    txt = hideAttr(commentEscapes(trim(txt)));
+    return htmlToFrag(txt).cloneNode(true).cloneNode(true);
   };
 
   attrList = function(node) {
@@ -426,9 +506,13 @@
     return [pre, post, frag];
   };
 
-  isEvent = function(name) {
-    return name[0] === 'o' && name[1] === 'n';
+  isEventAttr = function(name) {
+    return !!/^on/.exec(name);
   };
+
+  platter.helper.tmplToFrag = tmplToFrag;
+
+  platter.helper.htmlToFrag = htmlToFrag;
 
   undoer = (function() {
 
@@ -472,52 +556,6 @@
   })();
 
   this.$undo = new undoer;
-
-  this.platter = {
-    str: str,
-    internal: {
-      templateCompiler: templateCompiler,
-      templateRunner: templateRunner,
-      subscount: 0,
-      subs: {}
-    }
-  };
-
-  addBlockAndAttrExtract('foreach', 100, function(comp, frag, ret, js, jsCur, post, jsDatas, val) {
-    var inner, jsPost;
-    inner = comp.compileFrag(frag, jsDatas.length + 1);
-    ret[jsCur.n] = inner;
-    jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
-    comp.doForEach(ret, js, jsCur, jsPost, jsDatas, val, inner);
-    return jsPost;
-  });
-
-  addBlockAndAttrExtract('if', 60, function(comp, frag, ret, js, jsCur, post, jsDatas, val) {
-    var inner, jsPost;
-    inner = comp.compileFrag(frag, jsDatas.length);
-    ret[jsCur.n] = inner;
-    jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
-    comp.doIf(ret, js, jsCur, jsPost, jsDatas, val, inner);
-    return jsPost;
-  });
-
-  addBlockAndAttrExtract('unless', 60, function(comp, frag, ret, js, jsCur, post, jsDatas, val) {
-    var inner, jsPost;
-    inner = comp.compileFrag(frag, jsDatas.length);
-    ret[jsCur.n] = inner;
-    jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
-    comp.doUnless(ret, js, jsCur, jsPost, jsDatas, val, inner);
-    return jsPost;
-  });
-
-  addBlockAndAttrExtract('with', 40, function(comp, frag, ret, js, jsCur, post, jsDatas, val) {
-    var inner, jsPost;
-    inner = comp.compileFrag(frag, jsDatas.length + 1);
-    ret[jsCur.n] = inner;
-    jsPost = js.addVar("" + jsCur + "_end", "" + jsCur + ".nextSibling", post);
-    comp.doWith(ret, js, jsCur, jsPost, jsDatas, val, inner);
-    return jsPost;
-  });
 
   browser = {};
 
@@ -839,6 +877,35 @@
     return n;
   };
 
+  singrep = {
+    "'": "\\'",
+    "\\": "\\\\",
+    "\r": "\\r",
+    "\n": "\\n"
+  };
+
+  toSrc = function(o) {
+    var a;
+    if (typeof o === 'string') {
+      return "'" + (o.replace(/[\\'\r\n]/g, function(t) {
+        return singrep[t];
+      })) + "'";
+    }
+    if (typeof o === 'number' || !o) return o + '';
+    if (o instanceof Array) {
+      return "[" + (((function() {
+        var _i, _len, _results;
+        _results = [];
+        for (_i = 0, _len = o.length; _i < _len; _i++) {
+          a = o[_i];
+          _results.push(toSrc(a));
+        }
+        return _results;
+      })()).join(',')) + "]";
+    }
+    throw "Kaboom!";
+  };
+
   exprvar = /#(\w+)#/g;
 
   jskeywords = {
@@ -904,7 +971,6 @@
   };
 
   codegen = (function() {
-    var singrep;
 
     function codegen() {
       this._code = [];
@@ -1024,34 +1090,7 @@
       return name;
     };
 
-    singrep = {
-      "'": "\\'",
-      "\\": "\\\\",
-      "\r": "\\r",
-      "\n": "\\n"
-    };
-
-    codegen.prototype.toSrc = function(o) {
-      var a;
-      if (typeof o === 'string') {
-        return "'" + (o.replace(/[\\'\r\n]/g, function(t) {
-          return singrep[t];
-        })) + "'";
-      }
-      if (typeof o === 'number' || !o) return o + '';
-      if (o instanceof Array) {
-        return "[" + (((function() {
-          var _i, _len, _results;
-          _results = [];
-          for (_i = 0, _len = o.length; _i < _len; _i++) {
-            a = o[_i];
-            _results.push(this.toSrc(a));
-          }
-          return _results;
-        }).call(this)).join(',')) + "]";
-      }
-      throw "Kaboom!";
-    };
+    codegen.prototype.toSrc = toSrc;
 
     codegen.prototype.index = function(arr, entry) {
       if (!/^[a-z$_][a-z0-9$_]*$/.exec(entry) || jskeywords[entry]) {
@@ -1067,12 +1106,16 @@
 
   platter.internal.codegen = codegen;
 
+  platter.internal.toSrc = toSrc;
+
   plainGet = function(js) {
     return function(id, t, jsData) {
-      if (t === '.') {
-        return "" + jsData;
+      if (t === '.') return "" + jsData;
+      t = t.split('.');
+      if (t.length === 1) {
+        return "(" + jsData + " ? " + jsData + "[" + (js.toSrc(t[0])) + "] : " + jsData + ")";
       } else {
-        return "this.runGetMulti(" + jsData + ", " + (js.toSrc(t.split('.'))) + ")";
+        return "this.runGetMulti(" + jsData + ", " + (js.toSrc(t)) + ")";
       }
     };
   };
@@ -1116,29 +1159,29 @@
     };
 
     plainCompiler.prototype.doSimple = function(ret, js, jsCur, jsDatas, n, v, expr) {
-      return js.addExpr(expr.replace(/#el#/g, "" + jsCur).replace(/#n#/g, js.toSrc(n)).replace(/#v#/g, this.escapesParse(v, jsDatas, plainGet(js))));
+      return js.addExpr(expr.replace(/#el#/g, "" + jsCur).replace(/#n#/g, js.toSrc(n)).replace(/#v#/g, escapesStringParse(v, jsDatas, plainGet(js))));
     };
 
     plainCompiler.prototype.doIf = function(ret, js, jsCur, jsPost, jsDatas, val, inner) {
-      val = this.escapesParse(val, jsDatas, plainGet(js));
+      val = escapesNoStringParse(val, "&&", jsDatas, plainGet(js));
       return js.addExpr("if (" + val + ") " + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + (jsDatas.join(', ')) + ", false), " + jsPost + ")");
     };
 
     plainCompiler.prototype.doUnless = function(ret, js, jsCur, jsPost, jsDatas, val, inner) {
-      val = this.escapesParse(val, jsDatas, plainGet(js));
+      val = escapesNoStringParse(val, "&&", jsDatas, plainGet(js));
       return js.addExpr("if (!(" + val + ")) " + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + (jsDatas.join(', ')) + ", false), " + jsPost + ")");
     };
 
     plainCompiler.prototype.doForEach = function(ret, js, jsCur, jsPost, jsDatas, val, inner) {
       var jsFor;
-      val = this.escapesParse(val, jsDatas, plainGet(js));
+      val = escapesNoStringParse(val, null, jsDatas, plainGet(js));
       jsFor = js.addVar("" + jsCur + "_for", val);
       js.forceVar(jsPost);
-      return js.addExpr("for (var i=0;i<" + jsFor + ".length; ++i)\n	" + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + jsFor + "[i], " + (jsDatas.join(',')) + ", false), " + jsPost + ")");
+      return js.addExpr("if (" + jsFor + ")\n	for (var i=0;i<" + jsFor + ".length; ++i)\n		" + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + jsFor + "[i], " + (jsDatas.join(',')) + ", false), " + jsPost + ")");
     };
 
     plainCompiler.prototype.doWith = function(ret, js, jsCur, jsPost, jsDatas, val, inner) {
-      val = this.escapesParse(val, jsDatas, plainGet(js));
+      val = escapesNoStringParse(val, null, jsDatas, plainGet(js));
       return js.addExpr("" + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + val + ", " + (jsDatas.join(', ')) + ", false), " + jsPost + ")");
     };
 
@@ -1334,16 +1377,23 @@
       return new dynamicRunner(node);
     };
 
-    dynamicCompiler.prototype.doSimple = function(ret, js, jsCur, jsDatas, n, v, expr) {
-      var esc, escn, escvar, jsChange;
+    dynamicCompiler.prototype.doBase = function(ret, js, jsCur, jsDatas, n, v, expr, sep) {
+      var esc, escn, escvar, jsChange, parse;
+      if (sep === true) {
+        parse = escapesStringParse;
+      } else {
+        parse = function(txt, jsDatas, fn) {
+          return escapesNoStringParse(txt, sep, jsDatas, fn);
+        };
+      }
       esc = {};
       jsChange = js.addVar("" + jsCur + "_change", "null");
-      this.escapesParse(v, jsDatas, function(id, t, jsData) {
+      parse(v, jsDatas, function(id, t, jsData) {
         if (t !== '.') {
           return esc[id] = js.addForcedVar("" + jsCur + "_" + t, "null", [t, jsData]);
         }
       });
-      expr = expr.replace(/#el#/g, "" + jsCur).replace(/#n#/g, js.toSrc(n)).replace(/#v#/g, this.escapesParse(v, jsDatas, function(id, t, jsData) {
+      expr = expr.replace(/#el#/g, "" + jsCur).replace(/#n#/g, js.toSrc(n)).replace(/#v#/g, parse(v, jsDatas, function(id, t, jsData) {
         if (t !== '.') {
           return esc[id];
         } else {
@@ -1358,28 +1408,32 @@
       return js.addExpr("" + jsChange + "()");
     };
 
+    dynamicCompiler.prototype.doSimple = function(ret, js, jsCur, jsDatas, n, v, expr) {
+      return this.doBase(ret, js, jsCur, jsDatas, n, v, expr, true);
+    };
+
     dynamicCompiler.prototype.doIf = function(ret, js, jsPre, jsPost, jsDatas, val, inner) {
       var jsChange;
       jsChange = js.addForcedVar("" + jsPre + "_ifchange", "this.runIf([" + (jsDatas.join(', ')) + "], this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
-      return this.doSimple(ret, js, jsPre, jsDatas, null, val, "" + jsChange + "(#v#)");
+      return this.doBase(ret, js, jsPre, jsDatas, null, val, "" + jsChange + "(#v#)", "&&");
     };
 
     dynamicCompiler.prototype.doUnless = function(ret, js, jsPre, jsPost, jsDatas, val, inner) {
       var jsChange;
       jsChange = js.addForcedVar("" + jsPre + "_ifchange", "this.runIf([" + (jsDatas.join(', ')) + "], this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
-      return this.doSimple(ret, js, jsPre, jsDatas, null, val, "" + jsChange + "(!(#v#))");
+      return this.doBase(ret, js, jsPre, jsDatas, null, val, "" + jsChange + "(!(#v#))", "&&");
     };
 
     dynamicCompiler.prototype.doForEach = function(ret, js, jsPre, jsPost, jsDatas, val, inner) {
       var jsChange;
       jsChange = js.addForcedVar("" + jsPre + "_forchange", "this.runForEach(this." + jsPre + ", [" + (jsDatas.join(', ')) + "], " + jsPre + ", " + jsPost + ")");
-      return this.doSimple(ret, js, jsPre, jsDatas, null, val, "" + jsChange + "(#v#)");
+      return this.doBase(ret, js, jsPre, jsDatas, null, val, "" + jsChange + "(#v#)", null);
     };
 
     dynamicCompiler.prototype.doWith = function(ret, js, jsPre, jsPost, jsDatas, val, inner) {
       var jsChange;
       jsChange = js.addForcedVar("" + jsPre + "_ifchange", "this.runWith([" + (jsDatas.join(', ')) + "], this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
-      return this.doSimple(ret, js, jsPre, jsDatas, null, val, "" + jsChange + "(#v#)");
+      return this.doBase(ret, js, jsPre, jsDatas, null, val, "" + jsChange + "(#v#)", null);
     };
 
     return dynamicCompiler;
@@ -1398,7 +1452,6 @@
 
   if (window.Backbone) {
     modprot = Backbone.Model.prototype;
-    collprot = Backbone.Collection.prototype;
     modprot.platter_hasKey = modprot.hasKey || function(n) {
       return this.attributes.hasOwnProperty(n);
     };
@@ -1420,6 +1473,27 @@
     };
     modprot.platter_set = function(n, v) {
       return this.set(n, v);
+    };
+    collprot = Backbone.Collection.prototype;
+    collprot.platter_watchcoll = function(add, remove, replaceMe) {
+      var doRep, i, _ref,
+        _this = this;
+      doRep = function() {
+        return replaceMe(this);
+      };
+      this.on('add', add);
+      this.on('remove', remove);
+      this.on('reset', doRep);
+      for (i = 0, _ref = this.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
+        add(this.at(i), this, {
+          index: i
+        });
+      }
+      return $undo.add(function() {
+        _this.off('add', add);
+        _this.off('remove', remove);
+        return _this.off('reset', doRep);
+      });
     };
     collprot.platter_hasKey = function(n) {
       return n === 'length' || isNat(n);
@@ -1472,26 +1546,6 @@
       } else {
         return this[n] = v;
       }
-    };
-    collprot.platter_watchcoll = function(add, remove, replaceMe) {
-      var doRep, i, _ref,
-        _this = this;
-      doRep = function() {
-        return replaceMe(this);
-      };
-      this.on('add', add);
-      this.on('remove', remove);
-      this.on('reset', doRep);
-      for (i = 0, _ref = this.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
-        add(this.at(i), this, {
-          index: i
-        });
-      }
-      return $undo.add(function() {
-        _this.off('add', add);
-        _this.off('remove', remove);
-        return _this.off('reset', doRep);
-      });
     };
     platter.internal.debuglist.push({
       platter_haskey: modprot,

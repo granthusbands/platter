@@ -2,8 +2,10 @@
 isNat = (n) -> !!/^[0-9]+$/.exec(n)
 
 if window.Backbone
+	
+	
+	# Extend models with our specially-named methods
 	modprot = Backbone.Model.prototype
-	collprot = Backbone.Collection.prototype
 
 	modprot.platter_hasKey = 
 		modprot.hasKey || (n) ->
@@ -23,6 +25,22 @@ if window.Backbone
 
 	modprot.platter_set = (n, v) ->
 		@set n, v
+
+
+	# Extend collections, too.
+	collprot = Backbone.Collection.prototype
+	# Used by foreach and similar
+	collprot.platter_watchcoll = (add, remove, replaceMe) ->
+		doRep = -> replaceMe @
+		@on 'add', add
+		@on 'remove', remove
+		@on 'reset', doRep
+		for i in [0...@length]
+			add @at(i), @, {index:i}
+		$undo.add =>
+			@off 'add', add
+			@off 'remove', remove
+			@off 'reset', doRep
 
 	# Backbone does not have observable length or individual entries on collections - we'll emulate those.
 	# There's no cost outside of their use.
@@ -60,18 +78,6 @@ if window.Backbone
 				@remove @at @length-1
 		else
 			@[n] = v
-
-	collprot.platter_watchcoll = (add, remove, replaceMe) ->
-		doRep = -> replaceMe @
-		@on 'add', add
-		@on 'remove', remove
-		@on 'reset', doRep
-		for i in [0...@length]
-			add @at(i), @, {index:i}
-		$undo.add =>
-			@off 'add', add
-			@off 'remove', remove
-			@off 'reset', doRep
 
 
 	platter.internal.debuglist.push
