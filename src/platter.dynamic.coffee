@@ -25,6 +25,12 @@ class dynamicRunner extends platter.internal.templateRunner
 			data.platter_watch bit1, fn2
 		fn2()
 
+	doModify: (data, n, fn) ->
+		if (data.platter_modify)
+			data.platter_modify n, fn
+		else
+			data[n] = fn data[n]
+
 	# Runtime: Sets a value, first using things that cause events
 	doSet: (data, n, v) ->
 		if data.platter_set
@@ -129,7 +135,7 @@ class dynamicCompiler extends platter.internal.templateCompiler
 		if (sep==true)
 			parse = escapesStringParse
 		else
-			parse = (txt, jsDatas, fn) -> escapesNoStringParse txt, sep, jsDatas, fn 
+			parse = (txt, jsDatas, fn) -> escapesNoStringParse txt, sep, jsDatas, fn
 		esc = {}
 		jsChange = js.addVar "#{jsCur}_change", "null"
 		parse v, jsDatas, (id, t, jsData) ->

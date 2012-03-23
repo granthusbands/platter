@@ -52,11 +52,14 @@ escapesHandle = (txt, tfn, efn) ->
 		if v? then ret.push v
 	ret
 
+# Turns an escapey string into "a"+platter.str(...)+"c"+platter.str(...), where ... comes from fn('b') and fn('d')
+# Intended to be used in string contexts, of course, where it's appropriate to turn everything into strings.
 escapesString = (txt, fn) ->
 	ret = escapesHandle txt, platter.internal.toSrc, (bit) ->
 		"platter.str(#{fn(bit)})"
 	ret.join '+'
 
+# Turns an escapey string into whatever fn returns, joined with join. Between escapes, only whitespace is allowed.
 escapesNoString = (txt, join, fn) ->
 	ret = escapesHandle(
 		txt
@@ -74,17 +77,19 @@ escapesStringParse = (txt, jsDatas, fn) ->
 escapesNoStringParse = (txt, join, jsDatas, fn) ->
 	escapesNoString txt, join, jsParser(jsDatas, fn)
 
+chooseData = (txt, jsDatas) ->
+	m=/^(\.+)(.*?)$/.exec(txt)
+	if (!m) then return [jsDatas[0], txt]
+	dots = m[1].length
+	if (dots>jsDatas.length)
+		throw new Error("#{ex} has too many dots")
+	[jsDatas[dots-1], m[2]||'.']
+
 jsParser = (jsDatas, fn) ->
 	(v) ->
 		op = platter.internal.jslikeparse v, (ex) ->
-			ex2 = ex
-			dref = 0;
-			if m=/^(\.+)(.*?)$/.exec(ex)
-				if (m[1].length>jsDatas.length)
-					throw new Error("#{ex} has too many dots")
-				dref = m[1].length-1
-				ex2 = m[2]||'.'
-			""+fn(ex, ex2, jsDatas[dref])
+			[jsData, ex2] = chooseData ex, jsDatas
+			""+fn(ex, ex2, jsData)
 		platter.internal.jslikeunparse op
 
 platter.str = str

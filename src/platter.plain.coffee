@@ -9,6 +9,8 @@ plainGet = (js) ->
 			"this.runGetMulti(#{jsData}, #{js.toSrc t})"
 
 class plainRunner extends platter.internal.templateRunner
+	doModify: (data, n, fn) ->
+		data[n] = fn data[n]
 	doSet: (data, n, v) ->
 		data[n] = v
 
@@ -25,13 +27,20 @@ class plainCompiler extends platter.internal.templateCompiler
 	makeRet: (node) ->
 		new plainRunner(node)
 
-	doSimple: (ret, js, jsCur, jsDatas, n, v, expr) ->
+	doBase: (ret, js, jsCur, jsDatas, n, v, expr, sep) ->
+		if (sep==true)
+			parse = escapesStringParse
+		else
+			parse = (txt, jsDatas, fn) -> escapesNoStringParse txt, sep, jsDatas, fn
 		js.addExpr expr
 			.replace(/#el#/g, "#{jsCur}")
 			.replace(/#n#/g, js.toSrc n)
 			.replace(/#v#/g, 
-				escapesStringParse v, jsDatas, plainGet(js)
+				parse v, jsDatas, plainGet(js)
 			)
+
+	doSimple: (ret, js, jsCur, jsDatas, n, v, expr) ->
+		@doBase ret, js, jsCur, jsDatas, n, v, expr, true
 	
 	doIf: (ret, js, jsCur, jsPost, jsDatas, val, inner) ->
 		val = escapesNoStringParse val, "&&", jsDatas, plainGet(js)

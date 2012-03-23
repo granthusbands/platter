@@ -26,6 +26,11 @@ if window.Backbone
 	modprot.platter_set = (n, v) ->
 		@set n, v
 
+	modprot.platter_modify = (n, fn) ->
+		if @platter_hasKey n
+			@set n, fn @get n
+		else 
+			@[n] = fn @[n]
 
 	# Extend collections, too.
 	collprot = Backbone.Collection.prototype

@@ -159,19 +159,48 @@ class templateCompiler
 
 	doEvent: (ret, js, jsCur, jsDatas, realn, v) ->
 		ev = realn.substr(2)
-		@escapesString v, (t) ->
-			if (t[0]=='>')
-				t = t.substr 1
-				jsThis = js.addVar "#{jsCur}_this", "this"
-				js.forceVar jsThis
-				if (jsCur.v.type=='checkbox')
+		escapesNoString v, "", (t) =>
+			orig = t
+			# TODO: Perhaps generalise this to arbitrary JS expressions. We'd need a parse-tree walker, which might be a bit code-heavy.
+			m = /^(>|\+\+|--)?(.*?)(\+\+|--)?$/.exec t
+			if !m || m[1] && m[3] && m[1]!=m[3]
+				throw new Error("{{#{orig}}} is bad; only event handlers of the forms a.b, >a.b, ++a.b, --a.b, a.b++ and a.b-- are currently supported")
+			t = m[2]
+			op = m[1]||m[3]
+			#[jsData, t] = chooseData t, jsDatas
+			jsThis = js.addForcedVar "#{jsCur}_this", "this"
+			# If there is a dot in the expression, we need to fetch the left-hand-side of that into a variable
+			# (For setters/getters we need to know what to call them on. For functions, we need a 'this'.)
+			m = /^\s*(\.*)([^.\s].*)\.(.*)$/.exec t
+			if m
+				jsTarget = js.addForcedVar "#{jsCur}_target", "null"
+				@doBase ret, js, jsCur, jsDatas, 'text', "{{#{m[1]}#{m[2]}}}", "#{jsTarget} = #v#", null
+				post = m[3]
+			else
+				m = /^\s*(\.*)([^.\s].*)$/.exec t
+				if (m)
+					jsTarget = jsDatas[(m[1].length||1)-1]
+					post = m[2]
+				else if op
+					throw new Error("Sorry, {{#{orig}}} is not supported, because I can't replace the current data item");
+				else
+					m = /^\s*(\.+)$/.exec t
+					jsTarget = jsDatas[(m[1].length||1)-1]
+			if op=='++' || op=='--'
+				js.addExpr "this.runEvent(#{jsCur}, #{js.toSrc ev}, function(ev){ #{jsThis}.doModify(#{jsTarget}, #{js.toSrc post}, function(v){return #{op}v})})";
+			else if op=='>'
+				if (jsCur.v.type=='checkbox') # TODO: Support radio buttons, select-boxes and maybe others
 					prop = 'checked'
 				else
 					prop = 'value'
-				# TODO: Support radio buttons, select-boxes and maybe others
-				js.addExpr "this.runEvent(#{jsCur}, #{js.toSrc ev}, function(ev){ #{jsThis}.doSet(#{jsDatas[0]}, #{js.toSrc t}, #{js.index jsCur, prop}); })"
+				js.addExpr "this.runEvent(#{jsCur}, #{js.toSrc ev}, function(ev){ #{jsThis}.doSet(#{jsTarget}, #{js.toSrc post}, #{js.index jsCur, prop}); })"
 			else
-				js.addExpr "this.runEvent(#{jsCur}, #{js.toSrc ev}, function(ev){ return #{js.index jsDatas[0], t}(ev, #{js.toSrc ev}, #{jsCur}); })"
+				if (post)
+					jsFn = js.addForcedVar "#{jsCur}_fn", "null"
+					@doBase ret, js, jsCur, jsDatas, 'text', "{{#{t}}}", "#{jsFn} = #v#", null
+				else
+					jsFn = jsTarget
+				js.addExpr "this.runEvent(#{jsCur}, #{js.toSrc ev}, function(ev){ #{jsFn}.call(#{jsTarget}, ev, #{js.toSrc ev}, #{jsCur}); })"
 
 	assigners:
 		'#text': "#el#.nodeValue = #v#"
