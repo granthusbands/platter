@@ -1,5 +1,5 @@
 (function() {
-  var addBlockAndAttrExtract, addBlockExtract, addSpecialAttrExtract, attrList, bigDebug, bigDebugRan, browser, clean, codegen, collprot, commentEscapes, defaultRunEvent, dynamicCompiler, dynamicRunner, e, escapesHandle, escapesNoString, escapesNoStringParse, escapesString, escapesStringParse, expropdefs, exprvar, hasEscape, hideAttr, htmlToFrag, inopdefs, inopre, inops, isEventAttr, isNat, isPlatterAttr, jsParser, jskeywords, jslikeparse, jslikeunparse, modprot, n, never_equal_to_anything, nodeWraps, plainCompiler, plainGet, plainRunner, populate, preopdefs, preopre, preops, pullBlock, pullNode, runDOMEvent, runJQueryEvent, singrep, specAttrs, specBlocks, specpri, stackTrace, str, templateCompiler, templateRunner, tmplToFrag, toSrc, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName, unsupported, valre,
+  var addBlockAndAttrExtract, addBlockExtract, addSpecialAttrExtract, attrList, bigDebug, bigDebugRan, browser, chooseData, clean, codegen, collprot, commentEscapes, defaultRunEvent, dynamicCompiler, dynamicRunner, e, escapesHandle, escapesNoString, escapesNoStringParse, escapesString, escapesStringParse, expropdefs, exprvar, hasEscape, hideAttr, htmlToFrag, inopdefs, inopre, inops, isEventAttr, isNat, isPlatterAttr, jsParser, jskeywords, jslikeparse, jslikeunparse, modprot, n, never_equal_to_anything, nodeWraps, plainCompiler, plainGet, plainRunner, populate, preopdefs, preopre, preops, pullBlock, pullNode, runDOMEvent, runJQueryEvent, singrep, specAttrs, specBlocks, specpri, stackTrace, str, templateCompiler, templateRunner, tmplToFrag, toSrc, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName, unsupported, valre,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; },
     __slice = Array.prototype.slice;
@@ -214,22 +214,53 @@
     };
 
     templateCompiler.prototype.doEvent = function(ret, js, jsCur, jsDatas, realn, v) {
-      var ev;
+      var ev,
+        _this = this;
       ev = realn.substr(2);
-      return this.escapesString(v, function(t) {
-        var jsThis, prop;
-        if (t[0] === '>') {
-          t = t.substr(1);
-          jsThis = js.addVar("" + jsCur + "_this", "this");
-          js.forceVar(jsThis);
+      return escapesNoString(v, "", function(t) {
+        var jsFn, jsTarget, jsThis, m, op, orig, post, prop;
+        orig = t;
+        m = /^(>|\+\+|--)?(.*?)(\+\+|--)?$/.exec(t);
+        if (!m || m[1] && m[3] && m[1] !== m[3]) {
+          throw new Error("{{" + orig + "}} is bad; only event handlers of the forms a.b, >a.b, ++a.b, --a.b, a.b++ and a.b-- are currently supported");
+        }
+        t = m[2];
+        op = m[1] || m[3];
+        jsThis = js.addForcedVar("" + jsCur + "_this", "this");
+        m = /^\s*(\.*)([^.\s].*)\.(.*)$/.exec(t);
+        if (m) {
+          jsTarget = js.addForcedVar("" + jsCur + "_target", "null");
+          _this.doBase(ret, js, jsCur, jsDatas, 'text', "{{" + m[1] + m[2] + "}}", "" + jsTarget + " = #v#", null);
+          post = m[3];
+        } else {
+          m = /^\s*(\.*)([^.\s].*)$/.exec(t);
+          if (m) {
+            jsTarget = jsDatas[(m[1].length || 1) - 1];
+            post = m[2];
+          } else if (op) {
+            throw new Error("Sorry, {{" + orig + "}} is not supported, because I can't replace the current data item");
+          } else {
+            m = /^\s*(\.+)$/.exec(t);
+            jsTarget = jsDatas[(m[1].length || 1) - 1];
+          }
+        }
+        if (op === '++' || op === '--') {
+          return js.addExpr("this.runEvent(" + jsCur + ", " + (js.toSrc(ev)) + ", function(ev){ " + jsThis + ".doModify(" + jsTarget + ", " + (js.toSrc(post)) + ", function(v){return " + op + "v})})");
+        } else if (op === '>') {
           if (jsCur.v.type === 'checkbox') {
             prop = 'checked';
           } else {
             prop = 'value';
           }
-          return js.addExpr("this.runEvent(" + jsCur + ", " + (js.toSrc(ev)) + ", function(ev){ " + jsThis + ".doSet(" + jsDatas[0] + ", " + (js.toSrc(t)) + ", " + (js.index(jsCur, prop)) + "); })");
+          return js.addExpr("this.runEvent(" + jsCur + ", " + (js.toSrc(ev)) + ", function(ev){ " + jsThis + ".doSet(" + jsTarget + ", " + (js.toSrc(post)) + ", " + (js.index(jsCur, prop)) + "); })");
         } else {
-          return js.addExpr("this.runEvent(" + jsCur + ", " + (js.toSrc(ev)) + ", function(ev){ return " + (js.index(jsDatas[0], t)) + "(ev, " + (js.toSrc(ev)) + ", " + jsCur + "); })");
+          if (post) {
+            jsFn = js.addForcedVar("" + jsCur + "_fn", "null");
+            _this.doBase(ret, js, jsCur, jsDatas, 'text', "{{" + t + "}}", "" + jsFn + " = #v#", null);
+          } else {
+            jsFn = jsTarget;
+          }
+          return js.addExpr("this.runEvent(" + jsCur + ", " + (js.toSrc(ev)) + ", function(ev){ " + jsFn + ".call(" + jsTarget + ", ev, " + (js.toSrc(ev)) + ", " + jsCur + "); })");
         }
       });
     };
@@ -381,21 +412,22 @@
     return escapesNoString(txt, join, jsParser(jsDatas, fn));
   };
 
+  chooseData = function(txt, jsDatas) {
+    var dots, m;
+    m = /^(\.+)(.*?)$/.exec(txt);
+    if (!m) return [jsDatas[0], txt];
+    dots = m[1].length;
+    if (dots > jsDatas.length) throw new Error("" + ex + " has too many dots");
+    return [jsDatas[dots - 1], m[2] || '.'];
+  };
+
   jsParser = function(jsDatas, fn) {
     return function(v) {
       var op;
       op = platter.internal.jslikeparse(v, function(ex) {
-        var dref, ex2, m;
-        ex2 = ex;
-        dref = 0;
-        if (m = /^(\.+)(.*?)$/.exec(ex)) {
-          if (m[1].length > jsDatas.length) {
-            throw new Error("" + ex + " has too many dots");
-          }
-          dref = m[1].length - 1;
-          ex2 = m[2] || '.';
-        }
-        return "" + fn(ex, ex2, jsDatas[dref]);
+        var ex2, jsData, _ref;
+        _ref = chooseData(ex, jsDatas), jsData = _ref[0], ex2 = _ref[1];
+        return "" + fn(ex, ex2, jsData);
       });
       return platter.internal.jslikeunparse(op);
     };
@@ -1128,6 +1160,10 @@
       plainRunner.__super__.constructor.apply(this, arguments);
     }
 
+    plainRunner.prototype.doModify = function(data, n, fn) {
+      return data[n] = fn(data[n]);
+    };
+
     plainRunner.prototype.doSet = function(data, n, v) {
       return data[n] = v;
     };
@@ -1158,8 +1194,20 @@
       return new plainRunner(node);
     };
 
+    plainCompiler.prototype.doBase = function(ret, js, jsCur, jsDatas, n, v, expr, sep) {
+      var parse;
+      if (sep === true) {
+        parse = escapesStringParse;
+      } else {
+        parse = function(txt, jsDatas, fn) {
+          return escapesNoStringParse(txt, sep, jsDatas, fn);
+        };
+      }
+      return js.addExpr(expr.replace(/#el#/g, "" + jsCur).replace(/#n#/g, js.toSrc(n)).replace(/#v#/g, parse(v, jsDatas, plainGet(js))));
+    };
+
     plainCompiler.prototype.doSimple = function(ret, js, jsCur, jsDatas, n, v, expr) {
-      return js.addExpr(expr.replace(/#el#/g, "" + jsCur).replace(/#n#/g, js.toSrc(n)).replace(/#v#/g, escapesStringParse(v, jsDatas, plainGet(js))));
+      return this.doBase(ret, js, jsCur, jsDatas, n, v, expr, true);
     };
 
     plainCompiler.prototype.doIf = function(ret, js, jsCur, jsPost, jsDatas, val, inner) {
@@ -1230,6 +1278,14 @@
       };
       if (data && data.platter_watch) data.platter_watch(bit1, fn2);
       return fn2();
+    };
+
+    dynamicRunner.prototype.doModify = function(data, n, fn) {
+      if (data.platter_modify) {
+        return data.platter_modify(n, fn);
+      } else {
+        return data[n] = fn(data[n]);
+      }
     };
 
     dynamicRunner.prototype.doSet = function(data, n, v) {
@@ -1473,6 +1529,13 @@
     };
     modprot.platter_set = function(n, v) {
       return this.set(n, v);
+    };
+    modprot.platter_modify = function(n, fn) {
+      if (this.platter_hasKey(n)) {
+        return this.set(n, fn(this.get(n)));
+      } else {
+        return this[n] = fn(this[n]);
+      }
     };
     collprot = Backbone.Collection.prototype;
     collprot.platter_watchcoll = function(add, remove, replaceMe) {
