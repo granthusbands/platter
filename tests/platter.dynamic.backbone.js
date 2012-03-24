@@ -969,4 +969,54 @@ jQuery(function(){
 
 	for (var i=0; i<bbtests.length; ++i)
 		dotest(bbtests[i]);
+
+	var commoneventbit = function(tpl, data, o) {
+		var runthis = false;
+		var runev = null;
+		function dorun(ev){runthis = this; runev = ev;};
+		o.set({a:dorun, b:20, c:30, d:''});
+		var div = tpl.run(data);
+		ok(!runthis, "Event not yet run");
+		ok(!runev, "Event not yet run");
+		equal(o.get('b'), 20, "Correct initial b");
+		equal(o.get('c'), 30, "Correct initial c");
+		equal(o.get('d'), '', "Correct initial d");
+
+		$(div).trigger('foo');
+		equal(runthis, o, "Correct this for event");
+		ok(runev, "There was an event object");
+
+		$(div).trigger('up');
+		equal(o.get('b'), 21, "Increment b worked");
+		$(div).trigger('up');
+		equal(o.get('b'), 22, "Increment b worked again");
+		$(div).trigger('down');
+		equal(o.get('b'), 21, "Decrement b worked");
+		$(div).trigger('down');
+		equal(o.get('b'), 20, "Decrement b worked again");
+
+		$(div).trigger('up2');
+		equal(o.get('c'), 31, "Increment c worked");
+		$(div).trigger('up2');
+		equal(o.get('c'), 32, "Increment c worked again");
+		$(div).trigger('down2');
+		equal(o.get('c'), 31, "Decrement c worked");
+		$(div).trigger('down2');
+		equal(o.get('c'), 30, "Decrement c worked again");
+
+		$(div).trigger('put');
+		equal(o.get('d'), 'bar', "Value-grabbing worked");
+	}
+
+	test("Event-handlers", function(){
+		var tpl = platter.backbone.compile('<input type="text" value="bar" onfoo="{{a}}" onup="{{++b}}" ondown="{{--b}}" onup2="{{++c}}" ondown2="{{--c}}" onput="{{>d}}"/>');
+		var o = new Backbone.Model();
+		commoneventbit(tpl, o, o);
+	});
+
+	test("Event-handlers nested props", function(){
+		var tpl = platter.backbone.compile('<input type="text" value="bar" onfoo="{{z.a}}" onup="{{++z.b}}" ondown="{{--z.b}}" onup2="{{++z.c}}" ondown2="{{--z.c}}" onput="{{>z.d}}"/>');
+		var o = new Backbone.Model();
+		commoneventbit(tpl, {z:o}, o);
+	});
 });
