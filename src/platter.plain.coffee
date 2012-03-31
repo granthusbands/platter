@@ -8,7 +8,7 @@ plainGet = (js) ->
 		else
 			"this.runGetMulti(#{jsData}, #{js.toSrc t})"
 
-class plainRunner extends platter.internal.templateRunner
+class PlainRunner extends Platter.Internal.TemplateRunner
 	doModify: (data, n, fn) ->
 		data[n] = fn data[n]
 	doSet: (data, n, v) ->
@@ -23,9 +23,9 @@ class plainRunner extends platter.internal.templateRunner
 
 
 # TODO: This code is probably slowed down by not passing jsEl through (causing #{jsPost}.parentNode). Maybe bring it back?
-class plainCompiler extends platter.internal.templateCompiler
+class PlainCompiler extends Platter.Internal.TemplateCompiler
 	makeRet: (node) ->
-		new plainRunner(node)
+		new PlainRunner(node)
 
 	doBase: (ret, js, jsCur, jsDatas, n, v, expr, sep) ->
 		if (sep==true)
@@ -44,11 +44,11 @@ class plainCompiler extends platter.internal.templateCompiler
 	
 	doIf: (ret, js, jsCur, jsPost, jsDatas, val, inner) ->
 		val = escapesNoStringParse val, "&&", jsDatas, plainGet(js)
-		js.addExpr "if (#{val}) #{jsPost}.parentNode.insertBefore(this.#{jsCur}.run(#{jsDatas.join ', '}, false), #{jsPost})"
+		js.addExpr "if (#{val}) #{jsPost}.parentNode.insertBefore(this.#{jsCur}.run(#{jsDatas.join ', '}, undo, false).docfrag, #{jsPost})"
 
 	doUnless: (ret, js, jsCur, jsPost, jsDatas, val, inner) ->
 		val = escapesNoStringParse val, "&&", jsDatas, plainGet(js)
-		js.addExpr "if (!(#{val})) #{jsPost}.parentNode.insertBefore(this.#{jsCur}.run(#{jsDatas.join ', '}, false), #{jsPost})"
+		js.addExpr "if (!(#{val})) #{jsPost}.parentNode.insertBefore(this.#{jsCur}.run(#{jsDatas.join ', '}, undo, false).docfrag, #{jsPost})"
 
 	doForEach: (ret, js, jsCur, jsPost, jsDatas, val, inner) ->
 		val = escapesNoStringParse val, null, jsDatas, plainGet(js)
@@ -57,14 +57,14 @@ class plainCompiler extends platter.internal.templateCompiler
 		js.addExpr """
 			if (#{jsFor})
 				for (var i=0;i<#{jsFor}.length; ++i)
-					#{jsPost}.parentNode.insertBefore(this.#{jsCur}.run(#{jsFor}[i], #{jsDatas.join ','}, false), #{jsPost})
+					#{jsPost}.parentNode.insertBefore(this.#{jsCur}.run(#{jsFor}[i], #{jsDatas.join ','}, undo, false).docfrag, #{jsPost})
 		"""
 
 	doWith: (ret, js, jsCur, jsPost, jsDatas, val, inner) ->
 		val = escapesNoStringParse val, null, jsDatas, plainGet(js)
-		js.addExpr "#{jsPost}.parentNode.insertBefore(this.#{jsCur}.run(#{val}, #{jsDatas.join ', '}, false), #{jsPost})"
+		js.addExpr "#{jsPost}.parentNode.insertBefore(this.#{jsCur}.run(#{val}, #{jsDatas.join ', '}, undo, false).docfrag, #{jsPost})"
 
 
-platter.internal.plainRunner = plainRunner
-platter.internal.plainCompiler = plainCompiler
-platter.plain = new plainCompiler
+Platter.Internal.PlainRunner = PlainRunner
+Platter.Internal.PlainCompiler = PlainCompiler
+Platter.Plain = new PlainCompiler

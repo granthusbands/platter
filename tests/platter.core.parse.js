@@ -30,7 +30,7 @@ jQuery(function(){
 		return o;
 	}
 	function parseSimple(txt) {
-		return platter.internal.jslikeparse(txt, function(txt){return("#"+txt+"#");});
+		return Platter.Internal.JSLikeParse(txt, function(txt){return("#"+txt+"#");});
 	}
 	function parseMatch(txt, patt) {
 		var parsed = parseSimple(txt);
@@ -42,7 +42,7 @@ jQuery(function(){
 	}
 	function roundTrip(txt1, txt2) {
 		var parsed = parseSimple(txt1);
-		var unparsed = platter.internal.jslikeunparse(parsed);
+		var unparsed = Platter.Internal.JSLikeUnparse(parsed);
 		equal(unparsed, txt2, txt1);
 	}
 	function expectKaboom(txt, err) {

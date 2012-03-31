@@ -16,15 +16,16 @@ jQuery(function(){
 		empty: []
 	};
 
-	if (!platter.tests) platter.tests = {};
-	platter.tests.trivial = function(comp, has, hasNot, hasJQ, hasNotJQ, hasValue, textIs){
+	if (!Platter.Tests) Platter.Tests = {};
+	Platter.Tests.Trivial = function(comp, has, hasNot, hasJQ, hasNotJQ, hasValue, textIs){
 
 		test("No tokens", function(){
 			equal(testdiv.innerHTML, "", "Test div empty");
 			has("<h1>Hello</h1>", data, "Hello", "Element text unchanged");
 			hasNot("<h1>Hello</h1>", data, "Evil", "No evil introduced");
-			ok(comp.compile('<h1></h1>').run({}).firstChild==null, "Single-element template returns that element");
-			ok(comp.compile('<h1></h1><h1></h1>').run({}).firstChild!=null, "Multi-element template returns surrounding thing");
+			ok(comp.compile('<h1></h1>').run({}).el.firstChild==null, "Single-element template returns that element");
+			ok(comp.compile('<h1></h1><h1></h1>').run({}).el==null, "Multi-element template does not");
+			ok(comp.compile('<h1></h1><h1></h1>').run({}).docfrag.firstChild!=null, "Multi-element template returns surrounding thing");
 		});
 
 		test("Template hacks", function(){
@@ -244,7 +245,8 @@ jQuery(function(){
 			var runev = null;
 			function dorun(ev){runthis = this; runev = ev;};
 			o.a=dorun; o.b=20; o.c=30; o.d='';
-			var div = tpl.run(data);
+			var tplrun = tpl.run(data);
+			var div = tplrun.el;
 			ok(!runthis, "Event not yet run");
 			ok(!runev, "Event not yet run");
 			equal(o.b, 20, "Correct initial b");
@@ -275,6 +277,8 @@ jQuery(function(){
 
 			$(div).trigger('put');
 			equal(o.d, 'bar', "Value-grabbing worked");
+
+			tplrun.undo();
 		}
 
 		test("Event-handlers", function(){
@@ -292,7 +296,7 @@ jQuery(function(){
 		test("Event-handler direct fn", function(){
 			var tpl = comp.compile("<div onfoo='{{.}}'></div>");
 			var hasrun = false;
-			var div = tpl.run(function(){hasrun=true});
+			var div = tpl.run(function(){hasrun=true}).el;
 			equal(hasrun, false, "Hasn't run yet");
 			$(div).trigger('foo');
 			equal(hasrun, true, "Has now run");
@@ -322,20 +326,20 @@ jQuery(function(){
 			ok(true, msg);
 	}
 
-	function runPlainDiv(tmpl, data) {
+	function runPlainDiv(undo, tmpl, data) {
 		if (typeof tmpl == 'string')
-			tmpl = platter.plain.compile(tmpl);
-		testdiv.appendChild(tmpl.run(data));
+			tmpl = Platter.Plain.compile(tmpl);
+		testdiv.appendChild(tmpl.run(data, undo).docfrag);
 		return testdiv;
 	}
 
 	function testwrap(fn) {
 		return function(tmpl, data, txt, msg){
 			testdiv.innerHTML = "";
-			$undo.start();
-			var div = runPlainDiv(tmpl, data);
+			var undo = new Platter.Undo();
+			var div = runPlainDiv(undo, tmpl, data);
 			fn(tmpl, data, txt, msg, div);
-			$undo.undoToStart();
+			undo.undo();
 			if (testdiv.innerHTML)
 				ok(false, "testdiv empty, afterwards");
 		};
@@ -365,5 +369,5 @@ jQuery(function(){
 		equal(jQuery(div).text(), txt, msg);
 	});
 
-	platter.tests.trivial(platter.plain, has, hasNot, hasJQ, hasNotJQ, hasValue, textIs);
+	Platter.Tests.Trivial(Platter.Plain, has, hasNot, hasJQ, hasNotJQ, hasValue, textIs);
 });

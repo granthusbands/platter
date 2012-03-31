@@ -12,29 +12,29 @@ bigDebugRan = false
 bigDebug = ->
 	return if bigDebugRan
 	bigDebugRan = true
-	for o in platter.internal.debuglist
+	for o in Platter.Internal.DebugList
 		do (o) ->
 			if o.platter_watch
 				id = Math.random()
 				orig = o.platter_watch.platter_watch
-				o.platter_watch.platter_watch = (n, fn) ->
-					platter.internal.subscount++
-					platter.internal.subs[id] = stackTrace()
-					$undo.add ->
-						platter.internal.subscount--
-						delete platter.internal.subs[id]
-					orig.call @, n, fn
+				o.platter_watch.platter_watch = (undo, n, fn) ->
+					Platter.Internal.SubsCount++
+					Platter.Internal.Subs[id] = stackTrace()
+					undo.add ->
+						Platter.Internal.SubsCount--
+						delete Platter.Internal.Subs[id]
+					orig.call @, undo, n, fn
 			if o.platter_watchcoll
 				id2 = Math.random()
 				orig2 = o.platter_watchcoll.platter_watchcoll
-				o.platter_watchcoll.platter_watchcoll = (add, remove, replaceMe) ->
-					platter.internal.subscount++
-					platter.internal.subs[id2] = stackTrace()
-					$undo.add ->
-						platter.internal.subscount--
-						delete platter.internal.subs[id2]
-					orig2.call @, add, remove, replaceMe
+				o.platter_watchcoll.platter_watchcoll = (undo, add, remove, replaceMe) ->
+					Platter.Internal.SubsCount++
+					Platter.Internal.Subs[id2] = stackTrace()
+					undo.add ->
+						Platter.Internal.SubsCount--
+						delete Platter.Internal.Subs[id2]
+					orig2.call @, undo, add, remove, replaceMe
 
 
-platter.internal.debuglist = []
-platter.internal.bigDebug = bigDebug
+Platter.Internal.DebugList = []
+Platter.Internal.BigDebug = bigDebug

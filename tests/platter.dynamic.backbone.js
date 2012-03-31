@@ -1,6 +1,6 @@
 jQuery(function(){
 	// Slows things down, but monitors subscriptions, so we can test for cleanup.
-	platter.internal.bigDebug();
+	Platter.Internal.BigDebug();
 
 	module("Backbone+plain templates");
 
@@ -22,20 +22,20 @@ jQuery(function(){
 			ok(true, msg);
 	}
 
-	function runBackboneDiv(tmpl, data) {
+	function runBackboneDiv(undo, tmpl, data) {
 		if (typeof tmpl == 'string')
-			tmpl = platter.backbone.compile(tmpl);
-		testdiv.appendChild(tmpl.run(data));
+			tmpl = Platter.Backbone.compile(tmpl);
+		testdiv.appendChild(tmpl.run(data, undo).docfrag);
 		return testdiv;
 	}
 
 	function testwrap(fn) {
 		return function(tmpl, data, txt, msg){
 			testdiv.innerHTML = "";
-			$undo.start();
-			var div = runBackboneDiv(tmpl, data);
+			var undo = new Platter.Undo();
+			var div = runBackboneDiv(undo, tmpl, data);
 			fn(tmpl, data, txt, msg, div);
-			$undo.undoToStart();
+			undo.undo();
 			if (testdiv.innerHTML)
 				ok(false, "testdiv empty, afterwards");
 		};
@@ -65,7 +65,7 @@ jQuery(function(){
 		equal(jQuery(div).text(), txt, msg);
 	});
 
-	platter.tests.trivial(platter.dynamic, quickHas, quickHasNot, quickHasJQ, quickHasNotJQ, quickHasValue, quickTextIs);
+	Platter.Tests.Trivial(Platter.Dynamic, quickHas, quickHasNot, quickHasJQ, quickHasNotJQ, quickHasValue, quickTextIs);
 
 
 
@@ -930,17 +930,17 @@ jQuery(function(){
 
 	function dotest(def) {
 		test(def.name, function(){
-			startsubs = platter.internal.subscount
+			startsubs = Platter.Internal.SubsCount
 			ok(testdiv.innerHTML=='', 'test div is empty');
-			$undo.start();
+			var undo = new Platter.Undo();
 			var totest = copyFrom(def.testsstart);
 			var model = new Backbone.Model();
-			var tmpl = platter.backbone.compile(def.template);
+			var tmpl = Platter.Backbone.compile(def.template);
 			var divs = [];
 			var addDiv = function(){
 				var div = document.createElement('div');
 				testdiv.appendChild(div);
-				div.appendChild(tmpl.run(model));
+				div.appendChild(tmpl.run(model, undo).docfrag);
 				divs.push(div);
 			}
 			var runTests = function(actioni){
@@ -961,9 +961,9 @@ jQuery(function(){
 				runTests(i);
 			}
 
-			$undo.undoToStart();
+			undo.undo();
 			testdiv.innerHTML = '';
-			equal(platter.internal.subscount, startsubs, "Events all gone");
+			equal(Platter.Internal.SubsCount, startsubs, "Events all gone");
 		});
 	}
 
@@ -975,7 +975,8 @@ jQuery(function(){
 		var runev = null;
 		function dorun(ev){runthis = this; runev = ev;};
 		o.set({a:dorun, b:20, c:30, d:''});
-		var div = tpl.run(data);
+		var tplrun = tpl.run(data);
+		var div = tplrun.el;
 		ok(!runthis, "Event not yet run");
 		ok(!runev, "Event not yet run");
 		equal(o.get('b'), 20, "Correct initial b");
@@ -1006,16 +1007,18 @@ jQuery(function(){
 
 		$(div).trigger('put');
 		equal(o.get('d'), 'bar', "Value-grabbing worked");
+
+		tplrun.undo();
 	}
 
 	test("Event-handlers", function(){
-		var tpl = platter.backbone.compile('<input type="text" value="bar" onfoo="{{a}}" onup="{{++b}}" ondown="{{--b}}" onup2="{{++c}}" ondown2="{{--c}}" onput="{{>d}}"/>');
+		var tpl = Platter.Backbone.compile('<input type="text" value="bar" onfoo="{{a}}" onup="{{++b}}" ondown="{{--b}}" onup2="{{++c}}" ondown2="{{--c}}" onput="{{>d}}"/>');
 		var o = new Backbone.Model();
 		commoneventbit(tpl, o, o);
 	});
 
 	test("Event-handlers nested props", function(){
-		var tpl = platter.backbone.compile('<input type="text" value="bar" onfoo="{{z.a}}" onup="{{++z.b}}" ondown="{{--z.b}}" onup2="{{++z.c}}" ondown2="{{--z.c}}" onput="{{>z.d}}"/>');
+		var tpl = Platter.Backbone.compile('<input type="text" value="bar" onfoo="{{z.a}}" onup="{{++z.b}}" ondown="{{--z.b}}" onup2="{{++z.c}}" ondown2="{{--z.c}}" onput="{{>z.d}}"/>');
 		var o = new Backbone.Model();
 		commoneventbit(tpl, {z:o}, o);
 	});

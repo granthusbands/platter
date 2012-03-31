@@ -285,8 +285,8 @@ jslikeunparse = (op) ->
 		"#{left} #{op.txt} #{right}"
 
 
-platter.internal.jslikeparse = jslikeparse
-platter.internal.jslikeunparse = jslikeunparse
-platter.internal.jsmunge = (txt, valfn) ->
+Platter.Internal.JSLikeParse = jslikeparse
+Platter.Internal.JSLikeUnparse = jslikeunparse
+Platter.Internal.JSMunge = (txt, valfn) ->
 	op = jslikeparse txt, valfn
 	jslikeunparse op

@@ -1,6 +1,6 @@
 
 
-runDOMEvent = (el, ev, fn) ->
+runDOMEvent = (undo, el, ev, fn) ->
 	# TODO: Polyfill oninput:
 	# IE <=8: attachEvent onpropertychange, ev.propertyName=='value'
 	# IE9: Misses some input (as does onpropertychange).
@@ -8,12 +8,12 @@ runDOMEvent = (el, ev, fn) ->
 	# Safari: Fires ontextinput for textarea, instead.
 	# All else: Use oninput
 	el.addEventListener ev, fn
-	$undo.add ->
+	undo.add ->
 		el.removeEventListener ev, fn
 
-runJQueryEvent = (el, ev, fn) ->
+runJQueryEvent = (undo, el, ev, fn) ->
 	jQuery(el).on ev, fn
-	$undo.add ->
+	undo.add ->
 		jQuery(el).off ev, fn
 
 defaultRunEvent = runDOMEvent
@@ -46,7 +46,7 @@ addBlockAndAttrExtract = (n, pri, fn) ->
 	addSpecialAttrExtract n, pri, fn
 
 
-class templateRunner
+class TemplateRunner
 	constructor: (node) ->
 		@node = node
 	removeBetween: (startel, endel) ->
@@ -69,22 +69,24 @@ class templateRunner
 		par.removeChild startel
 
 
-class templateCompiler
+class TemplateCompiler
 	makeRet: (node) ->
-		new templateRunner(node)
+		new TemplateRunner(node)
 
 	# Below here, I doubt anyone will override anything
 	compile: (txt) ->
 		@compileFrag tmplToFrag(txt), 1
 	
 	compileFrag: (frag, ctxCnt) ->
-		js = new platter.internal.codegen
+		js = new Platter.Internal.CodeGen
 		# TODO: Confirm that we can change this variable name without issue
 		jsDatas = []
 		for i in [0...ctxCnt]
 			jsDatas.push js.existingVar 'data'+i
+		js.existingVar 'undo'
 		# TODO: Confirm that we can change this variable name without issue
 		jsAutoRemove = js.existingVar 'autoRemove'
+		js.addExpr 'undo = undo ? undo.child() : new Platter.Undo()'
 		jsEl = js.addVar 'el', 'this.node.cloneNode(true)', frag
 		ret = @makeRet(frag)
 		@compileInner ret, js, jsEl, jsDatas
@@ -93,17 +95,17 @@ class templateCompiler
 		jsSelf = js.addForcedVar "self", "this"
 		js.addExpr """
 			if (#{jsAutoRemove}===true||#{jsAutoRemove}==null)
-				$undo.add(function(){
+				undo.add(function(){
 					#{jsSelf}.removeAll(#{jsFirstChild}, #{jsLastChild});
 				});
 			"""
 		if jsEl.v.firstChild==jsEl.v.lastChild
-			js.addExpr "return #{jsFirstChild}"
+			js.addExpr "return {el: #{jsFirstChild}, docfrag: #{jsEl}, undo: function(){undo.undo()}};"
 		else
-			js.addExpr "return #{jsEl}"
+			js.addExpr "return {docfrag: #{jsEl}, undo: function(){undo.undo()}};"
 		#alert "function(#{(d.n for d in jsDatas).join ', '}, autoRemove) {\n#{js}\n}"
 		try
-			ret.run = new Function((d.n for d in jsDatas).join(', '), 'autoRemove', ""+js)
+			ret.run = new Function((d.n for d in jsDatas).join(', '), 'undo', 'autoRemove', ""+js)
 		catch e
 			throw new Error("Internal error: Function compilation failed: #{e.message}\n\n#{js}")
 		ret
@@ -187,20 +189,20 @@ class templateCompiler
 					m = /^\s*(\.+)$/.exec t
 					jsTarget = jsDatas[(m[1].length||1)-1]
 			if op=='++' || op=='--'
-				js.addExpr "this.runEvent(#{jsCur}, #{js.toSrc ev}, function(ev){ #{jsThis}.doModify(#{jsTarget}, #{js.toSrc post}, function(v){return #{op}v})})";
+				js.addExpr "this.runEvent(undo, #{jsCur}, #{js.toSrc ev}, function(ev){ #{jsThis}.doModify(#{jsTarget}, #{js.toSrc post}, function(v){return #{op}v})})";
 			else if op=='>'
 				if (jsCur.v.type=='checkbox') # TODO: Support radio buttons, select-boxes and maybe others
 					prop = 'checked'
 				else
 					prop = 'value'
-				js.addExpr "this.runEvent(#{jsCur}, #{js.toSrc ev}, function(ev){ #{jsThis}.doSet(#{jsTarget}, #{js.toSrc post}, #{js.index jsCur, prop}); })"
+				js.addExpr "this.runEvent(undo, #{jsCur}, #{js.toSrc ev}, function(ev){ #{jsThis}.doSet(#{jsTarget}, #{js.toSrc post}, #{js.index jsCur, prop}); })"
 			else
 				if (post)
 					jsFn = js.addForcedVar "#{jsCur}_fn", "null"
 					@doBase ret, js, jsCur, jsDatas, 'text', "{{#{t}}}", "#{jsFn} = #v#", null
 				else
 					jsFn = jsTarget
-				js.addExpr "this.runEvent(#{jsCur}, #{js.toSrc ev}, function(ev){ #{jsFn}.call(#{jsTarget}, ev, #{js.toSrc ev}, #{jsCur}); })"
+				js.addExpr "this.runEvent(undo, #{jsCur}, #{js.toSrc ev}, function(ev){ #{jsFn}.call(#{jsTarget}, ev, #{js.toSrc ev}, #{jsCur}); })"
 
 	assigners:
 		'#text': "#el#.nodeValue = #v#"
@@ -213,13 +215,13 @@ class templateCompiler
 		#TODO: type in IE -> recreate the node, somehow
 
 
-this.platter =
-	internal:
-		templateCompiler: templateCompiler
-		templateRunner: templateRunner
-		subscount: 0
-		subs: {}
-	helper: {}
+this.Platter =
+	Internal:
+		TemplateCompiler: TemplateCompiler
+		TemplateRunner: TemplateRunner
+		SubsCount: 0
+		Subs: {}
+	Helper: {}
 
 
 # TODO: Move these into a separate file

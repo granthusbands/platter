@@ -1,19 +1,19 @@
 (function() {
-  var addBlockAndAttrExtract, addBlockExtract, addSpecialAttrExtract, attrList, bigDebug, bigDebugRan, browser, chooseData, clean, codegen, collprot, commentEscapes, defaultRunEvent, dynamicCompiler, dynamicRunner, e, escapesHandle, escapesNoString, escapesNoStringParse, escapesString, escapesStringParse, expropdefs, exprvar, hasEscape, hideAttr, htmlToFrag, inopdefs, inopre, inops, isEventAttr, isNat, isPlatterAttr, jsParser, jskeywords, jslikeparse, jslikeunparse, modprot, n, never_equal_to_anything, nodeWraps, plainCompiler, plainGet, plainRunner, populate, preopdefs, preopre, preops, pullBlock, pullNode, runDOMEvent, runJQueryEvent, singrep, specAttrs, specBlocks, specpri, stackTrace, str, templateCompiler, templateRunner, tmplToFrag, toSrc, trim, uncommentEscapes, undoer, unhideAttr, unhideAttrName, unsupported, valre,
+  var Browser, DynamicCompiler, DynamicRunner, PlainCompiler, PlainRunner, TemplateCompiler, TemplateRunner, Undo, addBlockAndAttrExtract, addBlockExtract, addSpecialAttrExtract, attrList, bigDebug, bigDebugRan, chooseData, clean, codegen, collprot, commentEscapes, defaultRunEvent, e, escapesHandle, escapesNoString, escapesNoStringParse, escapesString, escapesStringParse, expropdefs, exprvar, hasEscape, hideAttr, htmlToFrag, inopdefs, inopre, inops, isEventAttr, isNat, isPlatterAttr, jsParser, jskeywords, jslikeparse, jslikeunparse, modprot, n, never_equal_to_anything, nodeWraps, plainGet, populate, preopdefs, preopre, preops, pullBlock, pullNode, runDOMEvent, runJQueryEvent, singrep, specAttrs, specBlocks, specpri, stackTrace, str, tmplToFrag, toSrc, trim, uncommentEscapes, unhideAttr, unhideAttrName, unsupported, valre,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; },
     __slice = Array.prototype.slice;
 
-  runDOMEvent = function(el, ev, fn) {
+  runDOMEvent = function(undo, el, ev, fn) {
     el.addEventListener(ev, fn);
-    return $undo.add(function() {
+    return undo.add(function() {
       return el.removeEventListener(ev, fn);
     });
   };
 
-  runJQueryEvent = function(el, ev, fn) {
+  runJQueryEvent = function(undo, el, ev, fn) {
     jQuery(el).on(ev, fn);
-    return $undo.add(function() {
+    return undo.add(function() {
       return jQuery(el).off(ev, fn);
     });
   };
@@ -64,13 +64,13 @@
     return addSpecialAttrExtract(n, pri, fn);
   };
 
-  templateRunner = (function() {
+  TemplateRunner = (function() {
 
-    function templateRunner(node) {
+    function TemplateRunner(node) {
       this.node = node;
     }
 
-    templateRunner.prototype.removeBetween = function(startel, endel) {
+    TemplateRunner.prototype.removeBetween = function(startel, endel) {
       var par, prev;
       par = startel.parentNode;
       if (!par) return;
@@ -81,9 +81,9 @@
       return;
     };
 
-    templateRunner.prototype.runEvent = defaultRunEvent;
+    TemplateRunner.prototype.runEvent = defaultRunEvent;
 
-    templateRunner.prototype.removeAll = function(startel, endel) {
+    TemplateRunner.prototype.removeAll = function(startel, endel) {
       var par;
       par = startel.parentNode;
       if (!par) return;
@@ -96,41 +96,43 @@
       return par.removeChild(startel);
     };
 
-    return templateRunner;
+    return TemplateRunner;
 
   })();
 
-  templateCompiler = (function() {
+  TemplateCompiler = (function() {
 
-    function templateCompiler() {}
+    function TemplateCompiler() {}
 
-    templateCompiler.prototype.makeRet = function(node) {
-      return new templateRunner(node);
+    TemplateCompiler.prototype.makeRet = function(node) {
+      return new TemplateRunner(node);
     };
 
-    templateCompiler.prototype.compile = function(txt) {
+    TemplateCompiler.prototype.compile = function(txt) {
       return this.compileFrag(tmplToFrag(txt), 1);
     };
 
-    templateCompiler.prototype.compileFrag = function(frag, ctxCnt) {
+    TemplateCompiler.prototype.compileFrag = function(frag, ctxCnt) {
       var d, i, js, jsAutoRemove, jsDatas, jsEl, jsFirstChild, jsLastChild, jsSelf, ret;
-      js = new platter.internal.codegen;
+      js = new Platter.Internal.CodeGen;
       jsDatas = [];
       for (i = 0; 0 <= ctxCnt ? i < ctxCnt : i > ctxCnt; 0 <= ctxCnt ? i++ : i--) {
         jsDatas.push(js.existingVar('data' + i));
       }
+      js.existingVar('undo');
       jsAutoRemove = js.existingVar('autoRemove');
+      js.addExpr('undo = undo ? undo.child() : new Platter.Undo()');
       jsEl = js.addVar('el', 'this.node.cloneNode(true)', frag);
       ret = this.makeRet(frag);
       this.compileInner(ret, js, jsEl, jsDatas);
       jsFirstChild = js.addForcedVar("firstChild", "" + jsEl + ".firstChild");
       jsLastChild = js.addForcedVar("lastChild", "" + jsEl + ".lastChild");
       jsSelf = js.addForcedVar("self", "this");
-      js.addExpr("if (" + jsAutoRemove + "===true||" + jsAutoRemove + "==null)\n	$undo.add(function(){\n		" + jsSelf + ".removeAll(" + jsFirstChild + ", " + jsLastChild + ");\n	});");
+      js.addExpr("if (" + jsAutoRemove + "===true||" + jsAutoRemove + "==null)\n	undo.add(function(){\n		" + jsSelf + ".removeAll(" + jsFirstChild + ", " + jsLastChild + ");\n	});");
       if (jsEl.v.firstChild === jsEl.v.lastChild) {
-        js.addExpr("return " + jsFirstChild);
+        js.addExpr("return {el: " + jsFirstChild + ", docfrag: " + jsEl + ", undo: function(){undo.undo()}};");
       } else {
-        js.addExpr("return " + jsEl);
+        js.addExpr("return {docfrag: " + jsEl + ", undo: function(){undo.undo()}};");
       }
       try {
         ret.run = new Function(((function() {
@@ -141,14 +143,14 @@
             _results.push(d.n);
           }
           return _results;
-        })()).join(', '), 'autoRemove', "" + js);
+        })()).join(', '), 'undo', 'autoRemove', "" + js);
       } catch (e) {
         throw new Error("Internal error: Function compilation failed: " + e.message + "\n\n" + js);
       }
       return ret;
     };
 
-    templateCompiler.prototype.compileInner = function(ret, js, jsEl, jsDatas) {
+    TemplateCompiler.prototype.compileInner = function(ret, js, jsEl, jsDatas) {
       var attrs, ct, fn, isSpecial, jsCur, m, n, n2, realn, v, _i, _len, _ref, _ref2, _results;
       jsCur = js.addVar(jsEl + "_ch", "" + jsEl + ".firstChild", jsEl.v.firstChild);
       js.forceVar(jsCur);
@@ -213,7 +215,7 @@
       return _results;
     };
 
-    templateCompiler.prototype.doEvent = function(ret, js, jsCur, jsDatas, realn, v) {
+    TemplateCompiler.prototype.doEvent = function(ret, js, jsCur, jsDatas, realn, v) {
       var ev,
         _this = this;
       ev = realn.substr(2);
@@ -245,14 +247,14 @@
           }
         }
         if (op === '++' || op === '--') {
-          return js.addExpr("this.runEvent(" + jsCur + ", " + (js.toSrc(ev)) + ", function(ev){ " + jsThis + ".doModify(" + jsTarget + ", " + (js.toSrc(post)) + ", function(v){return " + op + "v})})");
+          return js.addExpr("this.runEvent(undo, " + jsCur + ", " + (js.toSrc(ev)) + ", function(ev){ " + jsThis + ".doModify(" + jsTarget + ", " + (js.toSrc(post)) + ", function(v){return " + op + "v})})");
         } else if (op === '>') {
           if (jsCur.v.type === 'checkbox') {
             prop = 'checked';
           } else {
             prop = 'value';
           }
-          return js.addExpr("this.runEvent(" + jsCur + ", " + (js.toSrc(ev)) + ", function(ev){ " + jsThis + ".doSet(" + jsTarget + ", " + (js.toSrc(post)) + ", " + (js.index(jsCur, prop)) + "); })");
+          return js.addExpr("this.runEvent(undo, " + jsCur + ", " + (js.toSrc(ev)) + ", function(ev){ " + jsThis + ".doSet(" + jsTarget + ", " + (js.toSrc(post)) + ", " + (js.index(jsCur, prop)) + "); })");
         } else {
           if (post) {
             jsFn = js.addForcedVar("" + jsCur + "_fn", "null");
@@ -260,12 +262,12 @@
           } else {
             jsFn = jsTarget;
           }
-          return js.addExpr("this.runEvent(" + jsCur + ", " + (js.toSrc(ev)) + ", function(ev){ " + jsFn + ".call(" + jsTarget + ", ev, " + (js.toSrc(ev)) + ", " + jsCur + "); })");
+          return js.addExpr("this.runEvent(undo, " + jsCur + ", " + (js.toSrc(ev)) + ", function(ev){ " + jsFn + ".call(" + jsTarget + ", ev, " + (js.toSrc(ev)) + ", " + jsCur + "); })");
         }
       });
     };
 
-    templateCompiler.prototype.assigners = {
+    TemplateCompiler.prototype.assigners = {
       '#text': "#el#.nodeValue = #v#",
       '#default': "#el#.setAttribute(#n#, #v#)",
       'class': "#el#.className = #v#",
@@ -273,18 +275,18 @@
       'value': "#el#.value = #v#"
     };
 
-    return templateCompiler;
+    return TemplateCompiler;
 
   })();
 
-  this.platter = {
-    internal: {
-      templateCompiler: templateCompiler,
-      templateRunner: templateRunner,
-      subscount: 0,
-      subs: {}
+  this.Platter = {
+    Internal: {
+      TemplateCompiler: TemplateCompiler,
+      TemplateRunner: TemplateRunner,
+      SubsCount: 0,
+      Subs: {}
     },
-    helper: {}
+    Helper: {}
   };
 
   addBlockAndAttrExtract('foreach', 100, function(comp, frag, ret, js, jsCur, post, jsDatas, val) {
@@ -389,8 +391,8 @@
 
   escapesString = function(txt, fn) {
     var ret;
-    ret = escapesHandle(txt, platter.internal.toSrc, function(bit) {
-      return "platter.str(" + (fn(bit)) + ")";
+    ret = escapesHandle(txt, Platter.Internal.ToSrc, function(bit) {
+      return "Platter.Str(" + (fn(bit)) + ")";
     });
     return ret.join('+');
   };
@@ -424,16 +426,16 @@
   jsParser = function(jsDatas, fn) {
     return function(v) {
       var op;
-      op = platter.internal.jslikeparse(v, function(ex) {
+      op = Platter.Internal.JSLikeParse(v, function(ex) {
         var ex2, jsData, _ref;
         _ref = chooseData(ex, jsDatas), jsData = _ref[0], ex2 = _ref[1];
         return "" + fn(ex, ex2, jsData);
       });
-      return platter.internal.jslikeunparse(op);
+      return Platter.Internal.JSLikeUnparse(op);
     };
   };
 
-  platter.str = str;
+  Platter.Str = str;
 
   nodeWraps = {
     '#other': [4, '<table><tbody><tr><td>', '</td></tr></tbody></table>'],
@@ -472,7 +474,7 @@
 
   attrList = function(node) {
     var att, realn, ret, _i, _len, _ref;
-    if (platter.browser.attributeIterationBreaksClone) {
+    if (Platter.Browser.AttributeIterationBreaksClone) {
       node = node.cloneNode(false);
     }
     ret = {};
@@ -542,66 +544,57 @@
     return !!/^on/.exec(name);
   };
 
-  platter.helper.tmplToFrag = tmplToFrag;
+  Platter.Helper.TmplToFrag = tmplToFrag;
 
-  platter.helper.htmlToFrag = htmlToFrag;
+  Platter.Helper.HtmlToFrag = htmlToFrag;
 
-  undoer = (function() {
+  Undo = (function() {
 
-    undoer.prototype.cur = {
-      push: function() {}
-    };
-
-    function undoer() {
-      this.stack = [];
+    function Undo() {
+      this.undos = [];
     }
 
-    undoer.prototype.add = function(fn) {
-      return this.cur.push(fn);
+    Undo.prototype.add = function(fn) {
+      return this.undos.push(fn);
     };
 
-    undoer.prototype.start = function() {
-      this.stack.push(this.cur);
-      return this.cur = [];
+    Undo.prototype.child = function() {
+      var ret;
+      ret = new Undo;
+      this.add(function() {
+        return ret.undo();
+      });
+      return ret;
     };
 
-    undoer.prototype.claim = function() {
-      var cur;
-      cur = this.cur;
-      this.cur = this.stack.pop();
-      return function() {
-        var fn, _i, _len;
-        for (_i = 0, _len = cur.length; _i < _len; _i++) {
-          fn = cur[_i];
-          fn();
-        }
-        return cur = [];
-      };
+    Undo.prototype.undo = function() {
+      var _results;
+      _results = [];
+      while (this.undos.length > 0) {
+        _results.push(this.undos.pop()());
+      }
+      return _results;
     };
 
-    undoer.prototype.undoToStart = function() {
-      return this.claim()();
-    };
-
-    return undoer;
+    return Undo;
 
   })();
 
-  this.$undo = new undoer;
+  Platter.Undo = Undo;
 
-  browser = {};
+  Browser = {};
 
   (function() {
     var att, div, div2, _i, _len, _ref;
     div = document.createElement('div');
     div.innerHTML = "<div> <span>a</span></div>";
     if (div.firstChild.firstChild === div.firstChild.lastChild) {
-      browser.brokenWhitespace = true;
+      Browser.BrokenWhitespace = true;
     }
     div.innerHTML = "a";
     div.appendChild(document.createTextNode("b"));
     div = div.cloneNode(true);
-    if (div.firstChild === div.lastChild) browser.combinesTextNodes = true;
+    if (div.firstChild === div.lastChild) Browser.CombinesTextNodes = true;
     div.innerHTML = '<div></div>';
     div2 = div.firstChild;
     _ref = div2.attributes;
@@ -612,11 +605,11 @@
     div2 = div2.cloneNode(true);
     div2.setAttribute('id', 'b');
     if (div2.getAttributeNode('id') && div2.getAttributeNode('id').nodeValue !== 'b') {
-      return browser.attributeIterationBreaksClone = true;
+      return Browser.AttributeIterationBreaksClone = true;
     }
   })();
 
-  platter.browser = browser;
+  Platter.Browser = Browser;
 
   stackTrace = function() {
     try {
@@ -632,7 +625,7 @@
     var o, _i, _len, _ref, _results;
     if (bigDebugRan) return;
     bigDebugRan = true;
-    _ref = platter.internal.debuglist;
+    _ref = Platter.Internal.DebugList;
     _results = [];
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       o = _ref[_i];
@@ -641,27 +634,27 @@
         if (o.platter_watch) {
           id = Math.random();
           orig = o.platter_watch.platter_watch;
-          o.platter_watch.platter_watch = function(n, fn) {
-            platter.internal.subscount++;
-            platter.internal.subs[id] = stackTrace();
-            $undo.add(function() {
-              platter.internal.subscount--;
-              return delete platter.internal.subs[id];
+          o.platter_watch.platter_watch = function(undo, n, fn) {
+            Platter.Internal.SubsCount++;
+            Platter.Internal.Subs[id] = stackTrace();
+            undo.add(function() {
+              Platter.Internal.SubsCount--;
+              return delete Platter.Internal.Subs[id];
             });
-            return orig.call(this, n, fn);
+            return orig.call(this, undo, n, fn);
           };
         }
         if (o.platter_watchcoll) {
           id2 = Math.random();
           orig2 = o.platter_watchcoll.platter_watchcoll;
-          return o.platter_watchcoll.platter_watchcoll = function(add, remove, replaceMe) {
-            platter.internal.subscount++;
-            platter.internal.subs[id2] = stackTrace();
-            $undo.add(function() {
-              platter.internal.subscount--;
-              return delete platter.internal.subs[id2];
+          return o.platter_watchcoll.platter_watchcoll = function(undo, add, remove, replaceMe) {
+            Platter.Internal.SubsCount++;
+            Platter.Internal.Subs[id2] = stackTrace();
+            undo.add(function() {
+              Platter.Internal.SubsCount--;
+              return delete Platter.Internal.Subs[id2];
             });
-            return orig2.call(this, add, remove, replaceMe);
+            return orig2.call(this, undo, add, remove, replaceMe);
           };
         }
       })(o));
@@ -669,9 +662,9 @@
     return _results;
   };
 
-  platter.internal.debuglist = [];
+  Platter.Internal.DebugList = [];
 
-  platter.internal.bigDebug = bigDebug;
+  Platter.Internal.BigDebug = bigDebug;
 
   specpri = 101;
 
@@ -891,11 +884,11 @@
     }
   };
 
-  platter.internal.jslikeparse = jslikeparse;
+  Platter.Internal.JSLikeParse = jslikeparse;
 
-  platter.internal.jslikeunparse = jslikeunparse;
+  Platter.Internal.JSLikeUnparse = jslikeunparse;
 
-  platter.internal.jsmunge = function(txt, valfn) {
+  Platter.Internal.JSMunge = function(txt, valfn) {
     var op;
     op = jslikeparse(txt, valfn);
     return jslikeunparse(op);
@@ -1136,9 +1129,9 @@
 
   })();
 
-  platter.internal.codegen = codegen;
+  Platter.Internal.CodeGen = codegen;
 
-  platter.internal.toSrc = toSrc;
+  Platter.Internal.ToSrc = toSrc;
 
   plainGet = function(js) {
     return function(id, t, jsData) {
@@ -1152,23 +1145,23 @@
     };
   };
 
-  plainRunner = (function(_super) {
+  PlainRunner = (function(_super) {
 
-    __extends(plainRunner, _super);
+    __extends(PlainRunner, _super);
 
-    function plainRunner() {
-      plainRunner.__super__.constructor.apply(this, arguments);
+    function PlainRunner() {
+      PlainRunner.__super__.constructor.apply(this, arguments);
     }
 
-    plainRunner.prototype.doModify = function(data, n, fn) {
+    PlainRunner.prototype.doModify = function(data, n, fn) {
       return data[n] = fn(data[n]);
     };
 
-    plainRunner.prototype.doSet = function(data, n, v) {
+    PlainRunner.prototype.doSet = function(data, n, v) {
       return data[n] = v;
     };
 
-    plainRunner.prototype.runGetMulti = function(data, bits) {
+    PlainRunner.prototype.runGetMulti = function(data, bits) {
       var bit, _i, _len;
       for (_i = 0, _len = bits.length; _i < _len; _i++) {
         bit = bits[_i];
@@ -1178,23 +1171,23 @@
       return data;
     };
 
-    return plainRunner;
+    return PlainRunner;
 
-  })(platter.internal.templateRunner);
+  })(Platter.Internal.TemplateRunner);
 
-  plainCompiler = (function(_super) {
+  PlainCompiler = (function(_super) {
 
-    __extends(plainCompiler, _super);
+    __extends(PlainCompiler, _super);
 
-    function plainCompiler() {
-      plainCompiler.__super__.constructor.apply(this, arguments);
+    function PlainCompiler() {
+      PlainCompiler.__super__.constructor.apply(this, arguments);
     }
 
-    plainCompiler.prototype.makeRet = function(node) {
-      return new plainRunner(node);
+    PlainCompiler.prototype.makeRet = function(node) {
+      return new PlainRunner(node);
     };
 
-    plainCompiler.prototype.doBase = function(ret, js, jsCur, jsDatas, n, v, expr, sep) {
+    PlainCompiler.prototype.doBase = function(ret, js, jsCur, jsDatas, n, v, expr, sep) {
       var parse;
       if (sep === true) {
         parse = escapesStringParse;
@@ -1206,81 +1199,76 @@
       return js.addExpr(expr.replace(/#el#/g, "" + jsCur).replace(/#n#/g, js.toSrc(n)).replace(/#v#/g, parse(v, jsDatas, plainGet(js))));
     };
 
-    plainCompiler.prototype.doSimple = function(ret, js, jsCur, jsDatas, n, v, expr) {
+    PlainCompiler.prototype.doSimple = function(ret, js, jsCur, jsDatas, n, v, expr) {
       return this.doBase(ret, js, jsCur, jsDatas, n, v, expr, true);
     };
 
-    plainCompiler.prototype.doIf = function(ret, js, jsCur, jsPost, jsDatas, val, inner) {
+    PlainCompiler.prototype.doIf = function(ret, js, jsCur, jsPost, jsDatas, val, inner) {
       val = escapesNoStringParse(val, "&&", jsDatas, plainGet(js));
-      return js.addExpr("if (" + val + ") " + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + (jsDatas.join(', ')) + ", false), " + jsPost + ")");
+      return js.addExpr("if (" + val + ") " + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + (jsDatas.join(', ')) + ", undo, false).docfrag, " + jsPost + ")");
     };
 
-    plainCompiler.prototype.doUnless = function(ret, js, jsCur, jsPost, jsDatas, val, inner) {
+    PlainCompiler.prototype.doUnless = function(ret, js, jsCur, jsPost, jsDatas, val, inner) {
       val = escapesNoStringParse(val, "&&", jsDatas, plainGet(js));
-      return js.addExpr("if (!(" + val + ")) " + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + (jsDatas.join(', ')) + ", false), " + jsPost + ")");
+      return js.addExpr("if (!(" + val + ")) " + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + (jsDatas.join(', ')) + ", undo, false).docfrag, " + jsPost + ")");
     };
 
-    plainCompiler.prototype.doForEach = function(ret, js, jsCur, jsPost, jsDatas, val, inner) {
+    PlainCompiler.prototype.doForEach = function(ret, js, jsCur, jsPost, jsDatas, val, inner) {
       var jsFor;
       val = escapesNoStringParse(val, null, jsDatas, plainGet(js));
       jsFor = js.addVar("" + jsCur + "_for", val);
       js.forceVar(jsPost);
-      return js.addExpr("if (" + jsFor + ")\n	for (var i=0;i<" + jsFor + ".length; ++i)\n		" + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + jsFor + "[i], " + (jsDatas.join(',')) + ", false), " + jsPost + ")");
+      return js.addExpr("if (" + jsFor + ")\n	for (var i=0;i<" + jsFor + ".length; ++i)\n		" + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + jsFor + "[i], " + (jsDatas.join(',')) + ", undo, false).docfrag, " + jsPost + ")");
     };
 
-    plainCompiler.prototype.doWith = function(ret, js, jsCur, jsPost, jsDatas, val, inner) {
+    PlainCompiler.prototype.doWith = function(ret, js, jsCur, jsPost, jsDatas, val, inner) {
       val = escapesNoStringParse(val, null, jsDatas, plainGet(js));
-      return js.addExpr("" + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + val + ", " + (jsDatas.join(', ')) + ", false), " + jsPost + ")");
+      return js.addExpr("" + jsPost + ".parentNode.insertBefore(this." + jsCur + ".run(" + val + ", " + (jsDatas.join(', ')) + ", undo, false).docfrag, " + jsPost + ")");
     };
 
-    return plainCompiler;
+    return PlainCompiler;
 
-  })(platter.internal.templateCompiler);
+  })(Platter.Internal.TemplateCompiler);
 
-  platter.internal.plainRunner = plainRunner;
+  Platter.Internal.PlainRunner = PlainRunner;
 
-  platter.internal.plainCompiler = plainCompiler;
+  Platter.Internal.PlainCompiler = PlainCompiler;
 
-  platter.plain = new plainCompiler;
+  Platter.Plain = new PlainCompiler;
 
   never_equal_to_anything = {};
 
-  dynamicRunner = (function(_super) {
+  DynamicRunner = (function(_super) {
 
-    __extends(dynamicRunner, _super);
+    __extends(DynamicRunner, _super);
 
-    function dynamicRunner() {
-      dynamicRunner.__super__.constructor.apply(this, arguments);
+    function DynamicRunner() {
+      DynamicRunner.__super__.constructor.apply(this, arguments);
     }
 
-    dynamicRunner.prototype.runGetMulti = function(fn, data, _arg) {
-      var bit1, bits, fn2, undo, val,
+    DynamicRunner.prototype.runGetMulti = function(undo, fn, data, _arg) {
+      var bit1, bits, fn2, undoch, val,
         _this = this;
       bit1 = _arg[0], bits = 2 <= _arg.length ? __slice.call(_arg, 1) : [];
       val = never_equal_to_anything;
-      undo = null;
-      $undo.add(function() {
-        if (undo) return undo();
-      });
+      undoch = undo.child();
       fn2 = function() {
         var oval;
         oval = val;
         val = _this.fetchVal(data, bit1);
         if (oval === val) return;
-        if (undo) undo();
-        $undo.start();
+        undoch.undo();
         if (bits.length === 0) {
-          fn(val);
+          return fn(val);
         } else {
-          _this.runGetMulti(fn, val, bits);
+          return _this.runGetMulti(undo, fn, val, bits);
         }
-        return undo = $undo.claim();
       };
-      if (data && data.platter_watch) data.platter_watch(bit1, fn2);
+      if (data && data.platter_watch) data.platter_watch(undo, bit1, fn2);
       return fn2();
     };
 
-    dynamicRunner.prototype.doModify = function(data, n, fn) {
+    DynamicRunner.prototype.doModify = function(data, n, fn) {
       if (data.platter_modify) {
         return data.platter_modify(n, fn);
       } else {
@@ -1288,7 +1276,7 @@
       }
     };
 
-    dynamicRunner.prototype.doSet = function(data, n, v) {
+    DynamicRunner.prototype.doSet = function(data, n, v) {
       if (data.platter_set) {
         return data.platter_set(n, v);
       } else {
@@ -1296,7 +1284,7 @@
       }
     };
 
-    dynamicRunner.prototype.watchCollection = function(coll, add, rem, replaceMe) {
+    DynamicRunner.prototype.watchCollection = function(undo, coll, add, rem, replaceMe) {
       var i, o, _len;
       if (coll instanceof Array) {
         for (i = 0, _len = coll.length; i < _len; i++) {
@@ -1308,11 +1296,11 @@
         return;
       }
       if (coll && coll.platter_watchcoll) {
-        return coll.platter_watchcoll(add, rem, replaceMe);
+        return coll.platter_watchcoll(undo, add, rem, replaceMe);
       }
     };
 
-    dynamicRunner.prototype.fetchVal = function(data, ident) {
+    DynamicRunner.prototype.fetchVal = function(data, ident) {
       if (!data) return;
       if (data.platter_get) {
         return data.platter_get(ident);
@@ -1321,119 +1309,98 @@
       }
     };
 
-    dynamicRunner.prototype.runIf = function(datas, tmpl, start, end) {
-      var shown, undo,
+    DynamicRunner.prototype.runIf = function(undo, datas, tmpl, start, end) {
+      var shown, undoch,
         _this = this;
       shown = false;
-      undo = null;
-      $undo.add(function() {
-        if (undo) return undo();
-      });
+      undoch = undo.child();
       return function(show) {
         show = !!show;
         if (shown === show) return;
         shown = show;
         if (show) {
-          $undo.start();
-          end.parentNode.insertBefore(tmpl.run.apply(tmpl, __slice.call(datas).concat([false])), end);
-          return undo = $undo.claim();
+          return end.parentNode.insertBefore(tmpl.run.apply(tmpl, __slice.call(datas).concat([undoch], [false])).docfrag, end);
         } else {
           _this.removeBetween(start, end);
-          undo();
-          return undo = null;
+          return undoch.undo();
         }
       };
     };
 
-    dynamicRunner.prototype.runForEach = function(tmpl, datas, start, end) {
-      var ret, undo,
+    DynamicRunner.prototype.runForEach = function(undo, tmpl, datas, start, end) {
+      var hasRun, ret, undoch,
         _this = this;
-      undo = null;
-      $undo.add(function() {
-        if (undo) return undo();
-      });
+      undoch = undo.child();
+      hasRun = false;
       return ret = function(coll) {
-        if (undo) {
-          undo();
+        if (hasRun) {
+          undoch.undo();
           _this.removeBetween(start, end);
+        } else {
+          hasRun = true;
         }
-        $undo.start();
-        _this.runForEachInner(coll, tmpl, datas, start, end, ret);
-        return undo = $undo.claim();
+        return _this.runForEachInner(undo, coll, tmpl, datas, start, end, ret);
       };
     };
 
-    dynamicRunner.prototype.runForEachInner = function(coll, tmpl, datas, start, end, replaceMe) {
-      var add, ends, rem, undo,
+    DynamicRunner.prototype.runForEachInner = function(undo, coll, tmpl, datas, start, end, replaceMe) {
+      var add, ends, rem, spareUndos, undos,
         _this = this;
       ends = [start, end];
-      undo = [];
+      undos = [];
+      spareUndos = [];
       add = function(model, coll, opts) {
-        var at, newend, par;
+        var at, newend, par, undoch;
         at = opts.index;
         newend = document.createComment("");
         ends.splice(at + 1, 0, newend);
         par = start.parentNode;
         par.insertBefore(newend, ends[at].nextSibling);
-        $undo.start();
-        par.insertBefore(tmpl.run.apply(tmpl, [model].concat(__slice.call(datas), [false])), newend);
-        return undo.splice(at, 0, $undo.claim());
+        undoch = spareUndos.pop() || undo.child();
+        par.insertBefore(tmpl.run.apply(tmpl, [model].concat(__slice.call(datas), [undoch], [false])).docfrag, newend);
+        return undos.splice(at, 0, undoch);
       };
       rem = function(model, coll, opts) {
         var at;
         at = opts.index;
         _this.removeBetween(ends[at], ends[at + 1].nextSibling);
         ends.splice(at + 1, 1);
-        undo[at]();
-        return undo.splice(at, 1);
+        undos[at].undo();
+        return spareUndos.push(undos.splice(at, 1)[0]);
       };
-      this.watchCollection(coll, add, rem, replaceMe);
-      return $undo.add(function() {
-        var undoer, _i, _len, _results;
-        _results = [];
-        for (_i = 0, _len = undo.length; _i < _len; _i++) {
-          undoer = undo[_i];
-          _results.push(undoer());
-        }
-        return _results;
-      });
+      return this.watchCollection(undo, coll, add, rem, replaceMe);
     };
 
-    dynamicRunner.prototype.runWith = function(datas, tmpl, start, end) {
-      var undo,
+    DynamicRunner.prototype.runWith = function(undo, datas, tmpl, start, end) {
+      var undoch,
         _this = this;
-      undo = null;
-      $undo.add(function() {
-        if (undo) return undo();
-      });
+      undoch = undo.child();
       return function(val) {
         _this.removeBetween(start, end);
-        if (undo) undo();
-        $undo.start();
+        undoch.undo();
         if (end.parentNode) {
-          end.parentNode.insertBefore(tmpl.run.apply(tmpl, [val].concat(__slice.call(datas), [false])), end);
+          return end.parentNode.insertBefore(tmpl.run.apply(tmpl, [val].concat(__slice.call(datas), [undoch], [false])).docfrag, end);
         }
-        return undo = $undo.claim();
       };
     };
 
-    return dynamicRunner;
+    return DynamicRunner;
 
-  })(platter.internal.templateRunner);
+  })(Platter.Internal.TemplateRunner);
 
-  dynamicCompiler = (function(_super) {
+  DynamicCompiler = (function(_super) {
 
-    __extends(dynamicCompiler, _super);
+    __extends(DynamicCompiler, _super);
 
-    function dynamicCompiler() {
-      dynamicCompiler.__super__.constructor.apply(this, arguments);
+    function DynamicCompiler() {
+      DynamicCompiler.__super__.constructor.apply(this, arguments);
     }
 
-    dynamicCompiler.prototype.makeRet = function(node) {
-      return new dynamicRunner(node);
+    DynamicCompiler.prototype.makeRet = function(node) {
+      return new DynamicRunner(node);
     };
 
-    dynamicCompiler.prototype.doBase = function(ret, js, jsCur, jsDatas, n, v, expr, sep) {
+    DynamicCompiler.prototype.doBase = function(ret, js, jsCur, jsDatas, n, v, expr, sep) {
       var esc, escn, escvar, jsChange, parse;
       if (sep === true) {
         parse = escapesStringParse;
@@ -1458,49 +1425,49 @@
       }));
       for (escn in esc) {
         escvar = esc[escn];
-        js.addExpr("this.runGetMulti(function(val){\n	" + escvar + " = val;\n	if (" + jsChange + ") " + jsChange + "();\n}, " + escvar.v[1] + ", " + (js.toSrc(escvar.v[0].split('.'))) + ")");
+        js.addExpr("this.runGetMulti(undo, function(val){\n	" + escvar + " = val;\n	if (" + jsChange + ") " + jsChange + "();\n}, " + escvar.v[1] + ", " + (js.toSrc(escvar.v[0].split('.'))) + ")");
       }
       js.addExpr("" + jsChange + " = function() {\n	" + expr + ";\n}");
       return js.addExpr("" + jsChange + "()");
     };
 
-    dynamicCompiler.prototype.doSimple = function(ret, js, jsCur, jsDatas, n, v, expr) {
+    DynamicCompiler.prototype.doSimple = function(ret, js, jsCur, jsDatas, n, v, expr) {
       return this.doBase(ret, js, jsCur, jsDatas, n, v, expr, true);
     };
 
-    dynamicCompiler.prototype.doIf = function(ret, js, jsPre, jsPost, jsDatas, val, inner) {
+    DynamicCompiler.prototype.doIf = function(ret, js, jsPre, jsPost, jsDatas, val, inner) {
       var jsChange;
-      jsChange = js.addForcedVar("" + jsPre + "_ifchange", "this.runIf([" + (jsDatas.join(', ')) + "], this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
+      jsChange = js.addForcedVar("" + jsPre + "_ifchange", "this.runIf(undo, [" + (jsDatas.join(', ')) + "], this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
       return this.doBase(ret, js, jsPre, jsDatas, null, val, "" + jsChange + "(#v#)", "&&");
     };
 
-    dynamicCompiler.prototype.doUnless = function(ret, js, jsPre, jsPost, jsDatas, val, inner) {
+    DynamicCompiler.prototype.doUnless = function(ret, js, jsPre, jsPost, jsDatas, val, inner) {
       var jsChange;
-      jsChange = js.addForcedVar("" + jsPre + "_ifchange", "this.runIf([" + (jsDatas.join(', ')) + "], this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
+      jsChange = js.addForcedVar("" + jsPre + "_ifchange", "this.runIf(undo, [" + (jsDatas.join(', ')) + "], this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
       return this.doBase(ret, js, jsPre, jsDatas, null, val, "" + jsChange + "(!(#v#))", "&&");
     };
 
-    dynamicCompiler.prototype.doForEach = function(ret, js, jsPre, jsPost, jsDatas, val, inner) {
+    DynamicCompiler.prototype.doForEach = function(ret, js, jsPre, jsPost, jsDatas, val, inner) {
       var jsChange;
-      jsChange = js.addForcedVar("" + jsPre + "_forchange", "this.runForEach(this." + jsPre + ", [" + (jsDatas.join(', ')) + "], " + jsPre + ", " + jsPost + ")");
+      jsChange = js.addForcedVar("" + jsPre + "_forchange", "this.runForEach(undo, this." + jsPre + ", [" + (jsDatas.join(', ')) + "], " + jsPre + ", " + jsPost + ")");
       return this.doBase(ret, js, jsPre, jsDatas, null, val, "" + jsChange + "(#v#)", null);
     };
 
-    dynamicCompiler.prototype.doWith = function(ret, js, jsPre, jsPost, jsDatas, val, inner) {
+    DynamicCompiler.prototype.doWith = function(ret, js, jsPre, jsPost, jsDatas, val, inner) {
       var jsChange;
-      jsChange = js.addForcedVar("" + jsPre + "_ifchange", "this.runWith([" + (jsDatas.join(', ')) + "], this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
+      jsChange = js.addForcedVar("" + jsPre + "_ifchange", "this.runWith(undo, [" + (jsDatas.join(', ')) + "], this." + jsPre + ", " + jsPre + ", " + jsPost + ")");
       return this.doBase(ret, js, jsPre, jsDatas, null, val, "" + jsChange + "(#v#)", null);
     };
 
-    return dynamicCompiler;
+    return DynamicCompiler;
 
-  })(platter.internal.templateCompiler);
+  })(Platter.Internal.TemplateCompiler);
 
-  platter.internal.dynamicRunner = dynamicRunner;
+  Platter.Internal.DynamicRunner = DynamicRunner;
 
-  platter.internal.dynamicCompiler = dynamicCompiler;
+  Platter.Internal.DynamicCompiler = DynamicCompiler;
 
-  platter.dynamic = new dynamicCompiler;
+  Platter.Dynamic = new DynamicCompiler;
 
   isNat = function(n) {
     return !!/^[0-9]+$/.exec(n);
@@ -1511,12 +1478,12 @@
     modprot.platter_hasKey = modprot.hasKey || function(n) {
       return this.attributes.hasOwnProperty(n);
     };
-    modprot.platter_watch = function(n, fn) {
+    modprot.platter_watch = function(undo, n, fn) {
       var ev,
         _this = this;
       ev = "change:" + n;
       this.on(ev, fn);
-      return $undo.add(function() {
+      return undo.add(function() {
         return _this.off(ev, fn);
       });
     };
@@ -1538,7 +1505,7 @@
       }
     };
     collprot = Backbone.Collection.prototype;
-    collprot.platter_watchcoll = function(add, remove, replaceMe) {
+    collprot.platter_watchcoll = function(undo, add, remove, replaceMe) {
       var doRep, i, _ref,
         _this = this;
       doRep = function() {
@@ -1552,7 +1519,7 @@
           index: i
         });
       }
-      return $undo.add(function() {
+      return undo.add(function() {
         _this.off('add', add);
         _this.off('remove', remove);
         return _this.off('reset', doRep);
@@ -1561,12 +1528,12 @@
     collprot.platter_hasKey = function(n) {
       return n === 'length' || isNat(n);
     };
-    collprot.platter_watch = function(n, fn) {
+    collprot.platter_watch = function(undo, n, fn) {
       var add, rem,
         _this = this;
       if (n === 'length') {
         this.on('add remove reset', fn);
-        return $undo.add(function() {
+        return undo.add(function() {
           return _this.off('add remove reset', fn);
         });
       } else if (isNat(n)) {
@@ -1579,7 +1546,7 @@
         this.on('add', add);
         this.on('remove', rem);
         this.on('reset', fn);
-        return $undo.add(function() {
+        return undo.add(function() {
           _this.off('add', add);
           _this.off('remove', rem);
           return _this.off('reset', fn);
@@ -1610,20 +1577,20 @@
         return this[n] = v;
       }
     };
-    platter.internal.debuglist.push({
+    Platter.Internal.DebugList.push({
       platter_haskey: modprot,
       platter_watch: modprot,
       platter_get: modprot,
       platter_set: modprot
     });
-    platter.internal.debuglist.push({
+    Platter.Internal.DebugList.push({
       platter_haskey: collprot,
       platter_watch: collprot,
       platter_get: collprot,
       platter_set: collprot,
       platter_watchcoll: collprot
     });
-    platter.backbone = platter.dynamic;
+    Platter.Backbone = Platter.Dynamic;
   }
 
 }).call(this);

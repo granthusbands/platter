@@ -34,7 +34,7 @@ tmplToFrag = (txt) ->
 	htmlToFrag(txt).cloneNode(true).cloneNode(true)
 
 attrList = (node) ->
-	if platter.browser.attributeIterationBreaksClone
+	if Platter.Browser.AttributeIterationBreaksClone
 		node = node.cloneNode false
 	ret = {}
 	for att in node.attributes when isPlatterAttr att.nodeName
@@ -90,5 +90,5 @@ pullBlock = (endtext, node) ->
 
 isEventAttr = (name) -> !!/^on/.exec(name)
 
-platter.helper.tmplToFrag = tmplToFrag
-platter.helper.htmlToFrag = htmlToFrag
+Platter.Helper.TmplToFrag = tmplToFrag
+Platter.Helper.HtmlToFrag = htmlToFrag

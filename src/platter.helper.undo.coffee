@@ -1,22 +1,14 @@
-class undoer
-	cur:
-		push: ->
-			# By default, we just discard undoers, since nobody's collecting them.
+class Undo
 	constructor: ->
-		@stack = []
+		@undos = []
 	add: (fn) ->
-		@cur.push fn
-	start: () ->
-		@stack.push @cur
-		@cur = []
-	claim: () ->
-		cur = @cur
-		@cur = @stack.pop()
-		return () ->
-			for fn in cur
-				fn()
-			cur = []
-	undoToStart: () ->
-		@claim()()
+		@undos.push fn
+	child: ->
+		ret = new Undo
+		@add -> ret.undo()
+		ret
+	undo: ->
+		while @undos.length>0
+			@undos.pop()()
 
-this.$undo = new undoer
+Platter.Undo = Undo

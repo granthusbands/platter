@@ -117,5 +117,5 @@ class codegen
 		else
 			return "#{arr}.#{entry}"
 
-platter.internal.codegen = codegen
-platter.internal.toSrc = toSrc
+Platter.Internal.CodeGen = codegen
+Platter.Internal.ToSrc = toSrc

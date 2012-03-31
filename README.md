@@ -16,16 +16,16 @@ There's a usage example in example.html, but here's a template and a couple of e
 ```
 
 ```javascript
-var template = platter.plain.compile(ttext);
+var template = Platter.Plain.compile(ttext);
 var data = {title: "This is the title", blah: []};
 for (var i=0;Math.random()*5>i;++i)
 	data.blah.push({class:'row'+i, name:'Name '+Math.random(), click:function(){alert(1);}});
-var els = template.run(data);
+var els = template.run(data).docfrag;
 document.body.appendChild(els);
 ```
 
 ```javascript
-var template = platter.backbone.compile(ttext);
+var template = Platter.Backbone.compile(ttext);
 var data = new Backbone.Model();
 data.set({title: "This is the title"});
 data.blah = new Backbone.Collection();
@@ -35,16 +35,15 @@ for (var i=0;Math.random()*5>i;++i) {
 	row.click=function(){alert(2);};
 	data.blah.add(row);
 }
-var els = template.run(data);
+var els = template.run(data).docfrag;
 document.body.appendChild(els);
 ```
 
-Undoing a template is currently slightly long-winded. Basically, create it like this:
+To safely remove the template and all of the effects, including the all of the event handlers, call the undo method of the result:
 
 ```javascript
-$undo.start();
-template.run(data);
-var undoer = $undo.claim();
+var t = template.run(data);
+document.body.appendChild(t.docfrag);
+t.undo();
 ```
 
-And then run ```undoer``` to undo all of the template's effects (that will also remove its nodes from wherever they've been put).

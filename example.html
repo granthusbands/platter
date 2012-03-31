@@ -20,18 +20,18 @@
 
 		<script type="text/javascript">
 			function goPlain(){
-				var template = platter.plain.compile(document.getElementById('ggt').text);
+				var template = Platter.Plain.compile(document.getElementById('ggt').text);
 				
 				var data = {title: Math.random()>0.5?"This is the title":null, blah: []};
 				for (var i=0;Math.random()*5>i;++i)
 					data.blah.push({'class':{t:'row'+i}, name:'Name '+Math.random(), click:function(){alert(1);}});
 				
-				var els = template.run(data);
+				var els = template.run(data).docfrag;
 				document.body.appendChild(els);
 			}
 
 			function goBackbone(){
-				var template = platter.backbone.compile(document.getElementById('ggt').text);
+				var template = Platter.Backbone.compile(document.getElementById('ggt').text);
 				var data = new Backbone.Model();
 				data.set({title: Math.random()>0.5?"This is the title":null});
 				data.blah = new Backbone.Collection();
@@ -61,17 +61,16 @@
 				};
 				var timer = setInterval(mungedata, 1000);
 				var button = document.createElement('button');
-				$undo.start();
-				var els = template.run(data);
-				$undo.add(function(){
+				var undo = new Platter.Undo
+				var els = template.run(data, undo).docfrag;
+				undo.add(function(){
 					document.body.removeChild(button);
 					data.blah.reset();
 					clearInterval(timer);
 				});
-				var undo = $undo.claim();
 				document.body.appendChild(els);
 				button.innerHTML = "Undo";
-				button.onclick = undo;
+				button.onclick = function(){ undo.undo(); };
 				document.body.appendChild(button);
 			}
 		</script>

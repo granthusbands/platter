@@ -52,11 +52,11 @@ escapesHandle = (txt, tfn, efn) ->
 		if v? then ret.push v
 	ret
 
-# Turns an escapey string into "a"+platter.str(...)+"c"+platter.str(...), where ... comes from fn('b') and fn('d')
+# Turns an escapey string into "a"+Platter.Str(...)+"c"+Platter.Str(...), where ... comes from fn('b') and fn('d')
 # Intended to be used in string contexts, of course, where it's appropriate to turn everything into strings.
 escapesString = (txt, fn) ->
-	ret = escapesHandle txt, platter.internal.toSrc, (bit) ->
-		"platter.str(#{fn(bit)})"
+	ret = escapesHandle txt, Platter.Internal.ToSrc, (bit) ->
+		"Platter.Str(#{fn(bit)})"
 	ret.join '+'
 
 # Turns an escapey string into whatever fn returns, joined with join. Between escapes, only whitespace is allowed.
@@ -87,9 +87,9 @@ chooseData = (txt, jsDatas) ->
 
 jsParser = (jsDatas, fn) ->
 	(v) ->
-		op = platter.internal.jslikeparse v, (ex) ->
+		op = Platter.Internal.JSLikeParse v, (ex) ->
 			[jsData, ex2] = chooseData ex, jsDatas
 			""+fn(ex, ex2, jsData)
-		platter.internal.jslikeunparse op
+		Platter.Internal.JSLikeUnparse op
 
-platter.str = str
+Platter.Str = str

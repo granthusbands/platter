@@ -11,10 +11,10 @@ if window.Backbone
 		modprot.hasKey || (n) ->
 			@attributes.hasOwnProperty(n)
 
-	modprot.platter_watch = (n, fn) ->
+	modprot.platter_watch = (undo, n, fn) ->
 		ev = "change:"+n
 		@on ev, fn
-		$undo.add =>
+		undo.add =>
 			@off ev, fn
 
 	modprot.platter_get = (n) ->
@@ -35,14 +35,14 @@ if window.Backbone
 	# Extend collections, too.
 	collprot = Backbone.Collection.prototype
 	# Used by foreach and similar
-	collprot.platter_watchcoll = (add, remove, replaceMe) ->
+	collprot.platter_watchcoll = (undo, add, remove, replaceMe) ->
 		doRep = -> replaceMe @
 		@on 'add', add
 		@on 'remove', remove
 		@on 'reset', doRep
 		for i in [0...@length]
 			add @at(i), @, {index:i}
-		$undo.add =>
+		undo.add =>
 			@off 'add', add
 			@off 'remove', remove
 			@off 'reset', doRep
@@ -52,10 +52,10 @@ if window.Backbone
 	collprot.platter_hasKey = (n) ->
 		n == 'length' || isNat n
 
-	collprot.platter_watch = (n, fn) ->
+	collprot.platter_watch = (undo, n, fn) ->
 		if n=='length'
 			@on 'add remove reset', fn
-			$undo.add =>
+			undo.add =>
 				@off 'add remove reset', fn
 		else if isNat n
 			add = (el, coll, opts) -> if opts.index<=n then fn()
@@ -63,7 +63,7 @@ if window.Backbone
 			@on 'add', add
 			@on 'remove', rem
 			@on 'reset', fn
-			$undo.add =>
+			undo.add =>
 				@off 'add', add
 				@off 'remove', rem
 				@off 'reset', fn
@@ -85,17 +85,17 @@ if window.Backbone
 			@[n] = v
 
 
-	platter.internal.debuglist.push
+	Platter.Internal.DebugList.push
 		platter_haskey: modprot
 		platter_watch: modprot
 		platter_get: modprot
 		platter_set: modprot
 
-	platter.internal.debuglist.push
+	Platter.Internal.DebugList.push
 		platter_haskey: collprot
 		platter_watch: collprot
 		platter_get: collprot
 		platter_set: collprot
 		platter_watchcoll: collprot
 
-	platter.backbone = platter.dynamic
+	Platter.Backbone = Platter.Dynamic

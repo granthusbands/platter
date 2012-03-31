@@ -6,7 +6,7 @@ jQuery(function(){
 	test("DOM Helpers", function(){
 		equal(testdiv.innerHTML, "", "Test div empty");
 
-		var tmpl = platter.plain.compile("<div></div>");
+		var tmpl = Platter.Plain.compile("<div></div>");
 		fiveparts="test<b>test2</b>test3<b>test4</b>test5";
 		testdiv.innerHTML = fiveparts;
 		tmpl.removeBetween(testdiv.firstChild, testdiv.lastChild);
@@ -19,21 +19,21 @@ jQuery(function(){
 		equal(testdiv.firstChild, testdiv.lastChild, "removeAll");
 
 		// IE8 doesn't have whitespace textnodes in its DOM
-		if (!platter.browser.brokenWhitespace) {
-			var frag = platter.helper.htmlToFrag(" <div>blah</div> ");
+		if (!Platter.Browser.BrokenWhitespace) {
+			var frag = Platter.Helper.HtmlToFrag(" <div>blah</div> ");
 			equal(frag.firstChild.nodeValue, " ", "htmlToFrag whitespace");
 			equal(frag.lastChild.nodeValue, " ", "htmlToFrag whitespace");
 			equal(frag.firstChild.nextSibling.innerHTML, "blah", "htmltoFrag div");
 		}
 
-		var frag = platter.helper.tmplToFrag(" <div>blah</div> ");
+		var frag = Platter.Helper.TmplToFrag(" <div>blah</div> ");
 		equal(frag.firstChild.innerHTML, "blah", "tmpltoFrag trimmed pre");
 		equal(frag.lastChild.innerHTML, "blah", "tmpltoFrag trimmed post");
 
-		var frag = platter.helper.htmlToFrag("<link rel='stylesheet' href='/missing.css' type='text/css' />");
+		var frag = Platter.Helper.HtmlToFrag("<link rel='stylesheet' href='/missing.css' type='text/css' />");
 		equal(frag.firstChild.type, "text/css", "htmlToFrag link");
 
-		var frag = platter.helper.htmlToFrag("<script type='text/javascript'>ok(false, 'script should not run')</script>");
+		var frag = Platter.Helper.HtmlToFrag("<script type='text/javascript'>ok(false, 'script should not run')</script>");
 		equal(frag.firstChild.type, "text/javascript", "htmlToFrag script");
 		// TODO: Test whether script insertion into the doc runs the script.
 

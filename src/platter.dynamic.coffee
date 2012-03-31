@@ -2,27 +2,23 @@
 
 never_equal_to_anything = {}
 
-class dynamicRunner extends platter.internal.templateRunner
+class DynamicRunner extends Platter.Internal.TemplateRunner
 	# Runtime: Fetches data.bit1.bit2.bit3..., calls fn with the result. Calls it again when the result changes.
-	runGetMulti: (fn, data, [bit1, bits...]) ->
+	runGetMulti: (undo, fn, data, [bit1, bits...]) ->
 		val = never_equal_to_anything
-		undo = null;
-		$undo.add ->
-			undo() if undo
+		undoch = undo.child()
 		fn2 = =>
 			oval = val
 			val = @fetchVal data, bit1
 			if oval==val
 				return 
-			undo() if undo
-			$undo.start()
+			undoch.undo()
 			if bits.length==0
 				fn(val)
 			else
-				@runGetMulti fn, val, bits
-			undo = $undo.claim()
+				@runGetMulti undo, fn, val, bits
 		if data && data.platter_watch
-			data.platter_watch bit1, fn2
+			data.platter_watch undo, bit1, fn2
 		fn2()
 
 	doModify: (data, n, fn) ->
@@ -40,13 +36,13 @@ class dynamicRunner extends platter.internal.templateRunner
 
 	# Runtime: Call add/rem appropriately for the collection (with change-watching, if possible)
 	# It's actually more efficient for watchCollection to not undo the adds. The caller is expected to have their own undoer in the same context.
-	watchCollection: (coll, add, rem, replaceMe) ->
+	watchCollection: (undo, coll, add, rem, replaceMe) ->
 		if coll instanceof Array 
 			for o,i in coll
 				add o, coll, {index:i}
 			return
 		if coll && coll.platter_watchcoll
-			coll.platter_watchcoll add, rem, replaceMe
+			coll.platter_watchcoll undo, add, rem, replaceMe
 
 	# Runtime: When people say {{blah}}, they might mean data.get(blah) or data[blah]
 	# TODO: Maybe they mean data[blah]()?
@@ -59,76 +55,66 @@ class dynamicRunner extends platter.internal.templateRunner
 			data[ident]
 
 	# Runtime: A conditional section, automatically filled/removed as fn changes.
-	runIf: (datas, tmpl, start, end) ->
+	runIf: (undo, datas, tmpl, start, end) ->
 		shown = false
-		undo = null
-		$undo.add -> undo() if undo
+		undoch = undo.child()
 		(show) =>
 			show = !!show;
 			if shown==show
 				return
 			shown = show
 			if (show)
-				$undo.start()
-				end.parentNode.insertBefore tmpl.run(datas..., false), end
-				undo = $undo.claim()
+				end.parentNode.insertBefore tmpl.run(datas..., undoch, false).docfrag, end
 			else
 				@removeBetween start, end
-				undo()
-				undo = null
+				undoch.undo()
 
 	# Runtime: Provide a callback for doing foreach
-	runForEach: (tmpl, datas, start, end) ->
-		undo = null
-		$undo.add ->
-			undo() if undo
+	runForEach: (undo, tmpl, datas, start, end) ->
+		undoch = undo.child()
+		hasRun = false;
 		ret = (coll) =>
-			if undo
-				undo()
+			if hasRun
+				undoch.undo()
 				@removeBetween start, end
-			$undo.start()
-			@runForEachInner coll, tmpl, datas, start, end, ret
-			undo = $undo.claim()
+			else
+				hasRun = true
+			@runForEachInner undo, coll, tmpl, datas, start, end, ret
 
 	# Runtime: A collection of models, automatically expanded/collapsed as members get added/removed
-	runForEachInner: (coll, tmpl, datas, start, end, replaceMe) ->
+	runForEachInner: (undo, coll, tmpl, datas, start, end, replaceMe) ->
 		ends = [start, end]
-		undo = []
+		undos = []
+		spareUndos = [] # If we don't reuse them, the parent undoer will end up with many.
 		add = (model, coll, opts) =>
 			at = opts.index
 			newend = document.createComment ""
 			ends.splice at+1, 0, newend
 			par = start.parentNode
 			par.insertBefore newend, ends[at].nextSibling
-			$undo.start()
-			par.insertBefore tmpl.run(model, datas..., false), newend
-			undo.splice(at, 0, $undo.claim())
+			undoch = spareUndos.pop() || undo.child()
+			par.insertBefore tmpl.run(model, datas..., undoch, false).docfrag, newend
+			undos.splice(at, 0, undoch)
 		rem = (model, coll, opts) =>
 			at = opts.index
 			@removeBetween ends[at], ends[at+1].nextSibling
 			ends.splice(at+1,1)
-			undo[at]()
-			undo.splice(at, 1)
-		@watchCollection coll, add, rem, replaceMe
-		$undo.add ->
-			for undoer in undo
-				undoer()
+			undos[at].undo()
+			spareUndos.push undos.splice(at, 1)[0]
+		@watchCollection undo, coll, add, rem, replaceMe
 
-	runWith: (datas, tmpl, start, end) ->
-		undo = null
-		$undo.add -> undo() if undo
+	runWith: (undo, datas, tmpl, start, end) ->
+		undoch = undo.child()
 		(val) =>
 			@removeBetween start, end
-			if undo then undo()
-			$undo.start()
+			undoch.undo()
 			# In some transitions, we can end up removed from the page but wanting to process the event that caused that, so we need to cope with a lack of a parentNode.
 			if (end.parentNode)
-				end.parentNode.insertBefore tmpl.run(val, datas..., false), end
-			undo = $undo.claim()
+				end.parentNode.insertBefore tmpl.run(val, datas..., undoch, false).docfrag, end
 
-class dynamicCompiler extends platter.internal.templateCompiler
+class DynamicCompiler extends Platter.Internal.TemplateCompiler
 	makeRet: (node) ->
-		new dynamicRunner(node)
+		new DynamicRunner(node)
 
 	# Compiler: Handle simple value-assignments with escapes.
 	doBase: (ret, js, jsCur, jsDatas, n, v, expr, sep) ->
@@ -149,7 +135,7 @@ class dynamicCompiler extends platter.internal.templateCompiler
 			)
 		for escn, escvar of esc
 			js.addExpr """
-				this.runGetMulti(function(val){
+				this.runGetMulti(undo, function(val){
 					#{escvar} = val;
 					if (#{jsChange}) #{jsChange}();
 				}, #{escvar.v[1]}, #{js.toSrc escvar.v[0].split '.'})
@@ -166,24 +152,24 @@ class dynamicCompiler extends platter.internal.templateCompiler
 
 	# Compiler: Conditional section
 	doIf: (ret, js, jsPre, jsPost, jsDatas, val, inner) ->
-		jsChange = js.addForcedVar "#{jsPre}_ifchange", "this.runIf([#{jsDatas.join ', '}], this.#{jsPre}, #{jsPre}, #{jsPost})"
+		jsChange = js.addForcedVar "#{jsPre}_ifchange", "this.runIf(undo, [#{jsDatas.join ', '}], this.#{jsPre}, #{jsPre}, #{jsPost})"
 		@doBase ret, js, jsPre, jsDatas, null, val, "#{jsChange}(#v#)", "&&"
 
 	# Compiler: Conditional section
 	doUnless: (ret, js, jsPre, jsPost, jsDatas, val, inner) ->
-		jsChange = js.addForcedVar "#{jsPre}_ifchange", "this.runIf([#{jsDatas.join ', '}], this.#{jsPre}, #{jsPre}, #{jsPost})"
+		jsChange = js.addForcedVar "#{jsPre}_ifchange", "this.runIf(undo, [#{jsDatas.join ', '}], this.#{jsPre}, #{jsPre}, #{jsPost})"
 		@doBase ret, js, jsPre, jsDatas, null, val, "#{jsChange}(!(#v#))", "&&"
 
 	# Compiler:
 	doForEach: (ret, js, jsPre, jsPost, jsDatas, val, inner) ->
-		jsChange = js.addForcedVar "#{jsPre}_forchange", "this.runForEach(this.#{jsPre}, [#{jsDatas.join ', '}], #{jsPre}, #{jsPost})"
+		jsChange = js.addForcedVar "#{jsPre}_forchange", "this.runForEach(undo, this.#{jsPre}, [#{jsDatas.join ', '}], #{jsPre}, #{jsPost})"
 		@doBase ret, js, jsPre, jsDatas, null, val, "#{jsChange}(#v#)", null
 
 	# Compiler: Conditional section
 	doWith: (ret, js, jsPre, jsPost, jsDatas, val, inner) ->
-		jsChange = js.addForcedVar "#{jsPre}_ifchange", "this.runWith([#{jsDatas.join ', '}], this.#{jsPre}, #{jsPre}, #{jsPost})"
+		jsChange = js.addForcedVar "#{jsPre}_ifchange", "this.runWith(undo, [#{jsDatas.join ', '}], this.#{jsPre}, #{jsPre}, #{jsPost})"
 		@doBase ret, js, jsPre, jsDatas, null, val, "#{jsChange}(#v#)", null
 
-platter.internal.dynamicRunner = dynamicRunner
-platter.internal.dynamicCompiler = dynamicCompiler
-platter.dynamic = new dynamicCompiler
+Platter.Internal.DynamicRunner = DynamicRunner
+Platter.Internal.DynamicCompiler = DynamicCompiler
+Platter.Dynamic = new DynamicCompiler

@@ -16,7 +16,7 @@ jQuery(function(){
 	}
 
 	test("Variable Names", function(){
-		var js = new platter.internal.codegen();
+		var js = new Platter.Internal.CodeGen();
 		var vbreak = js.addVar('break');
 		notEqual(vbreak.n, "break", "Keyword variable name avoided");
 		var vbark = js.addVar('bark');
@@ -30,7 +30,7 @@ jQuery(function(){
 	});
 
 	test("Variable removal", function(){
-		var js = new platter.internal.codegen();
+		var js = new Platter.Internal.CodeGen();
 		var v1 = js.addVar("v1", "1");
 		var v2 = js.addVar("v2", ""+v1);
 		var v3 = js.addVar("v3", "2");
@@ -49,7 +49,7 @@ jQuery(function(){
 		contains(jsstr, 'var v1', "Forced variable is now kept");
 		contains(jsstr, 'v1+v3', "Forced variable is now used (v2 still missing)");
 
-		var js = new platter.internal.codegen();
+		var js = new Platter.Internal.CodeGen();
 		var v1 = js.addVar("v1", "1");
 		var v2 = js.addVar("v2", v1+"+"+v1);
 		var v3 = js.addVar("v3", "2");
@@ -68,7 +68,7 @@ jQuery(function(){
 	});
 
 	test("Sanitisation", function(){
-		var js = new platter.internal.codegen();
+		var js = new Platter.Internal.CodeGen();
 		equal(js.toSrc(undefined), 'undefined', 'undefined');
 		equal(js.toSrc(null), 'null', 'null');
 		equal(js.toSrc(1), 1, "1");
