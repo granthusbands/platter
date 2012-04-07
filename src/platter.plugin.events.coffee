@@ -42,7 +42,7 @@ doSet = Runner::addUniqueMethod 'doSet', (data, n, v) ->
 
 runEvent = Runner::addUniqueMethod 'runEvent', defaultRunEvent
 
-doEvent = Compiler::addUniqueMethod 'doEvent', (ret, js, jsCur, jsDatas, realn, v) ->
+doEvent = Compiler::addUniqueMethod 'doEvent', (ps, realn, v) ->
 	ev = realn.substr(2)
 	Platter.EscapesNoString v, "", (t) =>
 		orig = t
@@ -52,45 +52,45 @@ doEvent = Compiler::addUniqueMethod 'doEvent', (ret, js, jsCur, jsDatas, realn, 
 			throw new Error("{{#{orig}}} is bad; only event handlers of the forms a.b, >a.b, ++a.b, --a.b, a.b++ and a.b-- are currently supported")
 		t = m[2]
 		op = m[1]||m[3]
-		jsThis = js.addForcedVar "#{jsCur}_this", "this"
+		jsThis = ps.js.addForcedVar "#{ps.jsCur}_this", "this"
 		# If there is a dot in the expression, we need to fetch the left-hand-side of that into a variable
 		# (For setters/getters we need to know what to call them on. For functions, we need a 'this'.)
 		m = /^\s*(\.*)([^.\s].*)\.(.*)$/.exec t
 		if m
-			jsTarget = js.addForcedVar "#{jsCur}_target", "null"
-			@doBase ret, js, jsCur, jsDatas, 'text', "{{#{m[1]}#{m[2]}}}", "#{jsTarget} = #v#", null
+			jsTarget = ps.js.addForcedVar "#{ps.jsCur}_target", "null"
+			@doBase ps, 'text', "{{#{m[1]}#{m[2]}}}", "#{jsTarget} = #v#", null
 			post = m[3]
 		else
 			m = /^\s*(\.*)([^.\s].*)$/.exec t
 			if (m)
-				jsTarget = jsDatas[(m[1].length||1)-1]
+				jsTarget = ps.jsDatas[(m[1].length||1)-1]
 				post = m[2]
 			else if op
 				throw new Error("Sorry, {{#{orig}}} is not supported, because I can't replace the current data item");
 			else
 				m = /^\s*(\.+)$/.exec t
-				jsTarget = jsDatas[(m[1].length||1)-1]
+				jsTarget = ps.jsDatas[(m[1].length||1)-1]
 		if op=='++' || op=='--'
-			js.addExpr "this.#{runEvent}(undo, #{jsCur}, #{js.toSrc ev}, function(ev){ #{jsThis}.#{doModify}(#{jsTarget}, #{js.toSrc post}, function(v){return #{op}v})})";
+			ps.js.addExpr "this.#{runEvent}(undo, #{ps.jsCur}, #{ps.js.toSrc ev}, function(ev){ #{jsThis}.#{doModify}(#{jsTarget}, #{ps.js.toSrc post}, function(v){return #{op}v})})";
 		else if op=='>'
-			if (jsCur.v.type=='checkbox') # TODO: Support radio buttons, select-boxes and maybe others
+			if (ps.cur.type=='checkbox') # TODO: Support radio buttons, select-boxes and maybe others
 				prop = 'checked'
 			else
 				prop = 'value'
-			js.addExpr "this.#{runEvent}(undo, #{jsCur}, #{js.toSrc ev}, function(ev){ #{jsThis}.#{doSet}(#{jsTarget}, #{js.toSrc post}, #{js.index jsCur, prop}); })"
+			ps.js.addExpr "this.#{runEvent}(undo, #{ps.jsCur}, #{ps.js.toSrc ev}, function(ev){ #{jsThis}.#{doSet}(#{jsTarget}, #{ps.js.toSrc post}, #{ps.js.index ps.jsCur, prop}); })"
 		else
 			if (post)
-				jsFn = js.addForcedVar "#{jsCur}_fn", "null"
-				@doBase ret, js, jsCur, jsDatas, 'text', "{{#{t}}}", "#{jsFn} = #v#", null
+				jsFn = ps.js.addForcedVar "#{ps.jsCur}_fn", "null"
+				@doBase ps, 'text', "{{#{t}}}", "#{jsFn} = #v#", null
 			else
 				jsFn = jsTarget
-			js.addExpr "this.#{runEvent}(undo, #{jsCur}, #{js.toSrc ev}, function(ev){ #{jsFn}.call(#{jsTarget}, ev, #{js.toSrc ev}, #{jsCur}); })"
+			ps.js.addExpr "this.#{runEvent}(undo, #{ps.jsCur}, #{ps.js.toSrc ev}, function(ev){ #{jsFn}.call(#{jsTarget}, ev, #{ps.js.toSrc ev}, #{ps.jsCur}); })"
 
-Compiler::addAttrPlugin 'on.*', 0, (comp, ret, js, jsCur, jsDatas, attrs) ->
-	for own realn, {n, realn, v} of attrs
+Compiler::addAttrPlugin 'on.*', 0, (comp, ps) ->
+	for own realn, {n, realn, v} of ps.attrs()
 		if isEventAttr realn
 			if (realn!=n)
-				jsCur.v.removeAttribute n
-			comp[doEvent] ret, js, jsCur, jsDatas, realn, v
-			delete attrs[realn]
+				ps.cur.removeAttribute n
+			comp[doEvent] ps, realn, v
+			ps.remAttr(realn)
 	null

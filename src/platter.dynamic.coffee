@@ -36,37 +36,37 @@ class Platter.Internal.DynamicCompiler extends Platter.Internal.TemplateCompiler
 	runner: Platter.Internal.DynamicRunner
 
 	# Compiler: Handle simple value-assignments with escapes.
-	doBase: (ret, js, jsCur, jsDatas, n, v, expr, sep) ->
+	doBase: (ps, n, v, expr, sep) ->
 		if (sep==true)
 			parse = Platter.EscapesStringParse
 		else
 			parse = (txt, jsDatas, fn) -> Platter.EscapesNoStringParse txt, sep, jsDatas, fn
 		esc = {}
-		jsChange = js.addVar "#{jsCur}_change", "null"
-		parse v, jsDatas, (id, t, jsData) ->
+		jsChange = ps.js.addVar "#{ps.jsCur}_change", "null"
+		parse v, ps.jsDatas, (id, t, jsData) ->
 			if t!='.'
-				esc[id] = js.addForcedVar "#{jsCur}_#{t}", "null", [t, jsData]
+				esc[id] = ps.js.addForcedVar "#{ps.jsCur}_#{t}", "null", [t, jsData]
 		expr = expr
-			.replace(/#el#/g, "#{jsCur}")
-			.replace(/#n#/g, js.toSrc n)
+			.replace(/#el#/g, "#{ps.jsCur}")
+			.replace(/#n#/g, ps.js.toSrc n)
 			.replace(/#v#/g, 
-				parse v, jsDatas, (id, t, jsData) -> if t!='.' then esc[id] else jsData
+				parse v, ps.jsDatas, (id, t, jsData) -> if t!='.' then esc[id] else jsData
 			)
 		for escn, escvar of esc
-			js.addExpr """
+			ps.js.addExpr """
 				this.runGetMulti(undo, function(val){
 					#{escvar} = val;
 					if (#{jsChange}) #{jsChange}();
-				}, #{escvar.v[1]}, #{js.toSrc escvar.v[0].split '.'})
+				}, #{escvar.v[1]}, #{ps.js.toSrc escvar.v[0].split '.'})
 			"""
-		js.addExpr """
+		ps.js.addExpr """
 			#{jsChange} = function() {
 				#{expr};
 			}
 		"""
-		js.addExpr "#{jsChange}()"
+		ps.js.addExpr "#{jsChange}()"
 
-	doSimple: (ret, js, jsCur, jsDatas, n, v, expr) ->
-		@doBase ret, js, jsCur, jsDatas, n, v, expr, true
+	doSimple: (ps, n, v, expr) ->
+		@doBase ps, n, v, expr, true
 
 Platter.Dynamic = new Platter.Internal.DynamicCompiler

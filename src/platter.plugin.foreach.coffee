@@ -2,14 +2,14 @@
 
 Plain = Platter.Internal.PlainCompiler
 
-plainName = Plain::addUniqueMethod 'foreach', (ret, js, jsCur, jsPost, jsDatas, val, inner) ->
-	val = Platter.EscapesNoStringParse val, null, jsDatas, @plainGet(js)
-	jsFor = js.addVar "#{jsCur}_for", val
-	js.forceVar jsPost
-	js.addExpr """
+plainName = Plain::addUniqueMethod 'foreach', (ps, jsPost, val) ->
+	val = Platter.EscapesNoStringParse val, null, ps.jsDatas, @plainGet(ps.js)
+	jsFor = ps.js.addVar "#{ps.jsCur}_for", val
+	ps.js.forceVar jsPost
+	ps.js.addExpr """
 		if (#{jsFor})
 			for (var i=0;i<#{jsFor}.length; ++i)
-				#{jsPost}.parentNode.insertBefore(this.#{jsCur}.run(#{jsFor}[i], #{jsDatas.join ','}, undo, false).docfrag, #{jsPost})
+				#{jsPost}.parentNode.insertBefore(this.#{ps.jsCur}.run(#{jsFor}[i], #{ps.jsDatas.join ','}, undo, false).docfrag, #{jsPost})
 	"""
 
 Plain::addExtractorPlugin 'foreach', 100, plainName, 1
@@ -66,9 +66,10 @@ watchCollection = DynamicRun::addUniqueMethod 'foreach_watch', (undo, coll, add,
 
 
 
-doForEach = Dynamic::addUniqueMethod 'foreach', (ret, js, jsPre, jsPost, jsDatas, val, inner) ->
-	jsChange = js.addForcedVar "#{jsPre}_forchange", "this.#{runForEach}(undo, this.#{jsPre}, [#{jsDatas.join ', '}], #{jsPre}, #{jsPost})"
-	@doBase ret, js, jsPre, jsDatas, null, val, "#{jsChange}(#v#)", null
+doForEach = Dynamic::addUniqueMethod 'foreach', (ps, jsPost, val, inner) ->
+	jsPre = ps.jsCur
+	jsChange = ps.js.addForcedVar "#{jsPre}_forchange", "this.#{runForEach}(undo, this.#{jsPre}, [#{ps.jsDatas.join ', '}], #{jsPre}, #{jsPost})"
+	@doBase ps, null, val, "#{jsChange}(#v#)", null
 
 
 Dynamic::addExtractorPlugin 'foreach', 100, doForEach, 1

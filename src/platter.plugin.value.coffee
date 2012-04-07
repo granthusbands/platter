@@ -1,24 +1,22 @@
 # Given value="{{>blah}}" or checked="{{>blah}}", generates value="{{blah}}"/checked="{{blah}}" and oninput="{{>blah}}"
 
 Compiler = Platter.Internal.TemplateCompiler
-Compiler::addAttrPlugin 'value|checked', 200, (comp, ret, js, jsCur, jsDatas, attrs, attrNames, updateAttrNames) ->
+Compiler::addAttrPlugin 'value|checked', 200, (comp, ps) ->
 	for n in ['value', 'checked']
-		if !attrs[n] then continue
-		m = /^\{\{>(.*?)\}\}/.exec(attrs[n].v)
+		v = ps.getAttr(n)
+		if !v then continue
+		m = /^\{\{>(.*?)\}\}/.exec(v)
 		if !m then continue
-		if m[0].length!=attrs[n].v.length
+		if m[0].length!=v.length
 			throw new Error("{{>thing}} cannot be in the same value attribute as anything else")
-		if attrs.type && /\{\{/.exec(attrs.type.v)
+		type = ps.getAttr('type')
+		if Platter.HasEscape(type||'')
 			throw new Error("{{>thing}} cannot be the value of an element with dynamic type")
 		ev = 
-			if attrs.type && (attrs.type.v=='checkbox' || attrs.type.v=='radio')
+			if type && (type=='checkbox' || type=='radio')
 				'onchange'
 			else
 				'oninput'
-		attrs[ev] =
-			n: attrs[ev]?.n || ev
-			realn: ev
-			v: attrs[n].v + (attrs[ev]?.v || '')
-		attrs[n].v = "{{#{m[1]}}}"
-	updateAttrNames Platter.AttrNames attrs
+		ps.setAttr ev, v + (ps.getAttr(ev)||'')
+		ps.setAttr n, "{{#{m[1]}}}"
 	null

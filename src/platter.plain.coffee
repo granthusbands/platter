@@ -23,20 +23,20 @@ class Platter.Internal.PlainCompiler extends Platter.Internal.TemplateCompiler
 			else
 				"this.runGetMulti(#{jsData}, #{js.toSrc t})"
 
-	doBase: (ret, js, jsCur, jsDatas, n, v, expr, sep) ->
+	doBase: (ps, n, v, expr, sep) ->
 		if (sep==true)
 			parse = Platter.EscapesStringParse
 		else
 			parse = (txt, jsDatas, fn) -> Platter.EscapesNoStringParse txt, sep, jsDatas, fn
-		js.addExpr expr
-			.replace(/#el#/g, "#{jsCur}")
-			.replace(/#n#/g, js.toSrc n)
+		ps.js.addExpr expr
+			.replace(/#el#/g, "#{ps.jsCur}")
+			.replace(/#n#/g, ps.js.toSrc n)
 			.replace(/#v#/g, 
-				parse v, jsDatas, @plainGet(js)
+				parse v, ps.jsDatas, @plainGet(ps.js)
 			)
 
-	doSimple: (ret, js, jsCur, jsDatas, n, v, expr) ->
-		@doBase ret, js, jsCur, jsDatas, n, v, expr, true
+	doSimple: (ps, n, v, expr) ->
+		@doBase ps, n, v, expr, true
 
 
 Platter.Plain = new Platter.Internal.PlainCompiler
