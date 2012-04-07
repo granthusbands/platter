@@ -4,7 +4,7 @@ jQuery(function(){
 
 	module("Backbone+plain templates");
 
-	// First, we rerun the plain-template tests against the backbone compiler, since the backbone compiler should support all of the plain results.
+	// First, we rerun the plain-template tests against the dynamic compiler, since the dynamic compiler should support all of the plain results.
 
 	var testdiv = document.getElementById('plattertest');
 
@@ -22,9 +22,9 @@ jQuery(function(){
 			ok(true, msg);
 	}
 
-	function runBackboneDiv(undo, tmpl, data) {
+	function runDynamicDiv(undo, tmpl, data) {
 		if (typeof tmpl == 'string')
-			tmpl = Platter.Backbone.compile(tmpl);
+			tmpl = Platter.Dynamic.compile(tmpl);
 		testdiv.appendChild(tmpl.run(data, undo).docfrag);
 		return testdiv;
 	}
@@ -33,7 +33,7 @@ jQuery(function(){
 		return function(tmpl, data, txt, msg){
 			testdiv.innerHTML = "";
 			var undo = new Platter.Undo();
-			var div = runBackboneDiv(undo, tmpl, data);
+			var div = runDynamicDiv(undo, tmpl, data);
 			fn(tmpl, data, txt, msg, div);
 			undo.undo();
 			if (testdiv.innerHTML)
@@ -935,7 +935,7 @@ jQuery(function(){
 			var undo = new Platter.Undo();
 			var totest = copyFrom(def.testsstart);
 			var model = new Backbone.Model();
-			var tmpl = Platter.Backbone.compile(def.template);
+			var tmpl = Platter.Dynamic.compile(def.template);
 			var divs = [];
 			var addDiv = function(){
 				var div = document.createElement('div');
@@ -1012,13 +1012,13 @@ jQuery(function(){
 	}
 
 	test("Event-handlers", function(){
-		var tpl = Platter.Backbone.compile('<input type="text" value="bar" onfoo="{{a}}" onup="{{++b}}" ondown="{{--b}}" onup2="{{++c}}" ondown2="{{--c}}" onput="{{>d}}"/>');
+		var tpl = Platter.Dynamic.compile('<input type="text" value="bar" onfoo="{{a}}" onup="{{++b}}" ondown="{{--b}}" onup2="{{++c}}" ondown2="{{--c}}" onput="{{>d}}"/>');
 		var o = new Backbone.Model();
 		commoneventbit(tpl, o, o);
 	});
 
 	test("Event-handlers nested props", function(){
-		var tpl = Platter.Backbone.compile('<input type="text" value="bar" onfoo="{{z.a}}" onup="{{++z.b}}" ondown="{{--z.b}}" onup2="{{++z.c}}" ondown2="{{--z.c}}" onput="{{>z.d}}"/>');
+		var tpl = Platter.Dynamic.compile('<input type="text" value="bar" onfoo="{{z.a}}" onup="{{++z.b}}" ondown="{{--z.b}}" onup2="{{++z.c}}" ondown2="{{--z.c}}" onput="{{>z.d}}"/>');
 		var o = new Backbone.Model();
 		commoneventbit(tpl, {z:o}, o);
 	});

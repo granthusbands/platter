@@ -31,7 +31,7 @@
 			}
 
 			function goBackbone(){
-				var template = Platter.Backbone.compile(document.getElementById('ggt').text);
+				var template = Platter.Dynamic.compile(document.getElementById('ggt').text);
 				var data = new Backbone.Model();
 				data.set({title: Math.random()>0.5?"This is the title":null});
 				data.blah = new Backbone.Collection();

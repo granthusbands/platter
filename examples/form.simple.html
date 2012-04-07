@@ -6,19 +6,19 @@
 			<h1>A simple form</h1>
 			<label>
 				<span class="desc">First Name</span>
-				<input type="text" value="{{firstname}}" oninput="{{>firstname}}" />
+				<input type="text" value="{{>firstname}}" />
 			</label>
 			<label>
 				<span class="desc">Last Name</span>
-				<input type="text" value="{{lastname}}" oninput="{{>lastname}}" />
+				<input type="text" value="{{>lastname}}" />
 			</label>
 			<label>
-				<input type="checkbox" checked="{{isMonkey}}" onchange="{{>isMonkey}}" />
+				<input type="checkbox" checked="{{>isMonkey}}" />
 				<span class="desc"> Is a Monkey
 			</label>
 			<label>
 				<span class="desc">Description</span>
-				<textarea oninput="{{>description}}">{{description}}</textarea>
+				<textarea>{{>description}}</textarea>
 			</label>
 		</script>
 		<script type="text/x-platter" id="thepreview">
@@ -49,8 +49,8 @@
 				document.body.appendChild(tPlainPrev.run(data).docfrag);
 			}
 
-			tBBForm = Platter.Backbone.compile(getDocTemplate('theform'));
-			tBBPrev = Platter.Backbone.compile(getDocTemplate('thepreview'));
+			tBBForm = Platter.Dynamic.compile(getDocTemplate('theform'));
+			tBBPrev = Platter.Dynamic.compile(getDocTemplate('thepreview'));
 			function goBackbone(){
 				var data = new Backbone.Model();
 				document.body.appendChild(tBBForm.run(data).docfrag);

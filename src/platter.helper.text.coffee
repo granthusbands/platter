@@ -2,35 +2,35 @@
 
 # People don't want the whitespace that accidentally surrounds their template.
 # Whitespace nodes _within_ the template are maintained.
-trim = (txt) ->
+Platter.Trim = (txt) ->
 	txt = txt.replace /^\s+/, ""
 	txt = txt.replace /\s+$/, ""
 
 # For Firefox to not do crazy things (and, to be fair, maybe other 
 # browsers), we need to disguise some attributes.
 # However, IE doesn't like type being messed with.
-hideAttr = (txt) ->
+Platter.HideAttr = (txt) ->
 	txt = txt.replace /([a-z][-a-z0-9_]*=)/ig, "data-platter-$1"
 	txt = txt.replace /data-platter-type=/g, "type="
-unhideAttr = (txt) ->
+Platter.UnhideAttr = (txt) ->
 	txt = txt.replace /data-platter-(?!type=)([a-z][-a-z0-9_]*=)/g, "$1"
-unhideAttrName = (txt) ->
+Platter.UnhideAttrName = (txt) ->
 	txt = txt.replace /data-platter-(?!type(?:[^-a-z0-9_]|$))([a-z][-a-z0-9_]*)/g, "$1"
 
 # For the browser to parse our HTML, we need to make sure there's no strange text in odd places. Browsers love them some comments, though.
-commentEscapes = (txt) ->
+Platter.CommentEscapes = (txt) ->
 	txt = txt.replace /\{\{([#\/].*?)\}\}/g, "<!--{{$1}}-->"
-uncommentEscapes = (txt) ->
+Platter.UncommentEscapes = (txt) ->
 	txt = txt.replace /<!--\{\{([#\/].*?)\}\}-->/g, "{{$1}}"
 
-hasEscape = (txt) ->
+Platter.HasEscape = (txt) ->
 	!!/\{\{/.exec txt
 
 # Old versions of IE like to introduce arbitrary extra attributes; we avoid them.
-isPlatterAttr = (txt) ->
+Platter.IsPlatterAttr = (txt) ->
 	txt=='type'||!!/data-platter-(?!type(?:[^-a-z0-9_]|$))([a-z][-a-z0-9_]*)/.exec(txt)
 
-str = (o) ->
+Platter.Str = (o) ->
 	if o? then ''+o else ''
 
 # Given some text like "a{{b}}c{{d}}", call tfn('a'), efn('b'), tfn('c'), efn('d') and put the non-null results into an array, returning that.
@@ -54,13 +54,13 @@ escapesHandle = (txt, tfn, efn) ->
 
 # Turns an escapey string into "a"+Platter.Str(...)+"c"+Platter.Str(...), where ... comes from fn('b') and fn('d')
 # Intended to be used in string contexts, of course, where it's appropriate to turn everything into strings.
-escapesString = (txt, fn) ->
+Platter.EscapesString = (txt, fn) ->
 	ret = escapesHandle txt, Platter.Internal.ToSrc, (bit) ->
 		"Platter.Str(#{fn(bit)})"
 	ret.join '+'
 
 # Turns an escapey string into whatever fn returns, joined with join. Between escapes, only whitespace is allowed.
-escapesNoString = (txt, join, fn) ->
+Platter.EscapesNoString = (txt, join, fn) ->
 	ret = escapesHandle(
 		txt
 		(txt) ->
@@ -71,11 +71,11 @@ escapesNoString = (txt, join, fn) ->
 		throw new Error("Only one escape allowed here")
 	ret.join join
 
-escapesStringParse = (txt, jsDatas, fn) ->
-	escapesString txt, jsParser(jsDatas, fn)
+Platter.EscapesStringParse = (txt, jsDatas, fn) ->
+	Platter.EscapesString txt, jsParser(jsDatas, fn)
 
-escapesNoStringParse = (txt, join, jsDatas, fn) ->
-	escapesNoString txt, join, jsParser(jsDatas, fn)
+Platter.EscapesNoStringParse = (txt, join, jsDatas, fn) ->
+	Platter.EscapesNoString txt, join, jsParser(jsDatas, fn)
 
 chooseData = (txt, jsDatas) ->
 	m=/^(\.+)(.*?)$/.exec(txt)
@@ -91,5 +91,3 @@ jsParser = (jsDatas, fn) ->
 			[jsData, ex2] = chooseData ex, jsDatas
 			""+fn(ex, ex2, jsData)
 		Platter.Internal.JSLikeUnparse op
-
-Platter.Str = str

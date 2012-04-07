@@ -1,4 +1,6 @@
-# Good thing NaN isn't NaN
+# Adds adapters to Backbone core objects that make Platter.Dynamic work trivially with them.
+
+
 isNat = (n) -> !!/^[0-9]+$/.exec(n)
 
 if window.Backbone
@@ -40,7 +42,7 @@ if window.Backbone
 		@on 'add', add
 		@on 'remove', remove
 		@on 'reset', doRep
-		for i in [0...@length]
+		for i in [0...@length] by 1
 			add @at(i), @, {index:i}
 		undo.add =>
 			@off 'add', add
@@ -97,5 +99,3 @@ if window.Backbone
 		platter_get: collprot
 		platter_set: collprot
 		platter_watchcoll: collprot
-
-	Platter.Backbone = Platter.Dynamic

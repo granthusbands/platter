@@ -33,8 +33,8 @@
 				document.body.appendChild(tPlainPrev.run(data).docfrag);
 			}
 
-			tBBForm = Platter.Backbone.compile(getDocTemplate('theform'));
-			tBBPrev = Platter.Backbone.compile(getDocTemplate('thepreview'));
+			tBBForm = Platter.Dynamic.compile(getDocTemplate('theform'));
+			tBBPrev = Platter.Dynamic.compile(getDocTemplate('thepreview'));
 			function goBackbone(){
 				var data = new Backbone.Model();
 				document.body.appendChild(tBBForm.run(data).docfrag);

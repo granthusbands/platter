@@ -1,4 +1,4 @@
-class Undo
+class Platter.Undo
 	constructor: ->
 		@undos = []
 	add: (fn) ->
@@ -10,5 +10,3 @@ class Undo
 	undo: ->
 		while @undos.length>0
 			@undos.pop()()
-
-Platter.Undo = Undo

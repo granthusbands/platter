@@ -18,7 +18,7 @@ singrep =
 	"\\": "\\\\"
 	"\r": "\\r"
 	"\n": "\\n"
-toSrc = (o) ->
+Platter.Internal.ToSrc = toSrc = (o) ->
 	if typeof o == 'string'
 		return "'#{o.replace /[\\'\r\n]/g, (t)->singrep[t]}'"
 	if typeof o == 'number' || !o
@@ -30,7 +30,7 @@ toSrc = (o) ->
 exprvar = /#(\w+)#/g
 jskeywords = {'break':1, 'else':1, 'new':1, 'var':1, 'case':1, 'finally':1, 'return':1, 'void':1, 'catch':1, 'for':1, 'switch':1, 'while':1, 'continue':1, 'function':1, 'this':1, 'with':1, 'default':1, 'if':1, 'throw':1, 'delete':1, 'in':1, 'try':1, 'do':1, 'instanceof':1, 'typeof':1, 'abstract':1, 'enum':1, 'int':1, 'short':1, 'boolean':1, 'export':1, 'interface':1, 'static':1, 'byte':1, 'extends':1, 'long':1, 'super':1, 'char':1, 'final':1, 'native':1, 'synchronized':1, 'class':1, 'float':1, 'package':1, 'throws':1, 'const':1, 'goto':1, 'private':1, 'transient':1, 'debugger':1, 'implements':1, 'protected':1, 'volatile':1, 'double':1, 'import':1, 'public':1, 'null':1, 'true':1, 'false':1}
 
-class codegen
+class Platter.Internal.CodeGen
 	constructor: () ->
 		@_code = []
 		@_vars = {}
@@ -116,6 +116,3 @@ class codegen
 			return "#{arr}[#{@toSrc(entry)}]"
 		else
 			return "#{arr}.#{entry}"
-
-Platter.Internal.CodeGen = codegen
-Platter.Internal.ToSrc = toSrc

@@ -14,7 +14,7 @@ nodeWraps =
 	li: [1, '<ul>', '</ul>']
 	legend: [1, '<fieldset>', '</fieldset>']
 
-htmlToFrag = (html) ->
+Platter.Helper.HtmlToFrag = (html) ->
 	firsttag = /<(\w+)/.exec(html)[1].toLowerCase()
 	wrap = nodeWraps[firsttag]||nodeWraps['#other']
 	el = document.createElement "div"
@@ -28,24 +28,27 @@ htmlToFrag = (html) ->
 	frag
 
 # Below here, it's utility functions, which maybe should be moved.
-tmplToFrag = (txt) ->
-	txt = hideAttr commentEscapes trim txt
+Platter.Helper.TmplToFrag = (txt) ->
+	txt = Platter.HideAttr Platter.CommentEscapes Platter.Trim txt
 	# Clones to avoid any transient nodes.
-	htmlToFrag(txt).cloneNode(true).cloneNode(true)
+	Platter.Helper.HtmlToFrag(txt).cloneNode(true).cloneNode(true)
 
-attrList = (node) ->
+Platter.AttrList = (node) ->
 	if Platter.Browser.AttributeIterationBreaksClone
 		node = node.cloneNode false
 	ret = {}
-	for att in node.attributes when isPlatterAttr att.nodeName
-		realn = unhideAttrName att.nodeName
+	for att in node.attributes when Platter.IsPlatterAttr att.nodeName
+		realn = Platter.UnhideAttrName att.nodeName
 		ret[realn] = 
 			n: att.nodeName
 			realn: realn
-			v: uncommentEscapes unhideAttr att.nodeValue
+			v: Platter.UncommentEscapes Platter.UnhideAttr att.nodeValue
 	ret
 
-pullNode = (node) ->
+Platter.AttrNames = (attrList) ->
+	(n for own n, v of attrList).join('\n')
+
+Platter.PullNode = (node) ->
 	pre = document.createComment ""
 	post = document.createComment ""
 	node.parentNode.insertBefore pre, node
@@ -55,7 +58,7 @@ pullNode = (node) ->
 	[pre, post, frag]
 
 # Find the end of a block, while ignoring sub-blocks
-pullBlock = (endtext, node) ->
+Platter.PullBlock = (endtext, node) ->
 	end = node
 	stack = [endtext]
 	while true
@@ -87,8 +90,3 @@ pullBlock = (endtext, node) ->
 	node.parentNode.insertBefore post, node
 	node.parentNode.removeChild node
 	[pre, post, frag]
-
-isEventAttr = (name) -> !!/^on/.exec(name)
-
-Platter.Helper.TmplToFrag = tmplToFrag
-Platter.Helper.HtmlToFrag = htmlToFrag

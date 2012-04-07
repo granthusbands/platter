@@ -71,7 +71,7 @@ expropdefs =
 # expropnames = []
 # expropspec = ""
 # addspec = (txt, add) ->
-# 	for i in [0...add.length]
+# 	for i in [0...add.length by 1]
 # 		c = add.charAt(i)
 # 		if txt.indexOf(c)==-1 && /[^\w]/.exec(add.charAt(i))
 # 			txt += c

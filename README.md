@@ -25,7 +25,7 @@ document.body.appendChild(els);
 ```
 
 ```javascript
-var template = Platter.Backbone.compile(ttext);
+var template = Platter.Dynamic.compile(ttext);
 var data = new Backbone.Model();
 data.set({title: "This is the title"});
 data.blah = new Backbone.Collection();
