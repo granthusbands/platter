@@ -20,7 +20,15 @@ class Platter.Internal.CompilerState
 			{@ret, @plugins, @js, @jsDatas, @el, @jsEl, @jsSelf} = clone
 			@parent ||= clone
 		@afters = []
-	clone: -> new Platter.Internal.CompilerState(@)
+		@children = []
+	child: -> 
+		ret = new Platter.Internal.CompilerState(@)
+		if @children.length
+			prev = @children[@children.length-1]
+			prev.next = ret
+			ret.prev = prev
+		@children.push(ret)
+		ret
 	# The attributes of the current node, potentially modified by plugins
 	setEl: (@el) ->
 		@_attrs = undefined
@@ -138,8 +146,7 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 		ps.jsSelf = ps.js.addForcedVar "self", "this"
 		ps.js.addExpr 'undo = undo ? undo.child() : new Platter.Undo()'
 		jsRoot = ps.jsEl = ps.js.addVar 'el', 'this.node.cloneNode(true)'
-		ps.el = frag
-		@compileChildren ps
+		@compileChildren ps, frag
 		jsFirstChild = ps.js.addForcedVar "firstChild", "#{jsRoot}.firstChild"
 		jsLastChild = ps.js.addForcedVar "lastChild", "#{jsRoot}.lastChild"
 		ps.js.addExpr """
@@ -178,12 +185,12 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 				if ps.isHandled then return
 		null
 
-	compileChildren: (ps) ->
+	compileChildren: (ps, el) ->
 		baseName = "#{ps.jsEl}"
-		ch = ps.el.firstChild
+		ch = el.firstChild
 		jsCh = ps.js.addVar ps.jsEl+"_ch", "#{ps.jsEl}.firstChild"
 		while (ch)
-			ps2 = ps.clone()
+			ps2 = ps.child()
 			ps2.setEl ch
 			ps2.jsEl = jsCh
 			ps2.js.forceVar jsCh
@@ -208,7 +215,7 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 					else
 						@doSimple ps, realn, v, "#el#.setAttribute(#n#, #v#)"
 				if ps.el.tagName.toLowerCase()!='textarea'
-					@compileChildren ps
+					@compileChildren ps, ps.el
 				ps.runAfters()
 		else if ps.el.nodeType==8  # Comment
 			ct = ps.el.nodeValue
@@ -233,8 +240,8 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 			ps.jsPre = ps.jsEl
 			ps.jsPost = ps.js.addVar "#{ps.jsPre}_end", "#{ps.jsPre}.nextSibling", ps.post
 			ps.jsEl = null
-			ps.setEl frag
-			ps.ret[ps.jsPre.n] = comp.compileFrag ps.el, ps.jsDatas.length+extradepth, ps
+			ps.setEl null
+			ps.ret[ps.jsPre.n] = comp.compileFrag frag, ps.jsDatas.length+extradepth, ps
 			comp[method] ps, val
 			true
 		@addBlockExtractorPlugin n, fn

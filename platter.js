@@ -100,10 +100,19 @@
         this.parent || (this.parent = clone);
       }
       this.afters = [];
+      this.children = [];
     }
 
-    CompilerState.prototype.clone = function() {
-      return new Platter.Internal.CompilerState(this);
+    CompilerState.prototype.child = function() {
+      var prev, ret;
+      ret = new Platter.Internal.CompilerState(this);
+      if (this.children.length) {
+        prev = this.children[this.children.length - 1];
+        prev.next = ret;
+        ret.prev = prev;
+      }
+      this.children.push(ret);
+      return ret;
     };
 
     CompilerState.prototype.setEl = function(el) {
@@ -278,8 +287,7 @@
       ps.jsSelf = ps.js.addForcedVar("self", "this");
       ps.js.addExpr('undo = undo ? undo.child() : new Platter.Undo()');
       jsRoot = ps.jsEl = ps.js.addVar('el', 'this.node.cloneNode(true)');
-      ps.el = frag;
-      this.compileChildren(ps);
+      this.compileChildren(ps, frag);
       jsFirstChild = ps.js.addForcedVar("firstChild", "" + jsRoot + ".firstChild");
       jsLastChild = ps.js.addForcedVar("lastChild", "" + jsRoot + ".lastChild");
       ps.js.addExpr("if (" + jsAutoRemove + "===true||" + jsAutoRemove + "==null)\n	undo.add(function(){\n		" + ps.jsSelf + ".removeAll(" + jsFirstChild + ", " + jsLastChild + ");\n	});");
@@ -339,14 +347,14 @@
       return null;
     };
 
-    TemplateCompiler.prototype.compileChildren = function(ps) {
+    TemplateCompiler.prototype.compileChildren = function(ps, el) {
       var baseName, ch, jsCh, ps2, _results;
       baseName = "" + ps.jsEl;
-      ch = ps.el.firstChild;
+      ch = el.firstChild;
       jsCh = ps.js.addVar(ps.jsEl + "_ch", "" + ps.jsEl + ".firstChild");
       _results = [];
       while (ch) {
-        ps2 = ps.clone();
+        ps2 = ps.child();
         ps2.setEl(ch);
         ps2.jsEl = jsCh;
         ps2.js.forceVar(jsCh);
@@ -385,7 +393,9 @@
               this.doSimple(ps, realn, v, "#el#.setAttribute(#n#, #v#)");
             }
           }
-          if (ps.el.tagName.toLowerCase() !== 'textarea') this.compileChildren(ps);
+          if (ps.el.tagName.toLowerCase() !== 'textarea') {
+            this.compileChildren(ps, ps.el);
+          }
           return ps.runAfters();
         }
       } else if (ps.el.nodeType === 8) {
@@ -417,8 +427,8 @@
         ps.jsPre = ps.jsEl;
         ps.jsPost = ps.js.addVar("" + ps.jsPre + "_end", "" + ps.jsPre + ".nextSibling", ps.post);
         ps.jsEl = null;
-        ps.setEl(frag);
-        ps.ret[ps.jsPre.n] = comp.compileFrag(ps.el, ps.jsDatas.length + extradepth, ps);
+        ps.setEl(null);
+        ps.ret[ps.jsPre.n] = comp.compileFrag(frag, ps.jsDatas.length + extradepth, ps);
         comp[method](ps, val);
         return true;
       };
