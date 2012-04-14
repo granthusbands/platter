@@ -54,10 +54,11 @@ compileFiles = (files, watch) ->
     for i in [0...files.length] by 1
         do (i) ->
             compileFile files[i], watch, (err, data) ->
+                olddata = conv[i]
                 conv[i] = data
                 if err
                     console.log "Error: #{files[i]}: #{err.message}"
-                else
+                else if (olddata!=data)
                     maybeDone()
 
 
