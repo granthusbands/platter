@@ -42,12 +42,12 @@ class Platter.Internal.DynamicCompiler extends Platter.Internal.TemplateCompiler
 		else
 			parse = (txt, jsDatas, fn) -> Platter.EscapesNoStringParse txt, sep, jsDatas, fn
 		esc = {}
-		jsChange = ps.js.addVar "#{ps.jsCur}_change", "null"
+		jsChange = ps.js.addVar "#{ps.jsEl}_change", "null"
 		parse v, ps.jsDatas, (id, t, jsData) ->
 			if t!='.'
-				esc[id] = ps.js.addForcedVar "#{ps.jsCur}_#{t}", "null", [t, jsData]
+				esc[id] = ps.js.addForcedVar "#{ps.jsEl}_#{t}", "null", [t, jsData]
 		expr = expr
-			.replace(/#el#/g, "#{ps.jsCur}")
+			.replace(/#el#/g, "#{ps.jsEl}")
 			.replace(/#n#/g, ps.js.toSrc n)
 			.replace(/#v#/g, 
 				parse v, ps.jsDatas, (id, t, jsData) -> if t!='.' then esc[id] else jsData

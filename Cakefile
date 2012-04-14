@@ -18,12 +18,14 @@ files = [
     'src/platter.plain.coffee'
     'src/platter.dynamic.coffee'
     'src/platter.dynamic.backbone.coffee'
-    'src/platter.plugin.if.coffee'
-    'src/platter.plugin.with.coffee'
-    'src/platter.plugin.foreach.coffee'
-    'src/platter.plugin.events.coffee'
-    'src/platter.plugin.textarea.coffee'
-    'src/platter.plugin.value.coffee'
+    'src/platter.plugin.attr.checked.coffee'
+    'src/platter.plugin.attr.class.coffee'
+    'src/platter.plugin.attr.on.coffee'
+    'src/platter.plugin.attr.value.coffee'
+    'src/platter.plugin.el.textarea.coffee'
+    'src/platter.plugin.extr.foreach.coffee'
+    'src/platter.plugin.extr.if.coffee'
+    'src/platter.plugin.extr.with.coffee'
 ]
 
 

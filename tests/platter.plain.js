@@ -123,6 +123,9 @@ jQuery(function(){
 			hasJQ("<h1 if='{{two.too}}'>Hey</h1>", data, "h1", "Two-level value");
 			hasJQ("<h1 if='{{three.tree.tee}}'>Hey</h1>", data, "h1", "Three-level value");
 			hasJQ("<h1 if='{{one}} {{two.too}} {{three.tree.tee}}'>Hey</h1>", data, "h1", "All-level value");
+			hasNotJQ("<h1 if='{{no}} {{two.too}} {{three.tree.tee}}'>Hey</h1>", data, "h1", "All-level value - and");
+			hasNotJQ("<h1 if='{{one}} {{no}} {{three.tree.tee}}'>Hey</h1>", data, "h1", "All-level value - and");
+			hasNotJQ("<h1 if='{{one}} {{two.too}} {{no}}'>Hey</h1>", data, "h1", "All-level value - and");
 			hasJQ("<h1 if='{{yes}}'>Hey</h1>", data, "h1", "Boolean true");
 			hasNotJQ("<h1 if='{{no}}'>Hey</h1>", data, "h1", "Boolean false");
 			hasNotJQ("<h1 if='{{zero}}'>Hey</h1>", data, "h1", "Zero");
@@ -141,6 +144,9 @@ jQuery(function(){
 			hasNotJQ("<h1 unless='{{two.too}}'>Hey</h1>", data, "h1", "Two-level value");
 			hasNotJQ("<h1 unless='{{three.tree.tee}}'>Hey</h1>", data, "h1", "Three-level value");
 			hasNotJQ("<h1 unless='{{one}} {{two.too}} {{three.tree.tee}}'>Hey</h1>", data, "h1", "All-level value");
+			hasJQ("<h1 unless='{{no}} {{two.too}} {{three.tree.tee}}'>Hey</h1>", data, "h1", "All-level value - nand");
+			hasJQ("<h1 unless='{{one}} {{no}} {{three.tree.tee}}'>Hey</h1>", data, "h1", "All-level value - nand");
+			hasJQ("<h1 unless='{{one}} {{two.too}} {{no}}'>Hey</h1>", data, "h1", "All-level value - nand");
 			hasNotJQ("<h1 unless='{{yes}}'>Hey</h1>", data, "h1", "Boolean true");
 			hasJQ("<h1 unless='{{no}}'>Hey</h1>", data, "h1", "Boolean false");
 			hasJQ("<h1 unless='{{zero}}'>Hey</h1>", data, "h1", "Zero");

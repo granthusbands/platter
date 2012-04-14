@@ -4,9 +4,9 @@
 # The version for plain templates is trivial, of course, since it just needs to run the sub-template straight away.
 Plain = Platter.Internal.PlainCompiler
 
-plainName = Plain::addUniqueMethod 'with', (ps, jsPost, val) ->
+plainName = Plain::addUniqueMethod 'with', (ps, val) ->
 	val = Platter.EscapesNoStringParse val, null, ps.jsDatas, @plainGet(ps.js)
-	ps.js.addExpr "#{jsPost}.parentNode.insertBefore(this.#{ps.jsCur}.run(#{val}, #{ps.jsDatas.join ', '}, undo, false).docfrag, #{jsPost})"
+	ps.js.addExpr "#{ps.jsPost}.parentNode.insertBefore(this.#{ps.jsPre}.run(#{val}, #{ps.jsDatas.join ', '}, undo, false).docfrag, #{ps.jsPost})"
 
 Plain::addExtractorPlugin 'with', 40, plainName, 1
 
@@ -24,9 +24,8 @@ dynRunName = DynamicRun::addUniqueMethod 'with', (undo, datas, tmpl, start, end)
 		if (end.parentNode)
 			end.parentNode.insertBefore tmpl.run(val, datas..., undoch, false).docfrag, end
 
-dynName = Dynamic::addUniqueMethod 'with', (ps, jsPost, val) ->
-	jsPre = ps.jsCur
-	jsChange = ps.js.addForcedVar "#{jsPre}_ifchange", "this.#{dynRunName}(undo, [#{ps.jsDatas.join ', '}], this.#{jsPre}, #{jsPre}, #{jsPost})"
+dynName = Dynamic::addUniqueMethod 'with', (ps, val) ->
+	jsChange = ps.js.addForcedVar "#{ps.jsPre}_ifchange", "this.#{dynRunName}(undo, [#{ps.jsDatas.join ', '}], this.#{ps.jsPre}, #{ps.jsPre}, #{ps.jsPost})"
 	@doBase ps, null, val, "#{jsChange}(#v#)", null
 
 Dynamic::addExtractorPlugin 'with', 40, dynName, 1

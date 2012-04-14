@@ -58,15 +58,16 @@ Platter.PullNode = (node) ->
 	[pre, post, frag]
 
 # Find the end of a block, while ignoring sub-blocks
-Platter.PullBlock = (endtext, node) ->
+bits = /^\{\{([#\/])([^\s\}]*)(.*?)\}\}$/
+Platter.PullBlock = (node) ->
 	end = node
-	stack = [endtext]
+	stack = [bits.exec(node.nodeValue)[2]]
 	while true
 		matched = false
 		end = end.nextSibling
 		if (!end) then break
 		if (end.nodeType!=8) then continue
-		m = /^\{\{([#\/])([^\s\}]*)(.*?)\}\}$/.exec end.nodeValue
+		m = bits.exec end.nodeValue
 		if !m then continue
 		if (m[1]=='#')
 			stack.push m[2]

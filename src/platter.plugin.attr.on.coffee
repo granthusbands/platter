@@ -52,12 +52,12 @@ doEvent = Compiler::addUniqueMethod 'doEvent', (ps, realn, v) ->
 			throw new Error("{{#{orig}}} is bad; only event handlers of the forms a.b, >a.b, ++a.b, --a.b, a.b++ and a.b-- are currently supported")
 		t = m[2]
 		op = m[1]||m[3]
-		jsThis = ps.js.addForcedVar "#{ps.jsCur}_this", "this"
+		jsThis = ps.js.addForcedVar "#{ps.jsEl}_this", "this"
 		# If there is a dot in the expression, we need to fetch the left-hand-side of that into a variable
 		# (For setters/getters we need to know what to call them on. For functions, we need a 'this'.)
 		m = /^\s*(\.*)([^.\s].*)\.(.*)$/.exec t
 		if m
-			jsTarget = ps.js.addForcedVar "#{ps.jsCur}_target", "null"
+			jsTarget = ps.js.addForcedVar "#{ps.jsEl}_target", "null"
 			@doBase ps, 'text', "{{#{m[1]}#{m[2]}}}", "#{jsTarget} = #v#", null
 			post = m[3]
 		else
@@ -71,26 +71,28 @@ doEvent = Compiler::addUniqueMethod 'doEvent', (ps, realn, v) ->
 				m = /^\s*(\.+)$/.exec t
 				jsTarget = ps.jsDatas[(m[1].length||1)-1]
 		if op=='++' || op=='--'
-			ps.js.addExpr "this.#{runEvent}(undo, #{ps.jsCur}, #{ps.js.toSrc ev}, function(ev){ #{jsThis}.#{doModify}(#{jsTarget}, #{ps.js.toSrc post}, function(v){return #{op}v})})";
+			ps.js.addExpr "this.#{runEvent}(undo, #{ps.jsEl}, #{ps.js.toSrc ev}, function(ev){ #{jsThis}.#{doModify}(#{jsTarget}, #{ps.js.toSrc post}, function(v){return #{op}v})})";
 		else if op=='>'
-			if (ps.cur.type=='checkbox') # TODO: Support radio buttons, select-boxes and maybe others
-				prop = 'checked'
-			else
-				prop = 'value'
-			ps.js.addExpr "this.#{runEvent}(undo, #{ps.jsCur}, #{ps.js.toSrc ev}, function(ev){ #{jsThis}.#{doSet}(#{jsTarget}, #{ps.js.toSrc post}, #{ps.js.index ps.jsCur, prop}); })"
+			# TODO: Support radio buttons, select-boxes and maybe others
+			valGetter =
+				if ps.valGetter
+					ps.valGetter.replace("#el#", "#{ps.jsEl}")
+				else
+					ps.js.index ps.jsEl, if (ps.el.type=='checkbox') then 'checked' else 'value'
+			ps.js.addExpr "this.#{runEvent}(undo, #{ps.jsEl}, #{ps.js.toSrc ev}, function(ev){ #{jsThis}.#{doSet}(#{jsTarget}, #{ps.js.toSrc post}, #{valGetter}); })"
 		else
 			if (post)
-				jsFn = ps.js.addForcedVar "#{ps.jsCur}_fn", "null"
+				jsFn = ps.js.addForcedVar "#{ps.jsEl}_fn", "null"
 				@doBase ps, 'text', "{{#{t}}}", "#{jsFn} = #v#", null
 			else
 				jsFn = jsTarget
-			ps.js.addExpr "this.#{runEvent}(undo, #{ps.jsCur}, #{ps.js.toSrc ev}, function(ev){ #{jsFn}.call(#{jsTarget}, ev, #{ps.js.toSrc ev}, #{ps.jsCur}); })"
+			ps.js.addExpr "this.#{runEvent}(undo, #{ps.jsEl}, #{ps.js.toSrc ev}, function(ev){ #{jsFn}.call(#{jsTarget}, ev, #{ps.js.toSrc ev}, #{ps.jsEl}); })"
 
 Compiler::addAttrPlugin 'on.*', 0, (comp, ps) ->
 	for own realn, {n, realn, v} of ps.attrs()
 		if isEventAttr realn
 			if (realn!=n)
-				ps.cur.removeAttribute n
+				ps.el.removeAttribute n
 			comp[doEvent] ps, realn, v
 			ps.remAttr(realn)
-	null
+	false

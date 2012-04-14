@@ -29,7 +29,7 @@ class Platter.Internal.PlainCompiler extends Platter.Internal.TemplateCompiler
 		else
 			parse = (txt, jsDatas, fn) -> Platter.EscapesNoStringParse txt, sep, jsDatas, fn
 		ps.js.addExpr expr
-			.replace(/#el#/g, "#{ps.jsCur}")
+			.replace(/#el#/g, "#{ps.jsEl}")
 			.replace(/#n#/g, ps.js.toSrc n)
 			.replace(/#v#/g, 
 				parse v, ps.jsDatas, @plainGet(ps.js)
