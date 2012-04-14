@@ -4,6 +4,8 @@
 #TODO: Plugin: style in Firefox -> .style.cssText
 #TODO: Plugin: type in IE -> recreate the node, somehow
 
+platterData = {}
+platterDataID = 0
 
 # Sort helper - return a comparator for a particular property
 sby = (name) ->
@@ -45,6 +47,13 @@ class Platter.Internal.CompilerState
 		if @_attrs[n]
 			delete @_attrs[n]
 			@_attrNames = undefined
+	getJSElData: ->
+		@jsElData ||= @js.addForcedVar "#{@jsEl}_data", "this.createPlatterData(undo, #{@jsEl})"
+	doAfter: (fn) ->
+		@afters.push fn
+	runAfters: ->
+		while @afters.length
+			@afters.pop()()
 
 
 class Platter.Internal.TemplateRunner extends Platter.Internal.PluginBase
@@ -71,6 +80,30 @@ class Platter.Internal.TemplateRunner extends Platter.Internal.PluginBase
 			@removeBetween startel, endel
 		par.removeChild endel
 		par.removeChild startel
+
+	# Creates platter data for a node, avoiding memory leaks. Returns existing data, if it exists. Removes the data once all creations are undone.
+	createPlatterData: (undo, el) ->
+		id = el.getAttribute 'data-platter'
+		if !id
+			id = ++platterDataID
+			el.setAttribute 'data-platter', id
+			data = platterData[id] = {createCount: 1}
+		else
+			data = platterData[id]
+			++data.createCount
+		undo.add ->
+			if !--data.refCount
+				el.removeAttribute 'data-platter'
+				delete platterData[id]
+		data
+
+	# Gets the platter data for a node
+	getPlatterData: (el) ->
+		id = el.getAttribute 'data-platter'
+		if id
+			platterData[id]
+		else
+			undefined
 
 
 neverMatch = /^a\bb/
@@ -176,6 +209,7 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 						@doSimple ps, realn, v, "#el#.setAttribute(#n#, #v#)"
 				if ps.el.tagName.toLowerCase()!='textarea'
 					@compileChildren ps
+				ps.runAfters()
 		else if ps.el.nodeType==8  # Comment
 			ct = ps.el.nodeValue
 			ct = Platter.UnhideAttr ct

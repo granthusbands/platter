@@ -22,6 +22,7 @@ files = [
     'src/platter.plugin.attr.class.coffee'
     'src/platter.plugin.attr.on.coffee'
     'src/platter.plugin.attr.value.coffee'
+    'src/platter.plugin.el.select.coffee'
     'src/platter.plugin.el.textarea.coffee'
     'src/platter.plugin.extr.foreach.coffee'
     'src/platter.plugin.extr.if.coffee'
