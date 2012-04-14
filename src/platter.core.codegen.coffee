@@ -41,9 +41,11 @@ class Platter.Internal.CodeGen
 		@_vars[name] = {_name: name, _count:1000}
 		@getVar name
 
-	# Claim a variable is used 1000 times, so that it won't get optimised away. Used somewhere to optimise a loop.
+	# Claim a variable is used one extra time, so that it can't get folded into use-sites. Can be used to optimise loops or just for variables that don't want moving. If the variable is unused, it will still get removed.
 	forceVar: (name) ->
-		@_vars[name.n||name]._count = 1000
+		v = @_vars[name.n||name]
+		if v._forced then return
+		v._count++
 
 	addForcedVar: (name, expr, compVal) ->
 		ret = @addVar name, expr, compVal
