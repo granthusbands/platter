@@ -15,6 +15,9 @@ jQuery(function(){
 		zero: 0,
 		empty: []
 	};
+	data.obj0 = data.objs[0];
+	data.obj1 = data.objs[1];
+	data.obj2 = data.objs[2];
 
 	if (!Platter.Tests) Platter.Tests = {};
 	Platter.Tests.Trivial = function(comp, has, hasNot, hasJQ, hasNotJQ, hasValue, textIs){
@@ -217,6 +220,14 @@ jQuery(function(){
 			has("{{#foreach deep.derp.nums}}<h1>{{.}}</h1>{{/foreach}}", data, "7", "Deep Nums has 7");
 
 			// TODO: Maybe decide on and test what foreach="{{a}} {{b}}" should do
+		});
+		test("Element: Magical select", function(){
+			var tplwith1 = "<select value='{{obj1}}'><option foreach='{{objs}}'>{{txt}}</option></select>";
+			var tplwithnone = "<select value='{{undefined}}'><option>None</option><option foreach='{{objs}}'>{{txt}}</option></select>";
+			hasValue(tplwith1, data, "C", "Select-first");
+			hasValue(tplwithnone, data, "None", "Select-none");
+			textIs(tplwithnone, data, "NoneACE", "All text present");
+			textIs(tplwith1, data, "ACE", "All text present");
 		});
 
 		test("Contexts", function(){

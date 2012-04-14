@@ -920,6 +920,175 @@ jQuery(function(){
 					tests: {h2ABC:0, h22:0, h20:1}
 				}
 			]
+		},
+
+
+		// Magical selects
+		// TODO: Make sure that the selected element being removed is handled
+		// TODO: Make sure that the selected option's value changing is correctly reflected
+		{
+			name:"Element: magical select",
+			tests: {
+				h1: ruleElExists('h1'),
+				h1A: ruleElText('h1', 'A'),
+				h1B: ruleElText('h1', 'B'),
+				h1C: ruleElText('h1', 'C'),
+				valNone: ruleElText('option:selected', 'None'),
+				valA: ruleElText('option:selected', 'A'),
+				valB: ruleElText('option:selected', 'B'),
+				valC: ruleElText('option:selected', 'C'),
+				selA: ruleElText('select', 'NoneA'),
+				selAC: ruleElText('select', 'NoneAC'),
+				selABC: ruleElText('select', 'NoneABC'),
+				option1: ruleElCount('option', 1),
+				option2: ruleElCount('option', 2),
+				option3: ruleElCount('option', 3),
+				option4: ruleElCount('option', 4)
+			},
+			testsstart: {option1:1, valNone:1},
+			template:
+				"<select value='{{magselval}}'>"+
+					"<option>None</option>"+
+					"<option foreach='{{objs}}'>{{txt}}</option>"+
+				"</select>"+
+				"<h1 if='{{magselval}}'>{{magselval.txt}}</h1>",
+			actions: [
+				{
+					name: "Set objs to noise",
+					go: function(data){ data.set('objs', 'noise'); },
+					tests: {}
+				},
+				{
+					name: "Set objs to empty collection",
+					go: function(data){ data.set('objs', new Backbone.Collection()); },
+					tests: {}
+				},
+				{
+					name: "Insert empty model into objs",
+					go: function(data){
+						var coll = data.get('objs');
+						coll.add(new Backbone.Model());
+					},
+					tests: {option1:0, option2:1}
+				},
+				{
+					name: "Insert empty model into objs",
+					go: function(data){
+						var coll = data.get('objs');
+						coll.add(new Backbone.Model());
+					},
+					tests: {option2:0, option3:1}
+				},
+				{
+					name: "Insert empty model into objs",
+					go: function(data){
+						var coll = data.get('objs');
+						coll.add(new Backbone.Model());
+					},
+					tests: {option3:0, option4:1}
+				},
+				{
+					name: "Alter objs[0] to contain A",
+					go: function(data){
+						var coll = data.get('objs');
+						var el = coll.at(0);
+						el.set('txt', 'A');
+					},
+					tests: {selA:1}
+				},
+				{
+					name: "Alter objs[2] to contain C",
+					go: function(data){
+						var coll = data.get('objs');
+						var el = coll.at(2);
+						el.set('txt', 'C');
+					},
+					tests: {selA:0, selAC:1}
+				},
+				{
+					name: "Alter objs[1] to contain B",
+					go: function(data){
+						var coll = data.get('objs');
+						var el = coll.at(1);
+						el.set('txt', 'B');
+					},
+					tests: {selAC:0, selABC:1}
+				},
+				{
+					name: "Choose B",
+					go: function(data){
+						var coll = data.get('objs');
+						var el = coll.at(1);
+						data.set('magselval', el);
+					},
+					tests: {h1:1, h1B:1, valNone:0, valB:1}
+				},
+				{
+					name: "Choose A",
+					go: function(data){
+						var coll = data.get('objs');
+						var el = coll.at(0);
+						data.set('magselval', el);
+					},
+					tests: {h1B:0, h1A:1, valB:0, valA:1}
+				},
+				{
+					name: "Choose C",
+					go: function(data){
+						var coll = data.get('objs');
+						var el = coll.at(2);
+						data.set('magselval', el);
+					},
+					tests: {h1A:0, h1C:1, valA:0, valC:1}
+				},
+				{
+					name: "Choose nothing",
+					go: function(data){
+						var coll = data.get('objs');
+						var el = coll.at(1);
+						data.set('magselval', void 0);
+					},
+					tests: {h1:0, h1C:0, valC:0, valNone:1}
+				},
+				{
+					name: "Remove objs[1]",
+					go: function(data){
+						var coll = data.get('objs');
+						var el = coll.at(1);
+						coll.remove(el);
+					},
+					tests: {selABC:0, selAC:1, option4:0, option3:1}
+				},
+				{
+					name: "Alter objs[1] to contain BC",
+					go: function(data){
+						var coll = data.get('objs');
+						var el = coll.at(1);
+						el.set('txt', 'BC');
+					},
+					tests: {selAC:0, selABC:1}
+				},
+				{
+					name: "Reset the collection to A,C",
+					go: function(data){
+						var el1 = new Backbone.Model({txt:'A'});
+						var el2 = new Backbone.Model({txt:'C'});
+						var coll = data.get('objs');
+						coll.reset([el1, el2]);
+					},
+					tests: {selABC:0, selAC:1}
+				},
+				{
+					name: "Replace objs with plain object",
+					go: function(data){ data.set('objs', [{txt:'A'}, {txt:'BC'}]); },
+					tests: {selAC:0, selABC:1}
+				},
+				{
+					name: "Replace objs with garbage",
+					go: function(data){ data.set('objs', 'garbage'); },
+					tests: {selABC:0, option3:0, option1:1}
+				}
+			]
 		}
 	];
 
