@@ -4,9 +4,9 @@
 # The version for plain templates is trivial, of course, since it just needs to run the sub-template straight away.
 Plain = Platter.Internal.PlainCompiler
 
-plainName = Plain::addUniqueMethod 'with', (ps, val) ->
+plainName = Plain::addUniqueMethod 'with', (ps, val, tmplname) ->
 	val = Platter.EscapesNoStringParse val, null, ps.jsDatas, @plainGet(ps.js)
-	ps.js.addExpr "#{ps.jsPost}.parentNode.insertBefore(this.#{ps.jsPre}.run(#{val}, #{ps.jsDatas.join ', '}, undo, false).docfrag, #{ps.jsPost})"
+	ps.js.addExpr "Platter.InsertNode(#{ps.parent.jsEl||'null'}, #{ps.jsPost}, this.#{tmplname}.run(#{val}, #{ps.jsDatas.join ', '}, undo, false).docfrag)"
 
 Plain::addExtractorPlugin 'with', 40, plainName, 1
 
@@ -15,17 +15,15 @@ Plain::addExtractorPlugin 'with', 40, plainName, 1
 Dynamic = Platter.Internal.DynamicCompiler
 DynamicRun = Platter.Internal.DynamicRunner
 
-dynRunName = DynamicRun::addUniqueMethod 'with', (undo, datas, tmpl, start, end) ->
+dynRunName = DynamicRun::addUniqueMethod 'with', (undo, datas, tmpl, par, start, end) ->
 	undoch = undo.child()
 	(val) =>
-		@removeBetween start, end
+		@removeBetween start, end, par
 		undoch.undo()
-		# In some transitions, we can end up removed from the page but wanting to process the event that caused that, so we need to cope with a lack of a parentNode.
-		if (end.parentNode)
-			end.parentNode.insertBefore tmpl.run(val, datas..., undoch, false).docfrag, end
+		Platter.InsertNode par, end, tmpl.run(val, datas..., undoch, false).docfrag
 
-dynName = Dynamic::addUniqueMethod 'with', (ps, val) ->
-	jsChange = ps.js.addForcedVar "#{ps.jsPre}_ifchange", "this.#{dynRunName}(undo, [#{ps.jsDatas.join ', '}], this.#{ps.jsPre}, #{ps.jsPre}, #{ps.jsPost})"
+dynName = Dynamic::addUniqueMethod 'with', (ps, val, tmplname) ->
+	jsChange = ps.js.addForcedVar "#{ps.jsPre}_ifchange", "this.#{dynRunName}(undo, [#{ps.jsDatas.join ', '}], this.#{tmplname}, #{ps.parent.jsEl||'null'}, #{ps.jsPre}, #{ps.jsPost})"
 	@doBase ps, null, val, "#{jsChange}(#v#)", null
 
 Dynamic::addExtractorPlugin 'with', 40, dynName, 1

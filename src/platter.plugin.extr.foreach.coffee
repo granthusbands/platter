@@ -2,14 +2,14 @@
 
 Plain = Platter.Internal.PlainCompiler
 
-plainName = Plain::addUniqueMethod 'foreach', (ps, val) ->
+plainName = Plain::addUniqueMethod 'foreach', (ps, val, tmplname) ->
 	val = Platter.EscapesNoStringParse val, null, ps.jsDatas, @plainGet(ps.js)
 	jsFor = ps.js.addVar "#{ps.jsPre}_for", val
 	ps.js.forceVar ps.jsPost
 	ps.js.addExpr """
 		if (#{jsFor})
 			for (var i=0;i<#{jsFor}.length; ++i)
-				#{ps.jsPost}.parentNode.insertBefore(this.#{ps.jsPre}.run(#{jsFor}[i], #{ps.jsDatas.join ','}, undo, false).docfrag, #{ps.jsPost})
+				Platter.InsertNode(#{ps.parent.jsEl||'null'}, #{ps.jsPost}, this.#{tmplname}.run(#{jsFor}[i], #{ps.jsDatas.join ','}, undo, false).docfrag)
 	"""
 
 Plain::addExtractorPlugin 'foreach', 100, plainName, 1
@@ -20,18 +20,18 @@ Dynamic = Platter.Internal.DynamicCompiler
 DynamicRun = Platter.Internal.DynamicRunner
 
 
-runForEach = DynamicRun::addUniqueMethod 'foreach', (undo, tmpl, datas, start, end) ->
+runForEach = DynamicRun::addUniqueMethod 'foreach', (undo, tmpl, datas, par, start, end) ->
 	undoch = undo.child()
 	hasRun = false;
 	ret = (coll) =>
 		if hasRun
 			undoch.undo()
-			@removeBetween start, end
+			@removeBetween start, end, par
 		else
 			hasRun = true
-		@[runForEachInner] undo, coll, tmpl, datas, start, end, ret
+		@[runForEachInner] undo, coll, tmpl, datas, par, start, end, ret
 
-runForEachInner = DynamicRun::addUniqueMethod 'foreach_inner', (undo, coll, tmpl, datas, start, end, replaceMe) ->
+runForEachInner = DynamicRun::addUniqueMethod 'foreach_inner', (undo, coll, tmpl, datas, par, start, end, replaceMe) ->
 	ends = [start, end]
 	undos = []
 	spareUndos = [] # If we don't reuse them, the parent undoer will end up with many.
@@ -39,14 +39,15 @@ runForEachInner = DynamicRun::addUniqueMethod 'foreach_inner', (undo, coll, tmpl
 		at = opts.index
 		newend = document.createComment ""
 		ends.splice at+1, 0, newend
-		par = start.parentNode
-		par.insertBefore newend, ends[at].nextSibling
+		lpar = par || start.parentNode || end.parentNode
+		putBefore = if ends[at] then ends[at].nextSibling else lpar.firstChild
+		Platter.InsertNode lpar, putBefore, newend
 		undoch = spareUndos.pop() || undo.child()
-		par.insertBefore tmpl.run(model, datas..., undoch, false).docfrag, newend
+		Platter.InsertNode lpar, newend, tmpl.run(model, datas..., undoch, false).docfrag
 		undos.splice(at, 0, undoch)
 	rem = (model, coll, opts) =>
 		at = opts.index
-		@removeBetween ends[at], ends[at+1].nextSibling
+		@removeBetween ends[at], ends[at+1].nextSibling, par
 		ends.splice(at+1,1)
 		undos[at].undo()
 		spareUndos.push undos.splice(at, 1)[0]
@@ -66,8 +67,8 @@ watchCollection = DynamicRun::addUniqueMethod 'foreach_watch', (undo, coll, add,
 
 
 
-doForEach = Dynamic::addUniqueMethod 'foreach', (ps, val) ->
-	jsChange = ps.js.addForcedVar "#{ps.jsPre}_forchange", "this.#{runForEach}(undo, this.#{ps.jsPre}, [#{ps.jsDatas.join ', '}], #{ps.jsPre}, #{ps.jsPost})"
+doForEach = Dynamic::addUniqueMethod 'foreach', (ps, val, tmplname) ->
+	jsChange = ps.js.addForcedVar "#{ps.jsPre}_forchange", "this.#{runForEach}(undo, this.#{tmplname}, [#{ps.jsDatas.join ', '}], #{ps.parent.jsEl||null}, #{ps.jsPre}, #{ps.jsPost})"
 	@doBase ps, null, val, "#{jsChange}(#v#)", null
 
 

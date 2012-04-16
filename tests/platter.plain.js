@@ -257,6 +257,18 @@ jQuery(function(){
 			textIs(tpl, data, "AE", "foreach and if combine in right order");
 		});
 
+		test("Comments added where needed", function(){
+			has("a<h1 if='{{yes}}'>b</h1>c", data, "a<h1>b</h1>c", "Surrounding text nodes");
+			has("<h1>a</h1><h1 if='{{yes}}'>b</h1><h1>c</h1>", data, "<h1>a</h1><h1>b</h1><h1>c</h1>", "Surrounding elements");
+			has("<!--a--><h1 if='{{yes}}'>b</h1><!--c-->", data, "<!--a--><h1>b</h1><!--c-->", "Surrounding comments");
+			has("<h1 if='{{yes}}'>b</h1>c", data, "<!----><h1>b</h1>c", "Required before");
+			has("a<h1 if='{{yes}}'>b</h1>", data, "a<h1>b</h1><!---->", "Required after");
+			has("a<h1 if='{{yes}}'>b</h1><h1 if='{{yes}}'>c</h1>d", data, "a<h1>b</h1><!----><h1>c</h1>d", "Required between");
+			has("<div><h1 if='{{yes}}'>a</h1></div>", data, "<div><h1>a</h1></div>", "Parent div");
+			has("<div><h1 if='{{yes}}'>a</h1><h1 if='{{yes}}'>b</h1></div>", data, "<div><h1>a</h1><!----><h1>b</h1></div>", "Required between, within parent div");
+			has("<div><div if='{{yes}}'><h1 if='{{yes}}'>a</h1></div></div>", data, "<div><div><h1>a</h1></div></div>", "Nesting");
+		});
+
 		var commoneventbit = function(tpl, data, o) {
 			var runthis = false;
 			var runev = null;

@@ -48,6 +48,17 @@ Platter.AttrList = (node) ->
 Platter.AttrNames = (attrList) ->
 	(n for own n, v of attrList).join('\n')
 
+Platter.RemoveNode = (node) ->
+	node.parentNode.removeChild node
+
+Platter.InsertNode = (par, before, node) ->
+	if !par then par = before.parentNode
+	if !par then return
+	if !before
+		par.appendChild node
+	else
+		par.insertBefore node, before
+
 Platter.PullNode = (node) ->
 	pre = document.createComment ""
 	post = document.createComment ""

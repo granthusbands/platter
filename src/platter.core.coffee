@@ -62,6 +62,33 @@ class Platter.Internal.CompilerState
 	runAfters: ->
 		while @afters.length
 			@afters.pop()()
+	optimiseAwayPre: ->
+		# We only need a preceding comment if the previous node is non-constant
+		if @prev && (@prev.jsPost || @prev.jsEl)
+			@jsPre = @prev.jsPost || @prev.jsEl
+			@jsPost = @jsEl
+			Platter.RemoveNode @pre
+			@pre = null
+		else if !@prev && @parent && @parent.jsEl
+			@jsPre = 'null'
+			@jsPost = @jsEl
+			Platter.RemoveNode @pre
+			@pre = null
+	optimiseAwayLastPost: ->
+		# Since the current node is constant, we can remove the jsPost of the preceding node
+		if !@prev || !@prev.post then return
+		@js.replaceExpr @jsEl, @prev.jsPost
+		@jsEl = @prev.jsPost
+		Platter.RemoveNode @prev.post
+		@prev.post = null
+	optimiseAwayLastChildPost: ->
+		# Since the current node is constant, the last child doesn't need a jsPost
+		ch = @children[@children.length-1]
+		if !ch || !ch.post then return
+		@js.replaceExpr ch.jsPost, 'null'
+		Platter.RemoveNode ch.post
+		ch.post = null
+
 
 
 class Platter.Internal.TemplateRunner extends Platter.Internal.PluginBase
@@ -69,12 +96,18 @@ class Platter.Internal.TemplateRunner extends Platter.Internal.PluginBase
 		@node = node
 
 	# Remove all the nodes between startel and endel, which must be unique
-	removeBetween: (startel, endel) ->
-		par = startel.parentNode
+	removeBetween: (startel, endel, par) ->
+		par ||= startel.parentNode || endel.parentNode
 		return if !par
-		prev = undefined
-		while (prev=endel.previousSibling)!=startel
-			par.removeChild prev
+		if (!startel&&!endel)
+			while last=par.lastChild
+				par.removeChild last
+		else if endel
+			while (prev=endel.previousSibling)!=startel
+				par.removeChild prev
+		else if startel
+			while (next=startel.nextSibling)!=endel
+				par.removeChild next
 		undefined
 
 	# Remove startel and endel and everything between them. startel can be endel.
@@ -125,8 +158,7 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 	
 	compileFrag: (frag, ctxCnt, parent) ->
 		ps = new Platter.Internal.CompilerState
-		if parent
-			ps.parent = parent
+		ps.parent = parent
 
 		ps.js = new Platter.Internal.CodeGen
 		ps.ret = new @runner
@@ -188,15 +220,16 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 	compileChildren: (ps, el, jsEl) ->
 		baseName = "#{jsEl}"
 		ch = el.firstChild
-		jsCh = ps.js.addVar ps.jsEl+"_ch", "#{ps.jsEl}.firstChild"
+		jsCh = ps.js.addForcedVar ps.jsEl+"_ch", "#{jsEl}.firstChild"
 		while (ch)
 			ps2 = ps.child()
 			ps2.setEl ch
 			ps2.jsEl = jsCh
-			ps2.js.forceVar jsCh
 			@compileElement ps2
 			jsCh = ps2.js.addVar "#{baseName}_ch", "#{ps2.jsPost||ps2.jsEl}.nextSibling"
 			ch = (ps2.post||ps2.el).nextSibling
+		if (ps.el)
+			ps.optimiseAwayLastChildPost()
 
 	compileElement: (ps) ->
 		ps.isHandled = false
@@ -216,6 +249,8 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 						@doSimple ps, realn, v, "#el#.setAttribute(#n#, #v#)"
 				if ps.el.tagName.toLowerCase()!='textarea'
 					@compileChildren ps, ps.el, ps.jsEl
+					ps.optimiseAwayLastPost()
+					ps.optimiseAwayLastChildPost()
 				ps.runAfters()
 		else if ps.el.nodeType==8  # Comment
 			ct = ps.el.nodeValue
@@ -228,21 +263,26 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 					@doPlugins(ps.plugins.block, (->m[2]), ps, m[3])
 				if !ps.isHandled
 					throw new Error("Unhandled block "+ct);
+			else
+				ps.optimiseAwayLastPost()
 		else if ps.el.nodeType==3 || ps.el.nodeType==4  # Text/CData
 			ps.el.nodeValue = Platter.UnhideAttr ps.el.nodeValue
 			if ps.el.nodeValue.indexOf('{{')!=-1
 				@doSimple ps, 'text', ps.el.nodeValue, "#el#.nodeValue = #v#"
-	
+			ps.optimiseAwayLastPost()
+
 	addExtractorPlugin: (n, pri, method, extradepth) ->
 		fn = (comp, ps, val, bits) ->
 			[ps.pre, ps.post, frag] = bits
 			ps.extraScopes = extradepth
 			ps.jsPre = ps.jsEl
 			ps.jsPost = ps.js.addVar "#{ps.jsPre}_end", "#{ps.jsPre}.nextSibling", ps.post
+			ps.optimiseAwayPre()
 			ps.jsEl = null
 			ps.setEl null
-			ps.ret[ps.jsPre.n] = comp.compileFrag frag, ps.jsDatas.length+extradepth, ps
-			comp[method] ps, val
+			tmplname = (ps.js.addVar '#{ps.jsPre}_tmpl').n
+			ps.ret[tmplname] = comp.compileFrag frag, ps.jsDatas.length+extradepth, ps
+			comp[method] ps, val, tmplname
 			true
 		@addBlockExtractorPlugin n, fn
 		@addAttrExtractorPlugin n, pri, fn
