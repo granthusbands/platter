@@ -38,25 +38,23 @@ class Platter.Internal.CodeGen
 	# Since the codegen doesn't understand functions (it really should), we use existingVar for parameters.
 	existingVar: (name) ->
 		name = clean name
-		@_vars[name] = {_name: name, _count:1000}
+		@_vars[name] = {_name: name, _existing:true}
 		@getVar name
 
 	# Claim a variable is used one extra time, so that it can't get folded into use-sites. Can be used to optimise loops or just for variables that don't want moving. If the variable is unused, it will still get removed.
 	forceVar: (name) ->
-		v = @_vars[name.n||name]
-		if v._forced then return
-		v._count++
+		@_vars[name.n||name]._forced = true
 
 	addForcedVar: (name, expr, compVal) ->
 		ret = @addVar name, expr, compVal
 		@forceVar ret
 		ret
 
-	addVar: (name, expr, compVal) ->
+	addVar: (name, expr = 'null', compVal = null) ->
 		name = clean name
 		name = @_uniqName name
-		@_vars[name] = {_name: name, _count: -1, _expr: expr, _compVal:compVal}
-		@addOp {_expr:"var ##{name}# = #{expr}", _type:'var', _src:expr, _name:name}
+		@_vars[name] = {_name: name, _expr: expr, _compVal:compVal}
+		@_code.push {_expr:expr, _type:'var', _name:name}
 		@getVar name
 
 	getVar: (name) ->
@@ -68,37 +66,46 @@ class Platter.Internal.CodeGen
 		}
 	
 	addExpr: (expr) ->
-		@addOp {_expr:expr}
-
-	addOp: (op) ->
-		op._expr.replace exprvar, ($0, $1) =>
-			@_vars[$1]._count++
-		@_code.push op
+		@_code.push {_expr:expr}
 	
 	# Though this does brain-dead optimisations, it's non-mutating.
 	toString: () ->
 		s = ""
-		varsub = {}
+		varcnt = {}
 		varreps = {}
-		# Remove the effects of a now-unused expr
+
+		# Count the variable uses from an expr
+		add = (expr) ->
+			expr.replace exprvar, ($0, $1) ->
+				++varcnt[$1];
+		# Remove the variable uses of a now-unused expr
 		sub = (expr) ->
 			expr.replace exprvar, ($0, $1) ->
-				varsub[$1] = (varsub[$1]||0)+1;
+				--varcnt[$1];
 		# Turn variable placeholders into variable uses or expressions
 		rep = (expr) ->
 			expr.replace exprvar, ($0, $1) ->
 				varreps[$1]||$1
+
+		for op in @_code
+			if op._type=='var'
+				vr = @_vars[op._name]
+				varcnt[op._name] = if vr._existing then 1000 else if vr._forced then 1 else 0
+			add op._expr
 		# Remove unreferenced variables (moving backwards so only one pass is needed)
 		code = @_code.slice(0)
 		for i in [code.length-1..0] by -1
 			op = code[i]
-			if op._type=='var' && @_vars[op._name]._count-(varsub[op._name]||0)==0
+			if op._type=='var' && (varcnt[op._name]||0)==0
 				code[i] = undefined;
-				sub op._src
+				sub op._expr
 		for op in code when op
-			if op._type=='var' && @_vars[op._name]._count-(varsub[op._name]||0)==1
+			if op._type=='var'
 				# Single-use variables can instead be replaced with the expression
-				varreps[op._name] = rep op._src
+				if (varcnt[op._name]||0)==1
+					varreps[op._name] = rep op._expr
+				else
+					s+=rep("var ##{op._name}# = #{op._expr};\n");
 			else
 				s+=rep(op._expr)+";\n";
 		s
@@ -118,3 +125,7 @@ class Platter.Internal.CodeGen
 			return "#{arr}[#{@toSrc(entry)}]"
 		else
 			return "#{arr}.#{entry}"
+
+	replaceExpr: (from, to) ->
+		for op in @_code
+			op._expr = op._expr.split(from).join(to)
