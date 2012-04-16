@@ -32,23 +32,26 @@ runForEach = DynamicRun::addUniqueMethod 'foreach', (undo, tmpl, datas, par, sta
 		@[runForEachInner] undo, coll, tmpl, datas, par, start, end, ret
 
 runForEachInner = DynamicRun::addUniqueMethod 'foreach_inner', (undo, coll, tmpl, datas, par, start, end, replaceMe) ->
-	ends = [start, end]
+	pres = [start]
+	posts = [end]
 	undos = []
 	spareUndos = [] # If we don't reuse them, the parent undoer will end up with many.
 	add = (model, coll, opts) =>
 		at = opts.index
 		newend = document.createComment ""
-		ends.splice at+1, 0, newend
-		lpar = par || start.parentNode || end.parentNode
-		putBefore = if ends[at] then ends[at].nextSibling else lpar.firstChild
-		Platter.InsertNode lpar, putBefore, newend
 		undoch = spareUndos.pop() || undo.child()
-		Platter.InsertNode lpar, newend, tmpl.run(model, datas..., undoch, false).docfrag
+		frag = tmpl.run(model, datas..., undoch, false).docfrag
+		fragfirst = frag.firstChild
+		fraglast = frag.lastChild
+		Platter.InsertNode par, posts[at], frag
 		undos.splice(at, 0, undoch)
+		pres.splice(at+1, 0, fraglast)
+		posts.splice(at, 0, fragfirst)
 	rem = (model, coll, opts) =>
 		at = opts.index
-		@removeBetween ends[at], ends[at+1].nextSibling, par
-		ends.splice(at+1,1)
+		@removeBetween pres[at], posts[at+1], par
+		pres.splice(at+1, 1)
+		posts.splice(at,1)
 		undos[at].undo()
 		spareUndos.push undos.splice(at, 1)[0]
 	@[watchCollection] undo, coll, add, rem, replaceMe

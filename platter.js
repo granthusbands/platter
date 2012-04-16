@@ -2005,28 +2005,31 @@
   });
 
   runForEachInner = DynamicRun.prototype.addUniqueMethod('foreach_inner', function(undo, coll, tmpl, datas, par, start, end, replaceMe) {
-    var add, ends, rem, spareUndos, undos,
+    var add, posts, pres, rem, spareUndos, undos,
       _this = this;
-    ends = [start, end];
+    pres = [start];
+    posts = [end];
     undos = [];
     spareUndos = [];
     add = function(model, coll, opts) {
-      var at, lpar, newend, putBefore, undoch;
+      var at, frag, fragfirst, fraglast, newend, undoch;
       at = opts.index;
       newend = document.createComment("");
-      ends.splice(at + 1, 0, newend);
-      lpar = par || start.parentNode || end.parentNode;
-      putBefore = ends[at] ? ends[at].nextSibling : lpar.firstChild;
-      Platter.InsertNode(lpar, putBefore, newend);
       undoch = spareUndos.pop() || undo.child();
-      Platter.InsertNode(lpar, newend, tmpl.run.apply(tmpl, [model].concat(__slice.call(datas), [undoch], [false])).docfrag);
-      return undos.splice(at, 0, undoch);
+      frag = tmpl.run.apply(tmpl, [model].concat(__slice.call(datas), [undoch], [false])).docfrag;
+      fragfirst = frag.firstChild;
+      fraglast = frag.lastChild;
+      Platter.InsertNode(par, posts[at], frag);
+      undos.splice(at, 0, undoch);
+      pres.splice(at + 1, 0, fraglast);
+      return posts.splice(at, 0, fragfirst);
     };
     rem = function(model, coll, opts) {
       var at;
       at = opts.index;
-      _this.removeBetween(ends[at], ends[at + 1].nextSibling, par);
-      ends.splice(at + 1, 1);
+      _this.removeBetween(pres[at], posts[at + 1], par);
+      pres.splice(at + 1, 1);
+      posts.splice(at, 1);
       undos[at].undo();
       return spareUndos.push(undos.splice(at, 1)[0]);
     };

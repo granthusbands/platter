@@ -267,6 +267,7 @@ jQuery(function(){
 			has("<div><h1 if='{{yes}}'>a</h1></div>", data, "<div><h1>a</h1></div>", "Parent div");
 			has("<div><h1 if='{{yes}}'>a</h1><h1 if='{{yes}}'>b</h1></div>", data, "<div><h1>a</h1><!----><h1>b</h1></div>", "Required between, within parent div");
 			has("<div><div if='{{yes}}'><h1 if='{{yes}}'>a</h1></div></div>", data, "<div><div><h1>a</h1></div></div>", "Nesting");
+			has("<div>a{{#foreach nums}}{{.}}{{/foreach}}b</div>", data, "a2357b", "Loops");
 		});
 
 		var commoneventbit = function(tpl, data, o) {
