@@ -145,8 +145,8 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 
 		ps.jsSelf = ps.js.addForcedVar "self", "this"
 		ps.js.addExpr 'undo = undo ? undo.child() : new Platter.Undo()'
-		jsRoot = ps.jsEl = ps.js.addVar 'el', 'this.node.cloneNode(true)'
-		@compileChildren ps, frag
+		jsRoot = ps.js.addVar 'el', 'this.node.cloneNode(true)'
+		@compileChildren ps, frag, jsRoot
 		jsFirstChild = ps.js.addForcedVar "firstChild", "#{jsRoot}.firstChild"
 		jsLastChild = ps.js.addForcedVar "lastChild", "#{jsRoot}.lastChild"
 		ps.js.addExpr """
@@ -185,8 +185,8 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 				if ps.isHandled then return
 		null
 
-	compileChildren: (ps, el) ->
-		baseName = "#{ps.jsEl}"
+	compileChildren: (ps, el, jsEl) ->
+		baseName = "#{jsEl}"
 		ch = el.firstChild
 		jsCh = ps.js.addVar ps.jsEl+"_ch", "#{ps.jsEl}.firstChild"
 		while (ch)
@@ -215,7 +215,7 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 					else
 						@doSimple ps, realn, v, "#el#.setAttribute(#n#, #v#)"
 				if ps.el.tagName.toLowerCase()!='textarea'
-					@compileChildren ps, ps.el
+					@compileChildren ps, ps.el, ps.jsEl
 				ps.runAfters()
 		else if ps.el.nodeType==8  # Comment
 			ct = ps.el.nodeValue
