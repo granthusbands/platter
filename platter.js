@@ -1796,9 +1796,9 @@
     return Platter.EscapesNoString(v, "", function(t) {
       var jsFn, jsTarget, jsThis, m, op, orig, post, valGetter;
       orig = t;
-      m = /^(>|\+\+|--)?(.*?)(\+\+|--)?$/.exec(t);
+      m = /^(<>|\+\+|--)?(.*?)(\+\+|--)?$/.exec(t);
       if (!m || m[1] && m[3] && m[1] !== m[3]) {
-        throw new Error("{{" + orig + "}} is bad; only event handlers of the forms a.b, >a.b, ++a.b, --a.b, a.b++ and a.b-- are currently supported");
+        throw new Error("{{" + orig + "}} is bad; only event handlers of the forms a.b, <>a.b, ++a.b, --a.b, a.b++ and a.b-- are currently supported");
       }
       t = m[2];
       op = m[1] || m[3];
@@ -1822,7 +1822,7 @@
       }
       if (op === '++' || op === '--') {
         return ps.js.addExpr("this." + runEvent + "(undo, " + ps.jsEl + ", " + (ps.js.toSrc(ev)) + ", function(ev){ " + jsThis + "." + doModify + "(" + jsTarget + ", " + (ps.js.toSrc(post)) + ", function(v){return " + op + "v})})");
-      } else if (op === '>') {
+      } else if (op === '<>') {
         valGetter = ps.valGetter ? ps.valGetter.replace("#el#", "" + ps.jsEl) : ps.js.index(ps.jsEl, ps.el.type === 'checkbox' ? 'checked' : 'value');
         return ps.js.addExpr("this." + runEvent + "(undo, " + ps.jsEl + ", " + (ps.js.toSrc(ev)) + ", function(ev){ " + jsThis + "." + doSet + "(" + jsTarget + ", " + (ps.js.toSrc(post)) + ", " + valGetter + "); })");
       } else {
@@ -1865,14 +1865,14 @@
       n = _ref[_i];
       v = ps.getAttr(n);
       if (!v) continue;
-      m = /^\{\{>(.*?)\}\}/.exec(v);
+      m = /^\{\{<>(.*?)\}\}/.exec(v);
       if (!m) continue;
       if (m[0].length !== v.length) {
-        throw new Error("{{>thing}} cannot be in the same value attribute as anything else");
+        throw new Error("{{<>thing}} cannot be in the same value attribute as anything else");
       }
       type = ps.getAttr('type');
       if (Platter.HasEscape(type || '')) {
-        throw new Error("{{>thing}} cannot be the value of an element with dynamic type");
+        throw new Error("{{<>thing}} cannot be the value of an element with dynamic type");
       }
       ev = type && (type === 'checkbox' || type === 'radio') || ps.el.nodeName.toLowerCase() === 'select' ? 'onchange' : 'oninput';
       ps.setAttr(ev, v + (ps.getAttr(ev) || ''));

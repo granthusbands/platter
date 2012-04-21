@@ -312,13 +312,13 @@ jQuery(function(){
 		}
 
 		test("Event-handlers", function(){
-			var tpl = comp.compile('<input type="text" value="bar" onfoo="{{a}}" onup="{{++b}}" ondown="{{--b}}" onup2="{{++c}}" ondown2="{{--c}}" onput="{{>d}}"/>');
+			var tpl = comp.compile('<input type="text" value="bar" onfoo="{{a}}" onup="{{++b}}" ondown="{{--b}}" onup2="{{++c}}" ondown2="{{--c}}" onput="{{<>d}}"/>');
 			var o = {};
 			commoneventbit(tpl, o, o);
 		});
 
 		test("Event-handlers nested props", function(){
-			var tpl = comp.compile('<input type="text" value="bar" onfoo="{{z.a}}" onup="{{++z.b}}" ondown="{{--z.b}}" onup2="{{++z.c}}" ondown2="{{--z.c}}" onput="{{>z.d}}"/>');
+			var tpl = comp.compile('<input type="text" value="bar" onfoo="{{z.a}}" onup="{{++z.b}}" ondown="{{--z.b}}" onup2="{{++z.c}}" ondown2="{{--z.c}}" onput="{{<>z.d}}"/>');
 			var o = {};
 			commoneventbit(tpl, {z:o}, o);
 		});
@@ -333,8 +333,8 @@ jQuery(function(){
 		});
 
 		// TODO: Events (add/remove/count/parameters)
-		// TODO: oninput="{{>blah}}"
-		// TODO: value="{{>blah}}"
+		// TODO: oninput="{{<>blah}}"
+		// TODO: value="{{<>blah}}"
 	};
 });
 

@@ -6,19 +6,19 @@
 			<h1>A simple form</h1>
 			<label>
 				<span class="desc">First Name</span>
-				<input type="text" value="{{>firstname}}" />
+				<input type="text" value="{{<>firstname}}" />
 			</label>
 			<label>
 				<span class="desc">Last Name</span>
-				<input type="text" value="{{>lastname}}" />
+				<input type="text" value="{{<>lastname}}" />
 			</label>
 			<label>
-				<input type="checkbox" checked="{{>isMonkey}}" />
+				<input type="checkbox" checked="{{<>isMonkey}}" />
 				<span class="desc"> Is a Monkey
 			</label>
 			<label>
 				<span class="desc">Description</span>
-				<textarea>{{>description}}</textarea>
+				<textarea>{{<>description}}</textarea>
 			</label>
 		</script>
 		<script type="text/x-platter" id="thepreview">

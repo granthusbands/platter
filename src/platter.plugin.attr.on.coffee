@@ -47,9 +47,9 @@ doEvent = Compiler::addUniqueMethod 'doEvent', (ps, realn, v) ->
 	Platter.EscapesNoString v, "", (t) =>
 		orig = t
 		# TODO: Perhaps generalise this to arbitrary JS expressions. We'd need a parse-tree walker, which might be a bit code-heavy.
-		m = /^(>|\+\+|--)?(.*?)(\+\+|--)?$/.exec t
+		m = /^(<>|\+\+|--)?(.*?)(\+\+|--)?$/.exec t
 		if !m || m[1] && m[3] && m[1]!=m[3]
-			throw new Error("{{#{orig}}} is bad; only event handlers of the forms a.b, >a.b, ++a.b, --a.b, a.b++ and a.b-- are currently supported")
+			throw new Error("{{#{orig}}} is bad; only event handlers of the forms a.b, <>a.b, ++a.b, --a.b, a.b++ and a.b-- are currently supported")
 		t = m[2]
 		op = m[1]||m[3]
 		jsThis = ps.js.addForcedVar "#{ps.jsEl}_this", "this"
@@ -72,7 +72,7 @@ doEvent = Compiler::addUniqueMethod 'doEvent', (ps, realn, v) ->
 				jsTarget = ps.jsDatas[(m[1].length||1)-1]
 		if op=='++' || op=='--'
 			ps.js.addExpr "this.#{runEvent}(undo, #{ps.jsEl}, #{ps.js.toSrc ev}, function(ev){ #{jsThis}.#{doModify}(#{jsTarget}, #{ps.js.toSrc post}, function(v){return #{op}v})})";
-		else if op=='>'
+		else if op=='<>'
 			# TODO: Support radio buttons, select-boxes and maybe others
 			valGetter =
 				if ps.valGetter

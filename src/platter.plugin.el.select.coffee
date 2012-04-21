@@ -1,7 +1,7 @@
 # Some magic for intuitive <select> and <option> usage.
 #
 # Adds support for this:
-#   <select value="{{someval}}" oninput="{{>someval}}">
+#   <select value="{{someval}}" oninput="{{<>someval}}">
 #     <option>None</option>
 #     <option foreach="{{somelist}}">{{name}}</option>
 #     <option value="{{somethingelse}}">Other</option>
