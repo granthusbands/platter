@@ -69,4 +69,14 @@ class Platter.Internal.DynamicCompiler extends Platter.Internal.TemplateCompiler
 	doSimple: (ps, n, v, expr) ->
 		@doBase ps, n, v, expr, true
 
+	doRedo: (ps, n, v, expr, sep) ->
+		jsUndo2 = ps.js.addForcedVar "#{ps.jsPre}_undo", "undo.child()"
+		jsChange = ps.js.addForcedVar "#{ps.jsPre}_change", """
+			function(val) {
+				#{jsUndo2}.undo();
+				#{expr.replace(/#v#/g, 'val').replace(/#el#/g, ps.jsEl)};
+			}
+		"""
+		@doBase ps, n, v, "#{jsChange}(#v#)", sep
+
 Platter.Dynamic = new Platter.Internal.DynamicCompiler

@@ -308,10 +308,13 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 			if m=/^\{\{([#\/])([^\s\}]+)\s*(.*?)\}\}$/.exec(ct)
 				if m[1]=='/'
 					throw new Error("Unmatched end-block "+ct);
-				if m[2].match(ps.plugins.blockReg)
-					@doPlugins(ps.plugins.block, (->m[2]), ps, m[3])
+				else if m[1]=='#'
+					if m[2].match(ps.plugins.blockReg)
+						@doPlugins(ps.plugins.block, (->m[2]), ps, m[3])
 				if !ps.isHandled
 					throw new Error("Unhandled block "+ct);
+			else if m=/^\{\{>(.*?)\}\}$/.exec(ct)
+				@doRedo ps, null, "{{#{m[1]}}}", "if (#v#) Platter.InsertNode(#{ps.parent.jsEl||'null'}, #{ps.jsPost}, (#v#).run(#{ps.jsDatas[0]}, undo).docfrag)", null
 			else
 				ps.optimiseAwayLastPost()
 		else if ps.el.nodeType==3 || ps.el.nodeType==4  # Text/CData

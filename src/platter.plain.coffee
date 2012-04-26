@@ -35,6 +35,8 @@ class Platter.Internal.PlainCompiler extends Platter.Internal.TemplateCompiler
 				parse v, ps.jsDatas, @plainGet(ps.js)
 			)
 
+	@::doRedo = @::doBase
+
 	doSimple: (ps, n, v, expr) ->
 		@doBase ps, n, v, expr, true
 

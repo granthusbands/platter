@@ -19,9 +19,9 @@ Platter.UnhideAttrName = (txt) ->
 
 # For the browser to parse our HTML, we need to make sure there's no strange text in odd places. Browsers love them some comments, though.
 Platter.CommentEscapes = (txt) ->
-	txt = txt.replace /\{\{([#\/].*?)\}\}/g, "<!--{{$1}}-->"
+	txt = txt.replace /\{\{([#\/>].*?)\}\}/g, "<!--{{$1}}-->"
 Platter.UncommentEscapes = (txt) ->
-	txt = txt.replace /<!--\{\{([#\/].*?)\}\}-->/g, "{{$1}}"
+	txt = txt.replace /<!--\{\{([#\/>].*?)\}\}-->/g, "{{$1}}"
 
 Platter.HasEscape = (txt) ->
 	!!/\{\{/.exec txt
