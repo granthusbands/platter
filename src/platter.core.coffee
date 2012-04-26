@@ -14,6 +14,7 @@ sby = (name) ->
 
 
 # A compilation context - contains all of the things that are commonly passed around, and helps plugins follow the unwritten rules.
+blockbits = /^\{\{([#\/])([^\s\}]*)(.*?)\}\}$/
 class Platter.Internal.CompilerState
 	constructor: (clone, @parent) ->
 		if clone
@@ -88,6 +89,54 @@ class Platter.Internal.CompilerState
 		@js.replaceExpr ch.jsPost, 'null'
 		Platter.RemoveNode ch.post
 		ch.post = null
+	pulled: (@pre, @post, frag) ->
+		@jsPre = @jsEl
+		@jsPost = @js.addVar "#{@jsPre}_end", "#{@jsPre}.nextSibling", @post
+		@optimiseAwayPre()
+		@jsEl = null
+		@setEl null
+		frag
+	pullEl: ->
+		pre = document.createComment ""
+		post = document.createComment ""
+		@el.parentNode.insertBefore pre, @el
+		@el.parentNode.insertBefore post, @el
+		frag = document.createDocumentFragment()
+		frag.appendChild @el
+		@pulled pre, post, frag
+	# Find the end of a block, while ignoring sub-blocks
+	pullBlock: ->
+		end = @el
+		stack = [blockbits.exec(@el.nodeValue)[2]]
+		while true
+			matched = false
+			end = end.nextSibling
+			if (!end) then break
+			if (end.nodeType!=8) then continue
+			m = blockbits.exec end.nodeValue
+			if !m then continue
+			if (m[1]=='#')
+				stack.push m[2]
+				continue
+			while stack.length && stack[stack.length-1]!=m[2]
+				stack.pop()
+			if stack.length && stack[stack.length-1]==m[2]
+				matched = true
+				stack.pop()
+			if stack.length==0
+				break
+		# end now points just beyond the end (and hence might be null)
+		frag = document.createDocumentFragment()
+		while @el.nextSibling!=end
+			frag.appendChild @el.nextSibling
+		if matched
+			end.parentNode.removeChild end
+		pre = document.createComment ""
+		post = document.createComment ""
+		@el.parentNode.insertBefore pre, @el
+		@el.parentNode.insertBefore post, @el
+		@el.parentNode.removeChild @el
+		@pulled pre, post, frag
 
 
 
@@ -272,14 +321,8 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 			ps.optimiseAwayLastPost()
 
 	addExtractorPlugin: (n, pri, method, extradepth) ->
-		fn = (comp, ps, val, bits) ->
-			[ps.pre, ps.post, frag] = bits
+		fn = (comp, ps, val, frag) ->
 			ps.extraScopes = extradepth
-			ps.jsPre = ps.jsEl
-			ps.jsPost = ps.js.addVar "#{ps.jsPre}_end", "#{ps.jsPre}.nextSibling", ps.post
-			ps.optimiseAwayPre()
-			ps.jsEl = null
-			ps.setEl null
 			tmplname = (ps.js.addVar '#{ps.jsPre}_tmpl').n
 			ps.ret[tmplname] = comp.compileFrag frag, ps.jsDatas.length+extradepth, ps
 			comp[method] ps, val, tmplname
@@ -290,7 +333,7 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 	addBlockExtractorPlugin: (n, fn) ->
 		regTxt = "^(?:#{n})$" #TODO: Escaping
 		fn2 = (comp, ps, val, n) ->
-			fn comp, ps, "{{#{val}}}", Platter.PullBlock ps.el
+			fn comp, ps, "{{#{val}}}", ps.pullBlock()
 		@addPluginBase 'block',
 			fn: fn2
 			regTxt: regTxt
@@ -329,4 +372,4 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 			val = ps.getAttr(n)
 			if !Platter.HasEscape(val) then return
 			ps.el.removeAttribute ps.getAttrName(n)
-			fn comp, ps, val, Platter.PullNode ps.el
+			fn comp, ps, val, ps.pullEl()
