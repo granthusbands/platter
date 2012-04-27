@@ -532,7 +532,7 @@
       fn = function(comp, ps, val, frag) {
         var tmplname;
         ps.extraScopes = extradepth;
-        tmplname = (ps.js.addVar('#{ps.jsPre}_tmpl')).n;
+        tmplname = (ps.js.addVar("" + ps.jsPre + "_tmpl")).n;
         ps.ret[tmplname] = comp.compileFrag(frag, ps.jsDatas.length + extradepth, ps);
         comp[method](ps, val, tmplname);
         return true;
@@ -1586,7 +1586,7 @@
         if (t === '.' || esc[id]) return;
         ++escCount;
         last = id;
-        return esc[id] = ps.js.addForcedVar("" + ps.jsEl + "_" + t, "null", [t, jsData]);
+        return esc[id] = ps.js.addForcedVar("" + (ps.jsEl || ps.jsPre) + "_" + t, "null", [t, jsData]);
       });
       expr = expr.replace(/#el#/g, "" + ps.jsEl).replace(/#n#/g, ps.js.toSrc(n)).replace(/#v#/g, parse(v, ps.jsDatas, function(id, t, jsData) {
         if (t !== '.') {
@@ -1595,7 +1595,7 @@
           return jsData;
         }
       }));
-      jsChange = ps.js.addForcedVar("" + ps.jsEl + "_change", escCount > 1 ? "null" : "function() {\n	" + expr + ";\n}");
+      jsChange = ps.js.addForcedVar("" + (ps.jsEl || ps.jsPre) + "_change", escCount > 1 ? "null" : "function() {\n	" + expr + ";\n}");
       for (escn in esc) {
         escvar = esc[escn];
         if (escCount > 1 && escn === last) {

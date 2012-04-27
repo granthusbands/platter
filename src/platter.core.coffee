@@ -326,7 +326,7 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 	addExtractorPlugin: (n, pri, method, extradepth) ->
 		fn = (comp, ps, val, frag) ->
 			ps.extraScopes = extradepth
-			tmplname = (ps.js.addVar '#{ps.jsPre}_tmpl').n
+			tmplname = (ps.js.addVar "#{ps.jsPre}_tmpl").n
 			ps.ret[tmplname] = comp.compileFrag frag, ps.jsDatas.length+extradepth, ps
 			comp[method] ps, val, tmplname
 			true

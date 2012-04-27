@@ -49,14 +49,14 @@ class Platter.Internal.DynamicCompiler extends Platter.Internal.TemplateCompiler
 			if t=='.'||esc[id] then return
 			++escCount
 			last = id
-			esc[id] = ps.js.addForcedVar "#{ps.jsEl}_#{t}", "null", [t, jsData]
+			esc[id] = ps.js.addForcedVar "#{ps.jsEl||ps.jsPre}_#{t}", "null", [t, jsData]
 		expr = expr
 			.replace(/#el#/g, "#{ps.jsEl}")
 			.replace(/#n#/g, ps.js.toSrc n)
 			.replace(/#v#/g, 
 				parse v, ps.jsDatas, (id, t, jsData) -> if t!='.' then esc[id] else jsData
 			)
-		jsChange = ps.js.addForcedVar "#{ps.jsEl}_change", if escCount>1 then "null" else """
+		jsChange = ps.js.addForcedVar "#{ps.jsEl||ps.jsPre}_change", if escCount>1 then "null" else """
 			function() {
 				#{expr};
 			}
