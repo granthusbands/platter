@@ -71,7 +71,7 @@
 }).call(this);
 
 (function() {
-  var neverMatch, platterData, platterDataID, sby,
+  var blockbits, neverMatch, platterData, platterDataID, sby,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
@@ -90,6 +90,8 @@
       }
     };
   };
+
+  blockbits = /^\{\{([#\/])([^\s\}]*)(.*?)\}\}$/;
 
   Platter.Internal.CompilerState = (function() {
 
@@ -209,6 +211,65 @@
       this.js.replaceExpr(ch.jsPost, 'null');
       Platter.RemoveNode(ch.post);
       return ch.post = null;
+    };
+
+    CompilerState.prototype.pulled = function(pre, post, frag) {
+      this.pre = pre;
+      this.post = post;
+      this.jsPre = this.jsEl;
+      this.jsPost = this.js.addVar("" + this.jsPre + "_end", "" + this.jsPre + ".nextSibling", this.post);
+      this.optimiseAwayPre();
+      this.jsEl = null;
+      this.setEl(null);
+      return frag;
+    };
+
+    CompilerState.prototype.pullEl = function() {
+      var frag, post, pre;
+      pre = document.createComment("");
+      post = document.createComment("");
+      this.el.parentNode.insertBefore(pre, this.el);
+      this.el.parentNode.insertBefore(post, this.el);
+      frag = document.createDocumentFragment();
+      frag.appendChild(this.el);
+      return this.pulled(pre, post, frag);
+    };
+
+    CompilerState.prototype.pullBlock = function() {
+      var end, frag, m, matched, post, pre, stack;
+      end = this.el;
+      stack = [blockbits.exec(this.el.nodeValue)[2]];
+      while (true) {
+        matched = false;
+        end = end.nextSibling;
+        if (!end) break;
+        if (end.nodeType !== 8) continue;
+        m = blockbits.exec(end.nodeValue);
+        if (!m) continue;
+        if (m[1] === '#') {
+          stack.push(m[2]);
+          continue;
+        }
+        while (stack.length && stack[stack.length - 1] !== m[2]) {
+          stack.pop();
+        }
+        if (stack.length && stack[stack.length - 1] === m[2]) {
+          matched = true;
+          stack.pop();
+        }
+        if (stack.length === 0) break;
+      }
+      frag = document.createDocumentFragment();
+      while (this.el.nextSibling !== end) {
+        frag.appendChild(this.el.nextSibling);
+      }
+      if (matched) end.parentNode.removeChild(end);
+      pre = document.createComment("");
+      post = document.createComment("");
+      this.el.parentNode.insertBefore(pre, this.el);
+      this.el.parentNode.insertBefore(post, this.el);
+      this.el.parentNode.removeChild(this.el);
+      return this.pulled(pre, post, frag);
     };
 
     return CompilerState;
@@ -442,13 +503,18 @@
         ct = ps.el.nodeValue;
         ct = Platter.UnhideAttr(ct);
         if (m = /^\{\{([#\/])([^\s\}]+)\s*(.*?)\}\}$/.exec(ct)) {
-          if (m[1] === '/') throw new Error("Unmatched end-block " + ct);
-          if (m[2].match(ps.plugins.blockReg)) {
-            this.doPlugins(ps.plugins.block, (function() {
-              return m[2];
-            }), ps, m[3]);
+          if (m[1] === '/') {
+            throw new Error("Unmatched end-block " + ct);
+          } else if (m[1] === '#') {
+            if (m[2].match(ps.plugins.blockReg)) {
+              this.doPlugins(ps.plugins.block, (function() {
+                return m[2];
+              }), ps, m[3]);
+            }
           }
           if (!ps.isHandled) throw new Error("Unhandled block " + ct);
+        } else if (m = /^\{\{>(.*?)\}\}$/.exec(ct)) {
+          return this.doRedo(ps, null, "{{" + m[1] + "}}", "if (#v#) Platter.InsertNode(" + (ps.parent.jsEl || 'null') + ", " + ps.jsPost + ", (#v#).run(" + ps.jsDatas[0] + ", undo).docfrag)", null);
         } else {
           return ps.optimiseAwayLastPost();
         }
@@ -463,15 +529,9 @@
 
     TemplateCompiler.prototype.addExtractorPlugin = function(n, pri, method, extradepth) {
       var fn;
-      fn = function(comp, ps, val, bits) {
-        var frag, tmplname;
-        ps.pre = bits[0], ps.post = bits[1], frag = bits[2];
+      fn = function(comp, ps, val, frag) {
+        var tmplname;
         ps.extraScopes = extradepth;
-        ps.jsPre = ps.jsEl;
-        ps.jsPost = ps.js.addVar("" + ps.jsPre + "_end", "" + ps.jsPre + ".nextSibling", ps.post);
-        ps.optimiseAwayPre();
-        ps.jsEl = null;
-        ps.setEl(null);
         tmplname = (ps.js.addVar('#{ps.jsPre}_tmpl')).n;
         ps.ret[tmplname] = comp.compileFrag(frag, ps.jsDatas.length + extradepth, ps);
         comp[method](ps, val, tmplname);
@@ -485,7 +545,7 @@
       var fn2, regTxt;
       regTxt = "^(?:" + n + ")$";
       fn2 = function(comp, ps, val, n) {
-        return fn(comp, ps, "{{" + val + "}}", Platter.PullBlock(ps.el));
+        return fn(comp, ps, "{{" + val + "}}", ps.pullBlock());
       };
       return this.addPluginBase('block', {
         fn: fn2,
@@ -540,7 +600,7 @@
         val = ps.getAttr(n);
         if (!Platter.HasEscape(val)) return;
         ps.el.removeAttribute(ps.getAttrName(n));
-        return fn(comp, ps, val, Platter.PullNode(ps.el));
+        return fn(comp, ps, val, ps.pullEl());
       });
     };
 
@@ -572,11 +632,11 @@
   };
 
   Platter.CommentEscapes = function(txt) {
-    return txt = txt.replace(/\{\{([#\/].*?)\}\}/g, "<!--{{$1}}-->");
+    return txt = txt.replace(/\{\{([#\/>].*?)\}\}/g, "<!--{{$1}}-->");
   };
 
   Platter.UncommentEscapes = function(txt) {
-    return txt = txt.replace(/<!--\{\{([#\/].*?)\}\}-->/g, "{{$1}}");
+    return txt = txt.replace(/<!--\{\{([#\/>].*?)\}\}-->/g, "{{$1}}");
   };
 
   Platter.HasEscape = function(txt) {
@@ -666,7 +726,7 @@
 }).call(this);
 
 (function() {
-  var bits, nodeWraps,
+  var nodeWraps,
     __hasProp = Object.prototype.hasOwnProperty;
 
   nodeWraps = {
@@ -750,56 +810,6 @@
     } else {
       return par.insertBefore(node, before);
     }
-  };
-
-  Platter.PullNode = function(node) {
-    var frag, post, pre;
-    pre = document.createComment("");
-    post = document.createComment("");
-    node.parentNode.insertBefore(pre, node);
-    node.parentNode.insertBefore(post, node);
-    frag = document.createDocumentFragment();
-    frag.appendChild(node);
-    return [pre, post, frag];
-  };
-
-  bits = /^\{\{([#\/])([^\s\}]*)(.*?)\}\}$/;
-
-  Platter.PullBlock = function(node) {
-    var end, frag, m, matched, post, pre, stack;
-    end = node;
-    stack = [bits.exec(node.nodeValue)[2]];
-    while (true) {
-      matched = false;
-      end = end.nextSibling;
-      if (!end) break;
-      if (end.nodeType !== 8) continue;
-      m = bits.exec(end.nodeValue);
-      if (!m) continue;
-      if (m[1] === '#') {
-        stack.push(m[2]);
-        continue;
-      }
-      while (stack.length && stack[stack.length - 1] !== m[2]) {
-        stack.pop();
-      }
-      if (stack.length && stack[stack.length - 1] === m[2]) {
-        matched = true;
-        stack.pop();
-      }
-      if (stack.length === 0) break;
-    }
-    frag = document.createDocumentFragment();
-    while (node.nextSibling !== end) {
-      frag.appendChild(node.nextSibling);
-    }
-    if (matched) end.parentNode.removeChild(end);
-    pre = document.createComment("");
-    post = document.createComment("");
-    node.parentNode.insertBefore(pre, node);
-    node.parentNode.insertBefore(post, node);
-    node.parentNode.removeChild(node);
-    return [pre, post, frag];
   };
 
 }).call(this);
@@ -1485,6 +1495,8 @@
       return ps.js.addExpr(expr.replace(/#el#/g, "" + ps.jsEl).replace(/#n#/g, ps.js.toSrc(n)).replace(/#v#/g, parse(v, ps.jsDatas, this.plainGet(ps.js))));
     };
 
+    PlainCompiler.prototype.doRedo = PlainCompiler.prototype.doBase;
+
     PlainCompiler.prototype.doSimple = function(ps, n, v, expr) {
       return this.doBase(ps, n, v, expr, true);
     };
@@ -1591,6 +1603,13 @@
 
     DynamicCompiler.prototype.doSimple = function(ps, n, v, expr) {
       return this.doBase(ps, n, v, expr, true);
+    };
+
+    DynamicCompiler.prototype.doRedo = function(ps, n, v, expr, sep) {
+      var jsChange, jsUndo2;
+      jsUndo2 = ps.js.addForcedVar("" + ps.jsPre + "_undo", "undo.child()");
+      jsChange = ps.js.addForcedVar("" + ps.jsPre + "_change", "function(val) {\n	" + jsUndo2 + ".undo();\n	" + (expr.replace(/#v#/g, 'val').replace(/#el#/g, ps.jsEl)) + ";\n}");
+      return this.doBase(ps, n, v, "" + jsChange + "(#v#)", sep);
     };
 
     return DynamicCompiler;
