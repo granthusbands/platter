@@ -1571,7 +1571,7 @@
     DynamicCompiler.prototype.runner = Platter.Internal.DynamicRunner;
 
     DynamicCompiler.prototype.doBase = function(ps, n, v, expr, sep) {
-      var esc, escn, escvar, jsChange, parse;
+      var esc, escCount, escn, escvar, jsChange, last, parse;
       if (sep === true) {
         parse = Platter.EscapesStringParse;
       } else {
@@ -1580,11 +1580,13 @@
         };
       }
       esc = {};
-      jsChange = ps.js.addVar("" + ps.jsEl + "_change", "null");
+      escCount = 0;
+      last = null;
       parse(v, ps.jsDatas, function(id, t, jsData) {
-        if (t !== '.') {
-          return esc[id] = ps.js.addForcedVar("" + ps.jsEl + "_" + t, "null", [t, jsData]);
-        }
+        if (t === '.' || esc[id]) return;
+        ++escCount;
+        last = id;
+        return esc[id] = ps.js.addForcedVar("" + ps.jsEl + "_" + t, "null", [t, jsData]);
       });
       expr = expr.replace(/#el#/g, "" + ps.jsEl).replace(/#n#/g, ps.js.toSrc(n)).replace(/#v#/g, parse(v, ps.jsDatas, function(id, t, jsData) {
         if (t !== '.') {
@@ -1593,12 +1595,15 @@
           return jsData;
         }
       }));
+      jsChange = ps.js.addForcedVar("" + ps.jsEl + "_change", escCount > 1 ? "null" : "function() {\n	" + expr + ";\n}");
       for (escn in esc) {
         escvar = esc[escn];
-        ps.js.addExpr("this.runGetMulti(undo, function(val){\n	" + escvar + " = val;\n	if (" + jsChange + ") " + jsChange + "();\n}, " + escvar.v[1] + ", " + (ps.js.toSrc(escvar.v[0].split('.'))) + ")");
+        if (escCount > 1 && escn === last) {
+          ps.js.addExpr("" + jsChange + " = function() {\n	" + expr + ";\n}");
+        }
+        ps.js.addExpr("this.runGetMulti(undo, function(val){\n	" + escvar + " = val;\n	" + (escn !== last ? "if (" + jsChange + ") " : "") + jsChange + "();\n}, " + escvar.v[1] + ", " + (ps.js.toSrc(escvar.v[0].split('.'))) + ")");
       }
-      ps.js.addExpr("" + jsChange + " = function() {\n	" + expr + ";\n}");
-      return ps.js.addExpr("" + jsChange + "()");
+      if (escCount === 0) return ps.js.addExpr("" + jsChange + "()");
     };
 
     DynamicCompiler.prototype.doSimple = function(ps, n, v, expr) {

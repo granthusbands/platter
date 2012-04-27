@@ -36,35 +36,46 @@ class Platter.Internal.DynamicCompiler extends Platter.Internal.TemplateCompiler
 	runner: Platter.Internal.DynamicRunner
 
 	# Compiler: Handle simple value-assignments with escapes.
+	# TODO: Rewrite this beastly method.
 	doBase: (ps, n, v, expr, sep) ->
 		if (sep==true)
 			parse = Platter.EscapesStringParse
 		else
 			parse = (txt, jsDatas, fn) -> Platter.EscapesNoStringParse txt, sep, jsDatas, fn
 		esc = {}
-		jsChange = ps.js.addVar "#{ps.jsEl}_change", "null"
+		escCount = 0
+		last = null
 		parse v, ps.jsDatas, (id, t, jsData) ->
-			if t!='.'
-				esc[id] = ps.js.addForcedVar "#{ps.jsEl}_#{t}", "null", [t, jsData]
+			if t=='.'||esc[id] then return
+			++escCount
+			last = id
+			esc[id] = ps.js.addForcedVar "#{ps.jsEl}_#{t}", "null", [t, jsData]
 		expr = expr
 			.replace(/#el#/g, "#{ps.jsEl}")
 			.replace(/#n#/g, ps.js.toSrc n)
 			.replace(/#v#/g, 
 				parse v, ps.jsDatas, (id, t, jsData) -> if t!='.' then esc[id] else jsData
 			)
-		for escn, escvar of esc
-			ps.js.addExpr """
-				this.runGetMulti(undo, function(val){
-					#{escvar} = val;
-					if (#{jsChange}) #{jsChange}();
-				}, #{escvar.v[1]}, #{ps.js.toSrc escvar.v[0].split '.'})
-			"""
-		ps.js.addExpr """
-			#{jsChange} = function() {
+		jsChange = ps.js.addForcedVar "#{ps.jsEl}_change", if escCount>1 then "null" else """
+			function() {
 				#{expr};
 			}
 		"""
-		ps.js.addExpr "#{jsChange}()"
+		for escn, escvar of esc
+			if escCount>1 && escn==last
+				ps.js.addExpr """
+					#{jsChange} = function() {
+						#{expr};
+					}
+				"""
+			ps.js.addExpr """
+				this.runGetMulti(undo, function(val){
+					#{escvar} = val;
+					#{if escn!=last then "if (#{jsChange}) " else ""}#{jsChange}();
+				}, #{escvar.v[1]}, #{ps.js.toSrc escvar.v[0].split '.'})
+			"""
+		if escCount==0
+			ps.js.addExpr "#{jsChange}()"
 
 	doSimple: (ps, n, v, expr) ->
 		@doBase ps, n, v, expr, true
