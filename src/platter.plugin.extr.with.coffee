@@ -23,7 +23,7 @@ dynRunName = DynamicRun::addUniqueMethod 'with', (undo, datas, tmpl, par, start,
 		Platter.InsertNode par, end, tmpl.run(val, datas..., undoch, false).docfrag
 
 dynName = Dynamic::addUniqueMethod 'with', (ps, val, tmplname) ->
-	jsChange = ps.js.addForcedVar "#{ps.jsPre}_ifchange", "this.#{dynRunName}(undo, [#{ps.jsDatas.join ', '}], this.#{tmplname}, #{ps.parent.jsEl||'null'}, #{ps.jsPre}, #{ps.jsPost})"
+	jsChange = ps.js.addForcedVar "#{ps.jsPre}_withchange", "this.#{dynRunName}(undo, [#{ps.jsDatas.join ', '}], this.#{tmplname}, #{ps.parent.jsEl||'null'}, #{ps.jsPre}, #{ps.jsPost})"
 	@doBase ps, null, val, "#{jsChange}(#v#)", null
 
 Dynamic::addExtractorPlugin 'with', 40, dynName, 1

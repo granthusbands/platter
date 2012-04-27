@@ -2176,7 +2176,7 @@
 
   dynName = Dynamic.prototype.addUniqueMethod('with', function(ps, val, tmplname) {
     var jsChange;
-    jsChange = ps.js.addForcedVar("" + ps.jsPre + "_ifchange", "this." + dynRunName + "(undo, [" + (ps.jsDatas.join(', ')) + "], this." + tmplname + ", " + (ps.parent.jsEl || 'null') + ", " + ps.jsPre + ", " + ps.jsPost + ")");
+    jsChange = ps.js.addForcedVar("" + ps.jsPre + "_withchange", "this." + dynRunName + "(undo, [" + (ps.jsDatas.join(', ')) + "], this." + tmplname + ", " + (ps.parent.jsEl || 'null') + ", " + ps.jsPre + ", " + ps.jsPost + ")");
     return this.doBase(ps, null, val, "" + jsChange + "(#v#)", null);
   });
 
