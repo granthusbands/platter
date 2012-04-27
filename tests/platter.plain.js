@@ -357,8 +357,11 @@ jQuery(function(){
 	}
 
 	function runPlainDiv(undo, tmpl, data) {
-		if (typeof tmpl == 'string')
+		if (typeof tmpl == 'string') {
 			tmpl = Platter.Plain.compile(tmpl);
+			if ((tmpl.run+"").indexOf('undefined_')!=-1)
+				ok(false, "Template should not contain undefined_");
+		}
 		testdiv.appendChild(tmpl.run(data, undo).docfrag);
 		return testdiv;
 	}

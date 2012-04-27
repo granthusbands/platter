@@ -449,10 +449,10 @@
     };
 
     TemplateCompiler.prototype.compileChildren = function(ps, el, jsEl) {
-      var baseName, ch, jsCh, ps2;
+      var baseName, ch, jsCh, ps2, _ref;
       baseName = "" + jsEl;
       ch = el.firstChild;
-      jsCh = ps.js.addForcedVar(ps.jsEl + "_ch", "" + jsEl + ".firstChild");
+      jsCh = ps.js.addForcedVar("" + (((_ref = ps.jsEl || ps.jsPre) != null ? _ref.n : void 0) || 'el') + "_ch", "" + jsEl + ".firstChild");
       while (ch) {
         ps2 = ps.child();
         ps2.setEl(ch);

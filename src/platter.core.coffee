@@ -269,7 +269,7 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 	compileChildren: (ps, el, jsEl) ->
 		baseName = "#{jsEl}"
 		ch = el.firstChild
-		jsCh = ps.js.addForcedVar ps.jsEl+"_ch", "#{jsEl}.firstChild"
+		jsCh = ps.js.addForcedVar "#{(ps.jsEl||ps.jsPre)?.n||'el'}_ch", "#{jsEl}.firstChild"
 		while (ch)
 			ps2 = ps.child()
 			ps2.setEl ch
