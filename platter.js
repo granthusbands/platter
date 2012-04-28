@@ -852,6 +852,66 @@
 
 (function() {
 
+  Platter.Transformer = function(a, b, addfn, remfn, ai, bi, aj, bj) {
+    var added, ai2, bi2, diff, i, j, matched, maxdiff;
+    if (ai == null) ai = 0;
+    if (bi == null) bi = 0;
+    if (aj == null) aj = a.length;
+    if (bj == null) bj = b.length;
+    added = 0;
+    a = a.slice();
+    while (ai < aj && bi < bj && a[aj - 1] === b[bj - 1]) {
+      --aj;
+      --bj;
+    }
+    while (true) {
+      while (ai < aj && bi < bj && a[ai] === b[bi]) {
+        ++ai;
+        ++bi;
+      }
+      if (ai >= aj || bi >= bj) break;
+      maxdiff = bj - bi - 1 + aj - ai - 1;
+      matched = false;
+      for (diff = 1; diff <= maxdiff; diff += 1) {
+        for (i = 0; i <= diff; i += 1) {
+          ai2 = ai + i;
+          bi2 = bi + diff - i;
+          if (ai2 > aj || bi2 > bj || a[ai2] !== b[bi2]) continue;
+          matched = true;
+          for (j = ai; j < ai2; j += 1) {
+            remfn(added + ai);
+          }
+          for (j = bi; j < bi2; j += 1) {
+            addfn(added + ai, b[j]);
+            ++added;
+          }
+          added -= ai2 - ai;
+          ai = ai2;
+          bi = bi2;
+          break;
+        }
+        if (matched) break;
+      }
+      if (!matched) break;
+    }
+    if (ai < aj) {
+      for (i = ai; i < aj; i += 1) {
+        remfn(added + ai);
+      }
+    }
+    if (bi < bj) {
+      for (i = bi; i < bj; i += 1) {
+        addfn(added + ai, b[i]);
+        ++added;
+      }
+    }
+    return added -= aj - ai;
+  };
+
+}).call(this);
+
+(function() {
+
   Platter.Browser = {};
 
   (function() {
@@ -1748,6 +1808,108 @@
       platter_get: collprot,
       platter_set: collprot,
       platter_watchcoll: collprot
+    });
+  }
+
+}).call(this);
+
+(function() {
+  var isNat, objprot, setprot;
+
+  isNat = function(n) {
+    return !!/^[0-9]+$/.exec(n);
+  };
+
+  if (window.Batman) {
+    objprot = Batman.Object.prototype;
+    objprot.platter_hasKey = objprot.hasKey;
+    objprot.platter_watch = function(undo, n, fn) {
+      var _this = this;
+      this.observe(n, fn);
+      return undo.add(function() {
+        return _this.forget(n, fn);
+      });
+    };
+    objprot.platter_get = function(n) {
+      if (this.hasProperty(n)) {
+        return this.get(n);
+      } else {
+        return this[n];
+      }
+    };
+    objprot.platter_set = function(n, v) {
+      return this.set(n, v);
+    };
+    objprot.platter_modify = function(n, fn) {
+      if (this.hasProperty(n)) {
+        return this.set(n, fn(this.get(n)));
+      } else {
+        return this[n] = fn(this[n]);
+      }
+    };
+    objprot.platter_watchcoll = function(undo, add, remove, replaceMe) {
+      var arr, doRep, i, _ref,
+        _this = this;
+      arr = this.toArray();
+      doRep = function() {
+        var arr2;
+        arr2 = _this.toArray();
+        return Platter.Transformer(arr, arr2, function(i, o) {
+          arr.splice(i, 0, o);
+          return add(o, this, {
+            index: i
+          });
+        }, function(i) {
+          remove(arr[i], this, {
+            index: i
+          });
+          return arr.splice(i, 1);
+        });
+      };
+      for (i = 0, _ref = arr.length; i < _ref; i += 1) {
+        add(arr[i], this, {
+          index: i
+        });
+      }
+      this.event('change').addHandler(doRep);
+      return undo.add(function() {
+        return _this.event('change').removeHandler(doRep);
+      });
+    };
+    setprot = Batman.Set.prototype;
+    setprot.platter_get = function(n) {
+      if (isNat(n)) {
+        return this.toArray()[n];
+      } else if (this.hasProperty(n)) {
+        return this.get(n);
+      } else {
+        return this[n];
+      }
+    };
+    setprot.platter_watch = function(undo, n, fn) {
+      var _this = this;
+      if (isNat(n)) {
+        this.event('change').addHandler(fn);
+        return undo.add(function() {
+          return _this.event('change').removeHandler(fn);
+        });
+      } else {
+        this.observe(n, fn);
+        return undo.add(function() {
+          return _this.forget(n, fn);
+        });
+      }
+    };
+    Platter.Internal.DebugList.push({
+      platter_haskey: objprot,
+      platter_watch: objprot,
+      platter_get: objprot,
+      platter_set: objprot,
+      platter_watchcoll: objprot
+    });
+    Platter.Internal.DebugList.push({
+      platter_get: setprot,
+      platter_watch: setprot
     });
   }
 
