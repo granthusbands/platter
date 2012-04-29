@@ -9,8 +9,6 @@ if window.Batman
 	# Extend models with our specially-named methods
 	objprot = Batman.Object.prototype
 
-	objprot.platter_hasKey = objprot.hasKey
-
 	objprot.platter_watch = (undo, n, fn) ->
 		@observe n, fn
 		undo.add =>
@@ -76,7 +74,6 @@ if window.Batman
 
 
 	Platter.Internal.DebugList.push
-		platter_haskey: objprot
 		platter_watch: objprot
 		platter_get: objprot
 		platter_set: objprot

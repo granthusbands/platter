@@ -1850,7 +1850,6 @@
 
   if (window.Batman) {
     objprot = Batman.Object.prototype;
-    objprot.platter_hasKey = objprot.hasKey;
     objprot.platter_watch = function(undo, n, fn) {
       var _this = this;
       this.observe(n, fn);
@@ -1929,7 +1928,6 @@
       }
     };
     Platter.Internal.DebugList.push({
-      platter_haskey: objprot,
       platter_watch: objprot,
       platter_get: objprot,
       platter_set: objprot,
