@@ -2,7 +2,7 @@
 Platter.Internal.BigDebug();
 
 if (!Platter.Tests) Platter.Tests = {};
-Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
+Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSet){
 	// First, we rerun the plain-template tests against the dynamic compiler, since the dynamic compiler should support all of the plain results.
 	var testdiv = document.getElementById('plattertest');
 
@@ -132,35 +132,49 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 		return neg(ruleElCount(el,0));
 	}
 
+	onetwothreeinit = function() {
+		var o = newObj();
+		doSet(o, 'one', undefined);
+		doSet(o, 'two', undefined);
+		doSet(o, 'three', undefined);
+		doSet(o, 'zero', undefined);
+		doSet(o, 'yes', undefined);
+		doSet(o, 'no', undefined);
+		doSet(o, 'objs', undefined);
+		doSet(o, 'nums', undefined);
+		return o;
+	};
+
 	// A reused test sequence that eventually builds up {one:'First', two:{too:'Second'}, three:{tree:{tee:'Third'}}} in various formats. t1, t2 and t3 are the tests to enable as each entry is successfully completed.
 	function onetwothreetests(t1, t2, t3) {
 		return [
 			{
 				name: "Set one to First",
-				go: function(data){ data.platter_set('one', "First"); },
+				go: function(data){ doSet(data, 'one', "First"); },
 				tests: t1
 			},
 			{
 				name: "Set two to an object",
-				go: function(data){ data.platter_set('two', {}); },
+				go: function(data){ doSet(data, 'two', {}); },
 				tests: {}
 			},
 			{
 				name: "Set two to a model",
-				go: function(data){ data.platter_set('two', newObj())},
+				go: function(data){ doSet(data, 'two', newObj())},
 				tests: {}
 			},
 			{
 				name: "Set two to a correct object",
-				go: function(data){ data.platter_set('two', {too:'Second'})},
+				go: function(data){ doSet(data, 'two', {too:'Second'})},
 				tests: t2
 			},
 			{
 				name: "Set two to a model, then correct it",
 				go: function(data) {
 					var two = newObj();
-					data.platter_set('two', two);
-					two.platter_set('too', "Second");
+					doSet(two, 'too', undefined);
+					doSet(data, 'two', two);
+					doSet(two, 'too', "Second");
 				},
 				tests: {}
 			},
@@ -168,27 +182,27 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 				name: "Set two to a correct model",
 				go: function(data) {
 					var two = newObj();
-					two.platter_set('too', "Second");
-					data.platter_set('two', two);
+					doSet(two, 'too', "Second");
+					doSet(data, 'two', two);
 				},
 				tests: {}
 			},
 			{
 				name: "Set three to an object",
-				go: function(data){ data.platter_set('three', {}); },
+				go: function(data){ doSet(data, 'three', {}); },
 				tests: {}
 			},
 			{
 				name: "Set three to an object",
-				go: function(data){ data.platter_set('three', {tree:{}}); },
+				go: function(data){ doSet(data, 'three', {tree:{}}); },
 				tests: {}
 			},
 			{
 				name: "Set three to a model",
 				go: function(data){
 					var three = newObj();
-					data.platter_set('three', three);
-					three.platter_set('tree', {});
+					doSet(data, 'three', three);
+					doSet(three, 'tree', {});
 				},
 				tests: {}
 			},
@@ -196,22 +210,23 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 				name: "Set three to a model",
 				go: function(data){
 					var three = newObj();
-					data.platter_set('three', three);
-					three.platter_set('tree', newObj());
+					doSet(data, 'three', three);
+					doSet(three, 'tree', newObj());
 				},
 				tests: {}
 			},
 			{
 				name: "Set three to a correct object",
-				go: function(data){ data.platter_set('three', {tree:{tee:'Third'}}); },
+				go: function(data){ doSet(data, 'three', {tree:{tee:'Third'}}); },
 				tests: t3
 			},
 			{
 				name: "Set three to a model, then correct it",
 				go: function(data){
 					var three = newObj();
-					data.platter_set('three', three);
-					three.platter_set('tree', {tee:'Third'});
+					doSet(three, 'tree', undefined);
+					doSet(data, 'three', three);
+					doSet(three, 'tree', {tee:'Third'});
 				},
 				tests: {}
 			},
@@ -219,8 +234,8 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 				name: "Set three to a correct model",
 				go: function(data){
 					var three = newObj();
-					three.platter_set('tree', {tee:'Third'});
-					data.platter_set('three', three);
+					doSet(three, 'tree', {tee:'Third'});
+					doSet(data, 'three', three);
 				},
 				tests: {}
 			},
@@ -228,10 +243,12 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 				name: "Set three to a model, order 1",
 				go: function(data){
 					var three = newObj();
+					doSet(three, 'tree', undefined);
 					var tree = newObj();
-					data.platter_set('three', three);
-					three.platter_set('tree', tree);
-					tree.platter_set('tee', 'Third');
+					doSet(tree, 'tee', undefined);
+					doSet(data, 'three', three);
+					doSet(three, 'tree', tree);
+					doSet(tree, 'tee', 'Third');
 				},
 				tests: {}
 			},
@@ -239,10 +256,12 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 				name: "Set three to a model, order 2",
 				go: function(data){
 					var three = newObj();
+					doSet(three, 'tree', undefined);
 					var tree = newObj();
-					data.platter_set('three', three);
-					tree.platter_set('tee', 'Third');
-					three.platter_set('tree', tree);
+					doSet(tree, 'tee', undefined);
+					doSet(data, 'three', three);
+					doSet(tree, 'tee', 'Third');
+					doSet(three, 'tree', tree);
 				},
 				tests: {}
 			},
@@ -250,10 +269,12 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 				name: "Set three to a model, order 3",
 				go: function(data){
 					var three = newObj();
+					doSet(three, 'tree', undefined);
 					var tree = newObj();
-					three.platter_set('tree', tree);
-					data.platter_set('three', three);
-					tree.platter_set('tee', 'Third');
+					doSet(tree, 'tee', undefined);
+					doSet(three, 'tree', tree);
+					doSet(data, 'three', three);
+					doSet(tree, 'tee', 'Third');
 				},
 				tests: {}
 			},
@@ -261,10 +282,12 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 				name: "Set three to a model, order 4",
 				go: function(data){
 					var three = newObj();
+					doSet(three, 'tree', undefined);
 					var tree = newObj();
-					three.platter_set('tree', tree);
-					tree.platter_set('tee', 'Third');
-					data.platter_set('three', three);
+					doSet(tree, 'tee', undefined);
+					doSet(three, 'tree', tree);
+					doSet(tree, 'tee', 'Third');
+					doSet(data, 'three', three);
 				},
 				tests: {}
 			},
@@ -272,10 +295,12 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 				name: "Set three to a model, order 5",
 				go: function(data){
 					var three = newObj();
+					doSet(three, 'tree', undefined);
 					var tree = newObj();
-					tree.platter_set('tee', 'Third');
-					data.platter_set('three', three);
-					three.platter_set('tree', tree);
+					doSet(tree, 'tee', undefined);
+					doSet(tree, 'tee', 'Third');
+					doSet(data, 'three', three);
+					doSet(three, 'tree', tree);
 				},
 				tests: {}
 			},
@@ -283,10 +308,12 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 				name: "Set three to a model, order 6",
 				go: function(data){
 					var three = newObj();
+					doSet(three, 'tree', undefined);
 					var tree = newObj();
-					tree.platter_set('tee', 'Third');
-					three.platter_set('tree', tree);
-					data.platter_set('three', three);
+					doSet(tree, 'tee', undefined);
+					doSet(tree, 'tee', 'Third');
+					doSet(three, 'tree', tree);
+					doSet(data, 'three', three);
 				},
 				tests: {}
 			}
@@ -310,6 +337,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 				h6: ruleElText('h6', 'true', '')
 			},
 			testsstart: {},
+			init: onetwothreeinit,
 			template:
 				"<h1>{{one}}</h1>"+
 				"<h2>{{two.too}}</h2>"+
@@ -321,12 +349,12 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 				onetwothreetests({h1:1, h41:1}, {h2:1, h41:0, h42:1}, {h3:1, h42:0, h43:1}).concat([
 					{
 						name: "Set zero to 0",
-						go: function(data){ data.platter_set('zero', 0); },
+						go: function(data){ doSet(data, 'zero', 0); },
 						tests: {h5:1}
 					},
 					{
 						name: "Set yes to true",
-						go: function(data){ data.platter_set('yes', true); },
+						go: function(data){ doSet(data, 'yes', true); },
 						tests: {h6:1}
 					}
 				])
@@ -345,6 +373,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 				h53: ruleElText('h5.First.Second.Third', "E")
 			},
 			testsstart: {h1:1},
+			init: onetwothreeinit,
 			template:
 				"<h1 class='Huh'>A</h1>"+
 				"<h2 class='{{one}}'>B</h1>"+
@@ -366,6 +395,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 				h6: ruleElExists('h6 :checked')
 			},
 			testsstart: {'h1':1, 'h2':1},
+			init: onetwothreeinit,
 			template:
 				"<h1><input type='checkbox'/></h1>"+
 				"<h2><input type='checkbox' checked/></h2>"+
@@ -390,6 +420,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 				h63: ruleElValue('h6 :input', 'First SecondThird')
 			},
 			testsstart: {'h1':1, 'h2':1},
+			init: onetwothreeinit,
 			template:
 				"<h1><input type='text'/></h1>"+
 				"<h2><input type='text' value='hey' /></h2>"+
@@ -414,6 +445,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 				h63: ruleElValue('h6 :input', 'First SecondThird')
 			},
 			testsstart: {'h1':1, 'h2':1},
+			init: onetwothreeinit,
 			template:
 				"<h1><textarea></textarea></h1>"+
 				"<h2><textarea>hey</textarea></h2>"+
@@ -438,6 +470,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 				h63: ruleElExists('h6#FirstSecondThird')
 			},
 			testsstart: {'h1':1, 'h2':1},
+			init: onetwothreeinit,
 			template:
 				"<h1></h1>"+
 				"<h2 id='hey'></h2>"+
@@ -462,6 +495,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 				div: ruleElExists('div')
 			},
 			testsstart: {h1:1},
+			init: onetwothreeinit,
 			template:
 				"<h1 if='bogus'>a</h1>"+
 				"<h2 if='{{one}}'>b</h2>"+
@@ -474,17 +508,17 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 			actions: onetwothreetests({h2:1, div:1}, {h3:1}, {h4:1}).concat([
 				{
 					name: "Set zero to 0",
-					go: function(data){ data.platter_set('zero', 0); },
+					go: function(data){ doSet(data, 'zero', 0); },
 					tests: {}
 				},
 				{
 					name: "Set yes to true",
-					go: function(data){ data.platter_set('yes', true); },
+					go: function(data){ doSet(data, 'yes', true); },
 					tests: {h5:1}
 				},
 				{
 					name: "Set no to false",
-					go: function(data){ data.platter_set('no', false); },
+					go: function(data){ doSet(data, 'no', false); },
 					tests: {}
 				}
 			])
@@ -503,6 +537,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 				p: ruleElExists('p')
 			},
 			testsstart: {'h2':1, 'h3':1, 'h4':1, 'h5':1, 'h6':1, 'p':1},
+			init: onetwothreeinit,
 			template:
 				"<h1 unless='bogus'>a</h1>"+
 				"<h2 unless='{{one}}'>b</h2>"+
@@ -514,17 +549,17 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 			actions: onetwothreetests({h2:0}, {h3:0}, {h4:0}).concat([
 				{
 					name: "Set zero to 0",
-					go: function(data){ data.platter_set('zero', 0); },
+					go: function(data){ doSet(data, 'zero', 0); },
 					tests: {}
 				},
 				{
 					name: "Set yes to true",
-					go: function(data){ data.platter_set('yes', true); },
+					go: function(data){ doSet(data, 'yes', true); },
 					tests: {h5:0}
 				},
 				{
 					name: "Set no to false",
-					go: function(data){ data.platter_set('no', false); },
+					go: function(data){ doSet(data, 'no', false); },
 					tests: {}
 				}
 			])
@@ -541,6 +576,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 				h5: ruleElText('h5', 'First', '')
 			},
 			testsstart: {'h1':1},
+			init: onetwothreeinit,
 			template:
 				"<h1 with='bogus'>a</h1>"+
 				"<h2 with='{{one}}'>{{.}}</h2>"+
@@ -565,76 +601,87 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 				h2ABC: ruleElText('h2', 'ABC')
 			},
 			testsstart: {h1:1, h20:1, h30:1},
+			init: function() {
+				var o = newObj();
+				doSet(o, 'objs', undefined);
+				return o;
+			},
 			template:
 				"<h1 foreach='bogus'>a</h1>"+
 				"<h2 foreach='{{objs}}'>{{txt}}</h2>",
 			actions: [
 				{
 					name: "Set objs to noise",
-					go: function(data){ data.platter_set('objs', 'noise'); },
+					go: function(data){ doSet(data, 'objs', 'noise'); },
 					tests: {}
 				},
 				{
 					name: "Set objs to empty collection",
-					go: function(data){ data.platter_set('objs', newColl()); },
+					go: function(data){ doSet(data, 'objs', newColl()); },
 					tests: {}
 				},
 				{
 					name: "Insert empty model into objs",
 					go: function(data){
-						var coll = data.get('objs');
-						coll.add(newObj());
+						var coll = Platter.Get(data, 'objs');
+						var obj = newObj();
+						doSet(obj, 'txt', undefined);
+						collAdd(coll, obj);
 					},
 					tests: {h20:0, h21:1}
 				},
 				{
 					name: "Insert empty model into objs",
 					go: function(data){
-						var coll = data.get('objs');
-						coll.add(newObj());
+						var coll = Platter.Get(data, 'objs');
+						var obj = newObj();
+						doSet(obj, 'txt', undefined);
+						collAdd(coll, obj);
 					},
 					tests: {h21:0, h22:1}
 				},
 				{
 					name: "Insert empty model into objs",
 					go: function(data){
-						var coll = data.get('objs');
-						coll.add(newObj());
+						var coll = Platter.Get(data, 'objs');
+						var obj = newObj();
+						doSet(obj, 'txt', undefined);
+						collAdd(coll, obj);
 					},
 					tests: {h22:0, h23:1}
 				},
 				{
 					name: "Alter objs[0] to contain A",
 					go: function(data){
-						var coll = data.get('objs');
-						var el = coll.platter_get(0);
-						el.platter_set('txt', 'A');
+						var coll = Platter.Get(data, 'objs');
+						var el = Platter.Get(coll, 0);
+						doSet(el, 'txt', 'A');
 					},
 					tests: {h2A:1}
 				},
 				{
 					name: "Alter objs[2] to contain C",
 					go: function(data){
-						var coll = data.get('objs');
-						var el = coll.platter_get(2);
-						el.platter_set('txt', 'C');
+						var coll = Platter.Get(data, 'objs');
+						var el = Platter.Get(coll, 2);
+						doSet(el, 'txt', 'C');
 					},
 					tests: {h2A:0, h2AC:1}
 				},
 				{
 					name: "Alter objs[1] to contain B",
 					go: function(data){
-						var coll = data.get('objs');
-						var el = coll.platter_get(1);
-						el.platter_set('txt', 'B');
+						var coll = Platter.Get(data, 'objs');
+						var el = Platter.Get(coll, 1);
+						doSet(el, 'txt', 'B');
 					},
 					tests: {h2AC:0, h2ABC:1}
 				},
 				{
 					name: "Remove objs[1]",
 					go: function(data){
-						var coll = data.get('objs');
-						var el = coll.platter_get(1);
+						var coll = Platter.Get(data, 'objs');
+						var el = Platter.Get(coll, 1);
 						coll.remove(el);
 					},
 					tests: {h2ABC:0, h2AC:1, h23:0, h22:1}
@@ -642,9 +689,9 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 				{
 					name: "Alter objs[1] to contain BC",
 					go: function(data){
-						var coll = data.get('objs');
-						var el = coll.platter_get(1);
-						el.platter_set('txt', 'BC');
+						var coll = Platter.Get(data, 'objs');
+						var el = Platter.Get(coll, 1);
+						doSet(el, 'txt', 'BC');
 					},
 					tests: {h2AC:0, h2ABC:1}
 				},
@@ -652,22 +699,22 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 					name: "Reset the collection to A,C",
 					go: function(data){
 						var el1 = newObj();
-						el1.platter_set('txt', 'A');
+						doSet(el1, 'txt', 'A');
 						var el2 = newObj();
-						el2.platter_set('txt', 'C');
-						var coll = data.get('objs');
+						doSet(el2, 'txt', 'C');
+						var coll = Platter.Get(data, 'objs');
 						collReset(coll, [el1, el2]);
 					},
 					tests: {h2ABC:0, h2AC:1}
 				},
 				{
 					name: "Replace objs with plain object",
-					go: function(data){ data.platter_set('objs', [{txt:'A'}, {txt:'BC'}]); },
+					go: function(data){ doSet(data, 'objs', [{txt:'A'}, {txt:'BC'}]); },
 					tests: {h2AC:0, h2ABC:1}
 				},
 				{
 					name: "Replace objs with garbage",
-					go: function(data){ data.platter_set('objs', 'garbage'); },
+					go: function(data){ doSet(data, 'objs', 'garbage'); },
 					tests: {h2ABC:0, h22:0, h20:1}
 				}
 			]
@@ -692,6 +739,11 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 				h33: ruleElText('h3', '3')
 			},
 			testsstart: {h1:1, h20:1, h3empty:1},
+			init: function() {
+				var o = newObj();
+				doSet(o, 'objs', undefined);
+				return o;
+			},
 			template:
 				"<h1 foreach='bogus'>a</h1>"+
 				"<h2 if='{{objs.0}}' with='{{objs.0}}'>{{txt}}</h2>"+
@@ -702,70 +754,76 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 			actions: [
 				{
 					name: "Set objs to 0",
-					go: function(data){ data.platter_set('objs', 0); },
+					go: function(data){ doSet(data, 'objs', 0); },
 					tests: {}
 				},
 				{
 					name: "Set objs to empty collection",
-					go: function(data){ data.platter_set('objs', newColl()); },
+					go: function(data){ doSet(data, 'objs', newColl()); },
 					tests: {h3empty:0, h30:1}
 				},
 				{
 					name: "Insert empty model into objs",
 					go: function(data){
-						var coll = data.get('objs');
-						coll.add(newObj());
+						var coll = Platter.Get(data, 'objs');
+						var obj = newObj();
+						doSet(obj, 'txt', undefined);
+						collAdd(coll, obj);
 					},
 					tests: {h20:0, h21:1, h30:0, h31:1}
 				},
 				{
 					name: "Insert empty model into objs",
 					go: function(data){
-						var coll = data.get('objs');
-						coll.add(newObj());
+						var coll = Platter.Get(data, 'objs');
+						var obj = newObj();
+						doSet(obj, 'txt', undefined);
+						collAdd(coll, obj);
 					},
 					tests: {h21:0, h22:1, h31:0, h32:1}
 				},
 				{
 					name: "Insert empty model into objs",
 					go: function(data){
-						var coll = data.get('objs');
-						coll.add(newObj());
+						var coll = Platter.Get(data, 'objs');
+						var obj = newObj();
+						doSet(obj, 'txt', undefined);
+						collAdd(coll, obj);
 					},
 					tests: {h22:0, h23:1, h32:0, h33:1}
 				},
 				{
 					name: "Alter objs[0] to contain A",
 					go: function(data){
-						var coll = data.get('objs');
-						var el = coll.platter_get(0);
-						el.platter_set('txt', 'A');
+						var coll = Platter.Get(data, 'objs');
+						var el = Platter.Get(coll, 0);
+						doSet(el, 'txt', 'A');
 					},
 					tests: {h2A:1}
 				},
 				{
 					name: "Alter objs[2] to contain C",
 					go: function(data){
-						var coll = data.get('objs');
-						var el = coll.platter_get(2);
-						el.platter_set('txt', 'C');
+						var coll = Platter.Get(data, 'objs');
+						var el = Platter.Get(coll, 2);
+						doSet(el, 'txt', 'C');
 					},
 					tests: {h2A:0, h2AC:1}
 				},
 				{
 					name: "Alter objs[1] to contain B",
 					go: function(data){
-						var coll = data.get('objs');
-						var el = coll.platter_get(1);
-						el.platter_set('txt', 'B');
+						var coll = Platter.Get(data, 'objs');
+						var el = Platter.Get(coll, 1);
+						doSet(el, 'txt', 'B');
 					},
 					tests: {h2AC:0, h2ABC:1}
 				},
 				{
 					name: "Remove objs[1]",
 					go: function(data){
-						var coll = data.get('objs');
-						var el = coll.platter_get(1);
+						var coll = Platter.Get(data, 'objs');
+						var el = Platter.Get(coll, 1);
 						coll.remove(el);
 					},
 					tests: {h2ABC:0, h2AC:1, h23:0, h22:1, h33:0, h32:1}
@@ -773,9 +831,9 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 				{
 					name: "Alter objs[1] to contain BC",
 					go: function(data){
-						var coll = data.get('objs');
-						var el = coll.platter_get(1);
-						el.platter_set('txt', 'BC');
+						var coll = Platter.Get(data, 'objs');
+						var el = Platter.Get(coll, 1);
+						doSet(el, 'txt', 'BC');
 					},
 					tests: {h2AC:0, h2ABC:1}
 				},
@@ -783,22 +841,22 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 					name: "Reset the collection to A,C",
 					go: function(data){
 						var el1 = newObj();
-						el1.platter_set('txt', 'A');
+						doSet(el1, 'txt', 'A');
 						var el2 = newObj();
-						el2.platter_set('txt', 'C');
-						var coll = data.get('objs');
+						doSet(el2, 'txt', 'C');
+						var coll = Platter.Get(data, 'objs');
 						collReset(coll, [el1, el2]);
 					},
 					tests: {h2ABC:0, h2AC:1}
 				},
 				{
 					name: "Replace objs with plain object",
-					go: function(data){ data.platter_set('objs', [{txt:'A'}, {txt:'BC'}]); },
+					go: function(data){ doSet(data, 'objs', [{txt:'A'}, {txt:'BC'}]); },
 					tests: {h2AC:0, h2ABC:1}
 				},
 				{
 					name: "Replace objs with 0",
-					go: function(data){ data.platter_set('objs', 0); },
+					go: function(data){ doSet(data, 'objs', 0); },
 					tests: {h2ABC:0, h22:0, h20:1, h32:0, h3empty:1}
 				}
 			]
@@ -819,76 +877,87 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 				h2ABC: ruleElText('h2', 'ABC')
 			},
 			testsstart: {h1:1, h20:1, h30:1},
+			init: function() {
+				var o = newObj();
+				doSet(o, 'a', undefined);
+				return o;
+			},
 			template:
 				"<h1 foreach='bogus'>a</h1>"+
 				"<h2 foreach='{{a.b.objs}}'>{{txt}}</h2>",
 			actions: [
 				{
 					name: "Set objs to noise",
-					go: function(data){ data.platter_set('a', {b: {objs:'noise'}}); },
+					go: function(data){ doSet(data, 'a', {b: {objs:'noise'}}); },
 					tests: {}
 				},
 				{
 					name: "Set objs to empty collection",
-					go: function(data){ data.platter_set('a', {b: {objs:newColl()}}); },
+					go: function(data){ doSet(data, 'a', {b: {objs:newColl()}}); },
 					tests: {h5:1}
 				},
 				{
 					name: "Insert empty model into objs",
 					go: function(data){
-						var coll = data.get('a').b.objs;
-						coll.add(newObj());
+						var coll = Platter.Get(data, 'a').b.objs;
+						var obj = newObj();
+						doSet(obj, 'txt', undefined);
+						collAdd(coll, obj);
 					},
 					tests: {h20:0, h21:1}
 				},
 				{
 					name: "Insert empty model into objs",
 					go: function(data){
-						var coll = data.get('a').b.objs;
-						coll.add(newObj());
+						var coll = Platter.Get(data, 'a').b.objs;
+						var obj = newObj();
+						doSet(obj, 'txt', undefined);
+						collAdd(coll, obj);
 					},
 					tests: {h21:0, h22:1}
 				},
 				{
 					name: "Insert empty model into objs",
 					go: function(data){
-						var coll = data.get('a').b.objs;
-						coll.add(newObj());
+						var coll = Platter.Get(data, 'a').b.objs;
+						var obj = newObj();
+						doSet(obj, 'txt', undefined);
+						collAdd(coll, obj);
 					},
 					tests: {h22:0, h23:1}
 				},
 				{
 					name: "Alter objs[0] to contain A",
 					go: function(data){
-						var coll = data.get('a').b.objs;
-						var el = coll.platter_get(0);
-						el.platter_set('txt', 'A');
+						var coll = Platter.Get(data, 'a').b.objs;
+						var el = Platter.Get(coll, 0);
+						doSet(el, 'txt', 'A');
 					},
 					tests: {h2A:1}
 				},
 				{
 					name: "Alter objs[2] to contain C",
 					go: function(data){
-						var coll = data.get('a').b.objs;
-						var el = coll.platter_get(2);
-						el.platter_set('txt', 'C');
+						var coll = Platter.Get(data, 'a').b.objs;
+						var el = Platter.Get(coll, 2);
+						doSet(el, 'txt', 'C');
 					},
 					tests: {h2A:0, h2AC:1}
 				},
 				{
 					name: "Alter objs[1] to contain B",
 					go: function(data){
-						var coll = data.get('a').b.objs;
-						var el = coll.platter_get(1);
-						el.platter_set('txt', 'B');
+						var coll = Platter.Get(data, 'a').b.objs;
+						var el = Platter.Get(coll, 1);
+						doSet(el, 'txt', 'B');
 					},
 					tests: {h2AC:0, h2ABC:1}
 				},
 				{
 					name: "Remove objs[1]",
 					go: function(data){
-						var coll = data.get('a').b.objs;
-						var el = coll.platter_get(1);
+						var coll = Platter.Get(data, 'a').b.objs;
+						var el = Platter.Get(coll, 1);
 						coll.remove(el);
 					},
 					tests: {h2ABC:0, h2AC:1, h23:0, h22:1}
@@ -896,9 +965,9 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 				{
 					name: "Alter objs[1] to contain BC",
 					go: function(data){
-						var coll = data.get('a').b.objs;
-						var el = coll.platter_get(1);
-						el.platter_set('txt', 'BC');
+						var coll = Platter.Get(data, 'a').b.objs;
+						var el = Platter.Get(coll, 1);
+						doSet(el, 'txt', 'BC');
 					},
 					tests: {h2AC:0, h2ABC:1}
 				},
@@ -906,22 +975,22 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 					name: "Reset the collection to A,C",
 					go: function(data){
 						var el1 = newObj();
-						el1.platter_set('txt', 'A');
+						doSet(el1, 'txt', 'A');
 						var el2 = newObj();
-						el2.platter_set('txt', 'C');
-						var coll = data.get('a').b.objs;
+						doSet(el2, 'txt', 'C');
+						var coll = Platter.Get(data, 'a').b.objs;
 						collReset(coll, [el1, el2]);
 					},
 					tests: {h2ABC:0, h2AC:1}
 				},
 				{
 					name: "Replace objs with plain object",
-					go: function(data){ data.platter_set('a', {b: {objs:[{txt:'A'}, {txt:'BC'}]}}); },
+					go: function(data){ doSet(data, 'a', {b: {objs:[{txt:'A'}, {txt:'BC'}]}}); },
 					tests: {h2AC:0, h2ABC:1}
 				},
 				{
 					name: "Replace objs with garbage",
-					go: function(data){ data.platter_set('a', {b: {objs:'garbage'}}); },
+					go: function(data){ doSet(data, 'a', {b: {objs:'garbage'}}); },
 					tests: {h2ABC:0, h22:0, h20:1}
 				}
 			]
@@ -951,6 +1020,12 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 				option4: ruleElCount('option', 4)
 			},
 			testsstart: {option1:1, valNone:1},
+			init: function() {
+				var o = newObj();
+				doSet(o, 'magselval', undefined);
+				doSet(o, 'objs', undefined);
+				return o;
+			},
 			template:
 				"<select value='{{magselval}}'>"+
 					"<option>None</option>"+
@@ -960,106 +1035,112 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 			actions: [
 				{
 					name: "Set objs to noise",
-					go: function(data){ data.platter_set('objs', 'noise'); },
+					go: function(data){ doSet(data, 'objs', 'noise'); },
 					tests: {}
 				},
 				{
 					name: "Set objs to empty collection",
-					go: function(data){ data.platter_set('objs', newColl()); },
+					go: function(data){ doSet(data, 'objs', newColl()); },
 					tests: {}
 				},
 				{
 					name: "Insert empty model into objs",
 					go: function(data){
-						var coll = data.get('objs');
-						coll.add(newObj());
+						var coll = Platter.Get(data, 'objs');
+						var obj = newObj();
+						doSet(obj, 'txt', undefined);
+						collAdd(coll, obj);
 					},
 					tests: {option1:0, option2:1}
 				},
 				{
 					name: "Insert empty model into objs",
 					go: function(data){
-						var coll = data.get('objs');
-						coll.add(newObj());
+						var coll = Platter.Get(data, 'objs');
+						var obj = newObj();
+						doSet(obj, 'txt', undefined);
+						collAdd(coll, obj);
 					},
 					tests: {option2:0, option3:1}
 				},
 				{
 					name: "Insert empty model into objs",
 					go: function(data){
-						var coll = data.get('objs');
-						coll.add(newObj());
+						var coll = Platter.Get(data, 'objs');
+						var obj = newObj();
+						doSet(obj, 'txt', undefined);
+						collAdd(coll, obj);
 					},
 					tests: {option3:0, option4:1}
 				},
 				{
 					name: "Alter objs[0] to contain A",
 					go: function(data){
-						var coll = data.get('objs');
-						var el = coll.platter_get(0);
-						el.platter_set('txt', 'A');
+						var coll = Platter.Get(data, 'objs');
+						var el = Platter.Get(coll, 0);
+						doSet(el, 'txt', 'A');
 					},
 					tests: {selA:1}
 				},
 				{
 					name: "Alter objs[2] to contain C",
 					go: function(data){
-						var coll = data.get('objs');
-						var el = coll.platter_get(2);
-						el.platter_set('txt', 'C');
+						var coll = Platter.Get(data, 'objs');
+						var el = Platter.Get(coll, 2);
+						doSet(el, 'txt', 'C');
 					},
 					tests: {selA:0, selAC:1}
 				},
 				{
 					name: "Alter objs[1] to contain B",
 					go: function(data){
-						var coll = data.get('objs');
-						var el = coll.platter_get(1);
-						el.platter_set('txt', 'B');
+						var coll = Platter.Get(data, 'objs');
+						var el = Platter.Get(coll, 1);
+						doSet(el, 'txt', 'B');
 					},
 					tests: {selAC:0, selABC:1}
 				},
 				{
 					name: "Choose B",
 					go: function(data){
-						var coll = data.get('objs');
-						var el = coll.platter_get(1);
-						data.platter_set('magselval', el);
+						var coll = Platter.Get(data, 'objs');
+						var el = Platter.Get(coll, 1);
+						doSet(data, 'magselval', el);
 					},
 					tests: {h1:1, h1B:1, valNone:0, valB:1}
 				},
 				{
 					name: "Choose A",
 					go: function(data){
-						var coll = data.get('objs');
-						var el = coll.platter_get(0);
-						data.platter_set('magselval', el);
+						var coll = Platter.Get(data, 'objs');
+						var el = Platter.Get(coll, 0);
+						doSet(data, 'magselval', el);
 					},
 					tests: {h1B:0, h1A:1, valB:0, valA:1}
 				},
 				{
 					name: "Choose C",
 					go: function(data){
-						var coll = data.get('objs');
-						var el = coll.platter_get(2);
-						data.platter_set('magselval', el);
+						var coll = Platter.Get(data, 'objs');
+						var el = Platter.Get(coll, 2);
+						doSet(data, 'magselval', el);
 					},
 					tests: {h1A:0, h1C:1, valA:0, valC:1}
 				},
 				{
 					name: "Choose nothing",
 					go: function(data){
-						var coll = data.get('objs');
-						var el = coll.platter_get(1);
-						data.platter_set('magselval', void 0);
+						var coll = Platter.Get(data, 'objs');
+						var el = Platter.Get(coll, 1);
+						doSet(data, 'magselval', void 0);
 					},
 					tests: {h1:0, h1C:0, valC:0, valNone:1}
 				},
 				{
 					name: "Remove objs[1]",
 					go: function(data){
-						var coll = data.get('objs');
-						var el = coll.platter_get(1);
+						var coll = Platter.Get(data, 'objs');
+						var el = Platter.Get(coll, 1);
 						coll.remove(el);
 					},
 					tests: {selABC:0, selAC:1, option4:0, option3:1}
@@ -1067,9 +1148,9 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 				{
 					name: "Alter objs[1] to contain BC",
 					go: function(data){
-						var coll = data.get('objs');
-						var el = coll.platter_get(1);
-						el.platter_set('txt', 'BC');
+						var coll = Platter.Get(data, 'objs');
+						var el = Platter.Get(coll, 1);
+						doSet(el, 'txt', 'BC');
 					},
 					tests: {selAC:0, selABC:1}
 				},
@@ -1077,22 +1158,22 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 					name: "Reset the collection to A,C",
 					go: function(data){
 						var el1 = newObj();
-						el1.platter_set('txt', 'A');
+						doSet(el1, 'txt', 'A');
 						var el2 = newObj();
-						el2.platter_set('txt', 'C');
-						var coll = data.get('objs');
+						doSet(el2, 'txt', 'C');
+						var coll = Platter.Get(data, 'objs');
 						collReset(coll,[el1, el2]);
 					},
 					tests: {selABC:0, selAC:1}
 				},
 				{
 					name: "Replace objs with plain object",
-					go: function(data){ data.platter_set('objs', [{txt:'A'}, {txt:'BC'}]); },
+					go: function(data){ doSet(data, 'objs', [{txt:'A'}, {txt:'BC'}]); },
 					tests: {selAC:0, selABC:1}
 				},
 				{
 					name: "Replace objs with garbage",
-					go: function(data){ data.platter_set('objs', 'garbage'); },
+					go: function(data){ doSet(data, 'objs', 'garbage'); },
 					tests: {selABC:0, option3:0, option1:1}
 				}
 			]
@@ -1110,7 +1191,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 			ok(testdiv.innerHTML=='', 'test div is empty');
 			var undo = new Platter.Undo();
 			var totest = copyFrom(def.testsstart);
-			var model = newObj();
+			var model = def.init?def.init():newObj();
 			var tmpl = Platter.Dynamic.compile(def.template);
 			var divs = [];
 			var addDiv = function(){
@@ -1150,42 +1231,42 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset){
 		var runthis = false;
 		var runev = null;
 		function dorun(ev){runthis = this; runev = ev;};
-		o.platter_set('a', dorun);
-		o.platter_set('b', 20);
-		o.platter_set('c', 30);
-		o.platter_set('d', '');
+		doSet(o, 'a', dorun);
+		doSet(o, 'b', 20);
+		doSet(o, 'c', 30);
+		doSet(o, 'd', '');
 		var tplrun = tpl.run(data);
 		var div = tplrun.el;
 		ok(!runthis, "Event not yet run");
 		ok(!runev, "Event not yet run");
-		equal(o.get('b'), 20, "Correct initial b");
-		equal(o.get('c'), 30, "Correct initial c");
-		equal(o.get('d'), '', "Correct initial d");
+		equal(Platter.Get(o, 'b'), 20, "Correct initial b");
+		equal(Platter.Get(o, 'c'), 30, "Correct initial c");
+		equal(Platter.Get(o, 'd'), '', "Correct initial d");
 
 		$(div).trigger('foo');
 		equal(runthis, o, "Correct this for event");
 		ok(runev, "There was an event object");
 
 		$(div).trigger('up');
-		equal(o.get('b'), 21, "Increment b worked");
+		equal(Platter.Get(o, 'b'), 21, "Increment b worked");
 		$(div).trigger('up');
-		equal(o.get('b'), 22, "Increment b worked again");
+		equal(Platter.Get(o, 'b'), 22, "Increment b worked again");
 		$(div).trigger('down');
-		equal(o.get('b'), 21, "Decrement b worked");
+		equal(Platter.Get(o, 'b'), 21, "Decrement b worked");
 		$(div).trigger('down');
-		equal(o.get('b'), 20, "Decrement b worked again");
+		equal(Platter.Get(o, 'b'), 20, "Decrement b worked again");
 
 		$(div).trigger('up2');
-		equal(o.get('c'), 31, "Increment c worked");
+		equal(Platter.Get(o, 'c'), 31, "Increment c worked");
 		$(div).trigger('up2');
-		equal(o.get('c'), 32, "Increment c worked again");
+		equal(Platter.Get(o, 'c'), 32, "Increment c worked again");
 		$(div).trigger('down2');
-		equal(o.get('c'), 31, "Decrement c worked");
+		equal(Platter.Get(o, 'c'), 31, "Decrement c worked");
 		$(div).trigger('down2');
-		equal(o.get('c'), 30, "Decrement c worked again");
+		equal(Platter.Get(o, 'c'), 30, "Decrement c worked again");
 
 		$(div).trigger('put');
-		equal(o.get('d'), 'bar', "Value-grabbing worked");
+		equal(Platter.Get(o, 'd'), 'bar', "Value-grabbing worked");
 
 		tplrun.undo();
 	}

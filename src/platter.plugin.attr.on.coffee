@@ -28,18 +28,6 @@ if window.jQuery
 # TODO: Maybe support ext, Prototype and other event libraries
 
 
-doModify = Runner::addUniqueMethod 'doModify', (data, n, fn) ->
-	if (data.platter_modify)
-		data.platter_modify n, fn
-	else
-		data[n] = fn data[n]
-
-doSet = Runner::addUniqueMethod 'doSet', (data, n, v) ->
-	if data.platter_set
-		data.platter_set n, v
-	else
-		data[n] = v
-
 runEvent = Runner::addUniqueMethod 'runEvent', defaultRunEvent
 
 doEvent = Compiler::addUniqueMethod 'doEvent', (ps, realn, v) ->
@@ -71,7 +59,7 @@ doEvent = Compiler::addUniqueMethod 'doEvent', (ps, realn, v) ->
 				m = /^\s*(\.+)$/.exec t
 				jsTarget = ps.jsDatas[(m[1].length||1)-1]
 		if op=='++' || op=='--'
-			ps.js.addExpr "this.#{runEvent}(undo, #{ps.jsEl}, #{ps.js.toSrc ev}, function(ev){ #{jsThis}.#{doModify}(#{jsTarget}, #{ps.js.toSrc post}, function(v){return #{op}v})})";
+			ps.js.addExpr "this.#{runEvent}(undo, #{ps.jsEl}, #{ps.js.toSrc ev}, function(ev){ Platter.Modify(#{jsTarget}, #{ps.js.toSrc post}, function(v){return #{op}v})})";
 		else if op=='<>'
 			# TODO: Support radio buttons, select-boxes and maybe others
 			valGetter =
@@ -79,7 +67,7 @@ doEvent = Compiler::addUniqueMethod 'doEvent', (ps, realn, v) ->
 					ps.valGetter.replace("#el#", "#{ps.jsEl}")
 				else
 					ps.js.index ps.jsEl, if (ps.el.type=='checkbox') then 'checked' else 'value'
-			ps.js.addExpr "this.#{runEvent}(undo, #{ps.jsEl}, #{ps.js.toSrc ev}, function(ev){ #{jsThis}.#{doSet}(#{jsTarget}, #{ps.js.toSrc post}, #{valGetter}); })"
+			ps.js.addExpr "this.#{runEvent}(undo, #{ps.jsEl}, #{ps.js.toSrc ev}, function(ev){ Platter.Set(#{jsTarget}, #{ps.js.toSrc post}, #{valGetter}); })"
 		else
 			if (post)
 				jsFn = ps.js.addForcedVar "#{ps.jsEl}_fn", "null"

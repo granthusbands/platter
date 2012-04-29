@@ -912,6 +912,43 @@
 
 (function() {
 
+  Platter.Watch = function(undo, o, n, fn) {
+    if (!(o != null)) return;
+    if (o.platter_watch) return o.platter_watch(undo, n, fn);
+  };
+
+  Platter.Get = function(o, n) {
+    if (!(o != null)) {
+      return;
+    } else if (o.platter_get) {
+      return o.platter_get(n);
+    } else {
+      return o[n];
+    }
+  };
+
+  Platter.Set = function(o, n, v) {
+    if (!(o != null)) return;
+    if (o.platter_set) {
+      return o.platter_set(n, v);
+    } else {
+      return o[n] = v;
+    }
+  };
+
+  Platter.Modify = function(o, n, fn) {
+    if (!(o != null)) return;
+    if (o.platter_modify) {
+      return o.platter_modify(n, fn);
+    } else {
+      return Platter.Set(o, n, fn(Platter.Get(o, n)));
+    }
+  };
+
+}).call(this);
+
+(function() {
+
   Platter.Browser = {};
 
   (function() {
@@ -1594,7 +1631,7 @@
       fn2 = function() {
         var oval;
         oval = val;
-        val = _this.fetchVal(data, bit1);
+        val = Platter.Get(data, bit1);
         if (oval === val) return;
         undoch.undo();
         if (bits.length === 0) {
@@ -1603,17 +1640,8 @@
           return _this.runGetMulti(undo, fn, val, bits);
         }
       };
-      if (data && data.platter_watch) data.platter_watch(undo, bit1, fn2);
+      Platter.Watch(undo, data, bit1, fn2);
       return fn2();
-    };
-
-    DynamicRunner.prototype.fetchVal = function(data, ident) {
-      if (!data) return;
-      if (data.platter_get) {
-        return data.platter_get(ident);
-      } else {
-        return data[ident];
-      }
     };
 
     return DynamicRunner;
@@ -1916,6 +1944,115 @@
 }).call(this);
 
 (function() {
+  var collprot, isNat;
+
+  isNat = function(n) {
+    return !!/^[0-9]+$/.exec(n);
+  };
+
+  if (window.ko) {
+    Platter.WatchPreKO = Platter.Watch;
+    Platter.Watch = function(undo, o, n, fn) {
+      var sub, v;
+      v = Platter.GetPreKO(o, n);
+      if (v && ko.isSubscribable(v) && !v.platter_watchcoll) {
+        sub = v.subscribe(fn);
+        undo.add(function() {
+          return sub.dispose();
+        });
+      }
+      return Platter.WatchPreKO(undo, o, n, fn);
+    };
+    Platter.GetPreKO = Platter.Get;
+    Platter.Get = function(o, n) {
+      var v;
+      v = Platter.GetPreKO(o, n);
+      if (ko.isObservable(v) && !v.platter_watchcoll) {
+        return v();
+      } else {
+        return v;
+      }
+    };
+    Platter.SetPreKO = Platter.Set;
+    Platter.Set = function(o, n, v) {
+      var oldv;
+      oldv = Platter.GetPreKO(o, n);
+      if (ko.isObservable(oldv)) {
+        return oldv(v);
+      } else {
+        return Platter.SetPreKO(o, n, v);
+      }
+    };
+    Platter.ModifyPreKO = Platter.Modify;
+    Platter.Modify = function(o, n, fn) {
+      var oldv;
+      oldv = Platter.GetPreKO(o, n);
+      if (ko.isObservable(oldv)) {
+        return oldv(fn(oldv()));
+      } else {
+        return Platter.ModifyPreKO(o, n, fn);
+      }
+    };
+    collprot = ko.observableArray.fn;
+    collprot.platter_watch = function(undo, n, fn) {
+      var sub;
+      sub = this.subscribe(fn);
+      return undo.add(function() {
+        return sub.dispose();
+      });
+    };
+    collprot.platter_get = function(n) {
+      return this()[n];
+    };
+    collprot.platter_set = function(n, v) {
+      this()[n] = v;
+      return this.valueHasMutated();
+    };
+    collprot.platter_modify = function(n, fn) {
+      this()[n] = fn(this()[n]);
+      return this.valueHasMutated();
+    };
+    collprot.platter_watchcoll = function(undo, add, remove, replaceMe) {
+      var arr, doRep, i, sub, _ref,
+        _this = this;
+      arr = this().slice();
+      doRep = function() {
+        var arr2;
+        arr2 = _this();
+        return Platter.Transformer(arr, arr2, function(i, o) {
+          arr.splice(i, 0, o);
+          return add(o, this, {
+            index: i
+          });
+        }, function(i) {
+          remove(arr[i], this, {
+            index: i
+          });
+          return arr.splice(i, 1);
+        });
+      };
+      for (i = 0, _ref = arr.length; i < _ref; i += 1) {
+        add(arr[i], this, {
+          index: i
+        });
+      }
+      sub = this.subscribe(doRep);
+      return undo.add(function() {
+        return sub.dispose();
+      });
+    };
+    Platter.Internal.DebugList.push({
+      platter_haskey: collprot,
+      platter_watch: collprot,
+      platter_get: collprot,
+      platter_set: collprot,
+      platter_watchcoll: collprot
+    });
+  }
+
+}).call(this);
+
+(function() {
 
   Platter.Internal.TemplateCompiler.prototype.addAttrAssigner('checked', 0, "#el#.defaultChecked = #el#.checked = !!(#v#)");
 
@@ -1928,7 +2065,7 @@
 }).call(this);
 
 (function() {
-  var Compiler, Runner, defaultRunEvent, doEvent, doModify, doSet, isEventAttr, runDOMEvent, runEvent, runJQueryEvent,
+  var Compiler, Runner, defaultRunEvent, doEvent, isEventAttr, runDOMEvent, runEvent, runJQueryEvent,
     __hasProp = Object.prototype.hasOwnProperty;
 
   Runner = Platter.Internal.TemplateRunner;
@@ -1956,22 +2093,6 @@
   defaultRunEvent = runDOMEvent;
 
   if (window.jQuery) defaultRunEvent = runJQueryEvent;
-
-  doModify = Runner.prototype.addUniqueMethod('doModify', function(data, n, fn) {
-    if (data.platter_modify) {
-      return data.platter_modify(n, fn);
-    } else {
-      return data[n] = fn(data[n]);
-    }
-  });
-
-  doSet = Runner.prototype.addUniqueMethod('doSet', function(data, n, v) {
-    if (data.platter_set) {
-      return data.platter_set(n, v);
-    } else {
-      return data[n] = v;
-    }
-  });
 
   runEvent = Runner.prototype.addUniqueMethod('runEvent', defaultRunEvent);
 
@@ -2007,10 +2128,10 @@
         }
       }
       if (op === '++' || op === '--') {
-        return ps.js.addExpr("this." + runEvent + "(undo, " + ps.jsEl + ", " + (ps.js.toSrc(ev)) + ", function(ev){ " + jsThis + "." + doModify + "(" + jsTarget + ", " + (ps.js.toSrc(post)) + ", function(v){return " + op + "v})})");
+        return ps.js.addExpr("this." + runEvent + "(undo, " + ps.jsEl + ", " + (ps.js.toSrc(ev)) + ", function(ev){ Platter.Modify(" + jsTarget + ", " + (ps.js.toSrc(post)) + ", function(v){return " + op + "v})})");
       } else if (op === '<>') {
         valGetter = ps.valGetter ? ps.valGetter.replace("#el#", "" + ps.jsEl) : ps.js.index(ps.jsEl, ps.el.type === 'checkbox' ? 'checked' : 'value');
-        return ps.js.addExpr("this." + runEvent + "(undo, " + ps.jsEl + ", " + (ps.js.toSrc(ev)) + ", function(ev){ " + jsThis + "." + doSet + "(" + jsTarget + ", " + (ps.js.toSrc(post)) + ", " + valGetter + "); })");
+        return ps.js.addExpr("this." + runEvent + "(undo, " + ps.jsEl + ", " + (ps.js.toSrc(ev)) + ", function(ev){ Platter.Set(" + jsTarget + ", " + (ps.js.toSrc(post)) + ", " + valGetter + "); })");
       } else {
         if (post) {
           jsFn = ps.js.addForcedVar("" + ps.jsEl + "_fn", "null");

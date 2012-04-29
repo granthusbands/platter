@@ -9,7 +9,7 @@ class Platter.Internal.DynamicRunner extends Platter.Internal.TemplateRunner
 		undoch = undo.child()
 		fn2 = =>
 			oval = val
-			val = @fetchVal data, bit1
+			val = Platter.Get data, bit1
 			if oval==val
 				return 
 			undoch.undo()
@@ -17,19 +17,8 @@ class Platter.Internal.DynamicRunner extends Platter.Internal.TemplateRunner
 				fn(val)
 			else
 				@runGetMulti undo, fn, val, bits
-		if data && data.platter_watch
-			data.platter_watch undo, bit1, fn2
+		Platter.Watch undo, data, bit1, fn2
 		fn2()
-
-	# Runtime: When people say {{blah}}, they might mean data.get(blah) or data[blah]
-	# TODO: Maybe they mean data[blah]()?
-	fetchVal: (data, ident) ->
-		if !data
-			return undefined
-		if data.platter_get
-			data.platter_get ident
-		else
-			data[ident]
 
 
 class Platter.Internal.DynamicCompiler extends Platter.Internal.TemplateCompiler
