@@ -1,8 +1,8 @@
 jQuery(function(){
 	Platter.Tests.Dynamic(
-		'Batman',
-		function(){ return new Batman.Object(); },
-		function(){ return new Batman.Set(); },
+		'Ember',
+		function(){ return Ember.Object.create(); },
+		function(){ return Ember.Set.create(); },
 		function(coll, arr){
 			coll.clear();
 			for (var i=0; i<arr.length; ++i)

@@ -2051,6 +2051,118 @@
 }).call(this);
 
 (function() {
+  var collprot, collprots, isNat, modprot, unique, _i, _len;
+
+  isNat = function(n) {
+    return !!/^[0-9]+$/.exec(n);
+  };
+
+  unique = {};
+
+  if (window.Ember) {
+    modprot = Ember.Object.prototype;
+    modprot.platter_watch = function(undo, n, fn) {
+      var _this = this;
+      this.addObserver(n, fn);
+      return undo.add(function() {
+        return _this.removeObserver(n, fn);
+      });
+    };
+    modprot.platter_get = function(n) {
+      return this.getWithDefault(n, this[n]);
+    };
+    modprot.platter_set = function(n, v) {
+      return this.set(n, v);
+    };
+    modprot.platter_modify = function(n, fn) {
+      var v;
+      v = this.getWithDefault(n, unique);
+      if (v !== unique) {
+        return this.set(n, fn(v));
+      } else {
+        return this[n] = fn(this[n]);
+      }
+    };
+    Platter.Internal.DebugList.push({
+      platter_watch: modprot,
+      platter_get: modprot,
+      platter_set: modprot,
+      platter_modify: modprot
+    });
+    collprots = [Ember.Enumerable.mixins[0].properties, Ember.ArrayProxy.prototype, Ember.Set.prototype];
+    for (_i = 0, _len = collprots.length; _i < _len; _i++) {
+      collprot = collprots[_i];
+      collprot.platter_watchcoll = function(undo, add, remove, replaceMe) {
+        var arr, doRep, obs,
+          _this = this;
+        arr = [];
+        doRep = function() {
+          var arr2;
+          arr2 = _this.toArray();
+          return Platter.Transformer(arr, arr2, function(i, o) {
+            arr.splice(i, 0, o);
+            return add(o, this, {
+              index: i
+            });
+          }, function(i) {
+            remove(arr[i], this, {
+              index: i
+            });
+            return arr.splice(i, 1);
+          });
+        };
+        doRep();
+        obs = {
+          enumerableWillChange: function() {},
+          enumerableDidChange: doRep
+        };
+        this.addEnumerableObserver(obs);
+        return undo.add(function() {
+          return _this.removeEnumerableObserver(obs);
+        });
+      };
+      collprot.platter_watch = function(undo, n, fn) {
+        var obs,
+          _this = this;
+        obs = {
+          enumerableWillChange: function() {},
+          enumerableDidChange: fn
+        };
+        this.addEnumerableObserver(obs);
+        return undo.add(function() {
+          return _this.removeEnumerableObserver(obs);
+        });
+      };
+      collprot.platter_get = function(n) {
+        return this.toArray()[n];
+      };
+      collprot.platter_set = function(n, v) {
+        var _results;
+        if (n === 'length' && isNat(v)) {
+          while (this.length > n && this.length > 0) {
+            this.pop();
+          }
+          _results = [];
+          while (this.length < n) {
+            _results.push(this.push(void 0));
+          }
+          return _results;
+        } else {
+          return this[n] = v;
+        }
+      };
+      Platter.Internal.DebugList.push({
+        platter_watch: collprot,
+        platter_get: collprot,
+        platter_set: collprot,
+        platter_watchcoll: collprot
+      });
+    }
+  }
+
+}).call(this);
+
+(function() {
 
   Platter.Internal.TemplateCompiler.prototype.addAttrAssigner('checked', 0, "#el#.defaultChecked = #el#.checked = !!(#v#)");
 

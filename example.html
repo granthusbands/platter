@@ -17,6 +17,7 @@
 		<script type="text/javascript" src="http://documentcloud.github.com/backbone/backbone-min.js"></script>
 		<script type="text/javascript" src="https://raw.github.com/Shopify/batman/master/lib/batman.js"></script>
 		<script type="text/javascript" src="http://cloud.github.com/downloads/SteveSanderson/knockout/knockout-2.0.0.js"></script>
+		<script type="text/javascript" src="http://cloud.github.com/downloads/emberjs/ember.js/ember-0.9.7.1.min.js"></script>
 		
 		<script type="text/javascript" src="platter.js"></script>
 
@@ -165,6 +166,52 @@
 				button.onclick = function(){ undo.undo(); };
 				document.body.appendChild(button);
 			}
+
+			function goEmber(){
+				var template = Platter.Dynamic.compile(document.getElementById('ggt').text);
+				var data = Ember.Object.create();
+				data.set('title', Math.random()>0.5?"This is the title":null);
+				data.blah = Ember.Set.create();
+				for (var i=0;Math.random()*5>i;++i) {
+					var row = Ember.Object.create();
+					row.set('class', {t:'row'+i});
+					row.set('name', 'Name '+Math.random());
+					row.click=function(){alert(2);};
+					data.blah.add(row);
+				}
+				
+				var mungedata = function(){
+					data.set('title', Math.random()>0.5?"This is the title":null);
+					if (Math.random()*5>data.blah.length) {
+						var row = Ember.Object.create();
+						// Ember can't seem to add rows in the middle...
+						row.set('class', {t:'row'+data.blah.length});
+						row.set('name', 'Name '+Math.random());
+						row.click=function(){alert(2);};
+						data.blah.add(row);
+					}
+					else {
+						// Ember can't seem to access an entry by index...
+						var ent = data.blah.toArray()[Math.floor(Math.random()*data.blah.length)];
+						if (Math.random()>0.5)
+							data.blah.remove(ent);
+						else
+							ent.set('name', 'Name '+Math.random());
+					}
+				};
+				var timer = setInterval(mungedata, 1000);
+				var button = document.createElement('button');
+				var undo = new Platter.Undo
+				var els = template.run(data, undo).docfrag;
+				undo.add(function(){
+					document.body.removeChild(button);
+					clearInterval(timer);
+				});
+				document.body.appendChild(els);
+				button.innerHTML = "Undo";
+				button.onclick = function(){ undo.undo(); };
+				document.body.appendChild(button);
+			}
 		</script>
 	</head>
 	<body>
@@ -172,5 +219,6 @@
 		<button onclick="goBackbone()">Backbone</button>
 		<button onclick="goBatman()">Batman</button>
 		<button onclick="goKnockout()">Knockout</button>
+		<button onclick="goEmber()">Ember</button>
 	</body>
 </html>

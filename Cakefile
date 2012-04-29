@@ -22,6 +22,7 @@ files = [
     'src/platter.dynamic.backbone.coffee'
     'src/platter.dynamic.batman.coffee'
     'src/platter.dynamic.knockout.coffee'
+    'src/platter.dynamic.ember.coffee'
     'src/platter.plugin.attr.checked.coffee'
     'src/platter.plugin.attr.class.coffee'
     'src/platter.plugin.attr.on.coffee'
