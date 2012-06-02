@@ -1282,4 +1282,19 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 		var o = newObj();
 		commoneventbit(tpl, {z:o}, o);
 	});
+
+	test("Subscriptions for collections", function(){
+		var tpl = Platter.Dynamic.compile('<div>{{#foreach .}}a{{/foreach}}</div>');
+		var c = newColl();
+		collReset(c, [{}, {}]);
+		var sub1 = Platter.Internal.SubsCount;
+		var df = tpl.run(c).docfrag;
+		equal($(df.firstChild).text(), "aa", "Two elements work");
+		var sub2 = Platter.Internal.SubsCount;
+		notEqual(sub2, sub1, "Sub-count changed on template-run");
+		collReset(c, [{}, {}]);
+		equal($(df.firstChild).text(), "aa", "Two elements reset work");
+		var sub3 = Platter.Internal.SubsCount;
+		equal(sub3, sub2, "Sub-count unchanged on reset");
+	});
 }

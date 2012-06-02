@@ -29,7 +29,7 @@ runForEach = DynamicRun::addUniqueMethod 'foreach', (undo, tmpl, datas, par, sta
 			@removeBetween start, end, par
 		else
 			hasRun = true
-		@[runForEachInner] undo, coll, tmpl, datas, par, start, end, ret
+		@[runForEachInner] undoch, coll, tmpl, datas, par, start, end, ret
 
 runForEachInner = DynamicRun::addUniqueMethod 'foreach_inner', (undo, coll, tmpl, datas, par, start, end, replaceMe) ->
 	pres = [start]

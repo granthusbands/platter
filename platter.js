@@ -2417,7 +2417,7 @@
       } else {
         hasRun = true;
       }
-      return _this[runForEachInner](undo, coll, tmpl, datas, par, start, end, ret);
+      return _this[runForEachInner](undoch, coll, tmpl, datas, par, start, end, ret);
     };
   });
 
