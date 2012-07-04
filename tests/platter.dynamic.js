@@ -403,7 +403,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				"<h4><input type='checkbox' checked='{{two.too}}'/></h4>"+
 				"<h5><input type='checkbox' checked='{{three.tree.tee}}'/></h5>"+
 				"<h6><input type='checkbox' checked='{{one}}{{two.too}}{{three.tree.tee}}'/></h6>",
-			actions: onetwothreetests({h3:1, h6:1}, {h4:1}, {h5:1})
+			actions: onetwothreetests({h3:1}, {h4:1}, {h5:1, h6:1})
 		},
 
 

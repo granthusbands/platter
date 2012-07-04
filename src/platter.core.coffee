@@ -352,12 +352,12 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 			reg: new RegExp(regTxt, "i")
 			pri: pri
 
-	addAttrAssigner: (n, pri, str) ->
+	addAttrAssigner: (n, pri, str, sep) ->
 		fn = (comp, ps) ->
 			v = ps.getAttr n
 			if Platter.HasEscape v
 				ps.setAttr n, (ps, n) ->
-					comp.doSimple ps, n, v, str
+					comp.doBase ps, n, v, str, sep
 			false
 		@addAttrPlugin n, pri, fn
 

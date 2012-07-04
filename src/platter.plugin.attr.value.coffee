@@ -1,6 +1,6 @@
 # Given value="{{<>blah}}" or checked="{{<>blah}}", generates value="{{blah}}"/checked="{{blah}}" and oninput="{{<>blah}}"
 
-Platter.Internal.TemplateCompiler::addAttrAssigner 'value', 0, "#el#.value = #v#"
+Platter.Internal.TemplateCompiler::addAttrAssigner 'value', 0, "#el#.value = #v#", true
 
 Platter.Internal.TemplateCompiler::addAttrPlugin 'value|checked', 200, (comp, ps) ->
 	for n in ['value', 'checked']

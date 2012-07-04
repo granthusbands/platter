@@ -1764,7 +1764,6 @@
         }
         undoch.undo();
         if (bits.length === 0) {
-          debugger;
           return fn(val);
         } else {
           return _this.runGetMulti(undo, fn, val, bits);
@@ -2302,7 +2301,7 @@
 
 (function() {
 
-  Platter.Internal.TemplateCompiler.prototype.addAttrAssigner('checked', 0, "#el#.defaultChecked = #el#.checked = !!(#v#)", void 0);
+  Platter.Internal.TemplateCompiler.prototype.addAttrAssigner('checked', 0, "#el#.defaultChecked = #el#.checked = !!(#v#)", '&&');
 
 }).call(this);
 
@@ -2325,18 +2324,14 @@
   };
 
   runDOMEvent = function(undo, el, ev, fn) {
-    el.addEventListener(ev, function(ev) {
-      debugger;      return fn(ev);
-    });
+    el.addEventListener(ev, fn);
     return undo.add(function() {
       return el.removeEventListener(ev, fn);
     });
   };
 
   runJQueryEvent = function(undo, el, ev, fn) {
-    jQuery(el).on(ev, function(ev) {
-      debugger;      return fn(ev);
-    });
+    jQuery(el).on(ev, fn);
     return undo.add(function() {
       return jQuery(el).off(ev, fn);
     });
