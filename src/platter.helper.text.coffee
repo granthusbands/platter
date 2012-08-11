@@ -34,9 +34,9 @@ Platter.Str = (o) ->
 	if o? then ''+o else ''
 
 # Given some text like "a{{b}}c{{d}}", call tfn('a'), efn('b'), tfn('c'), efn('d') and put the non-null results into an array, returning that.
-escapesHandle = (txt, tfn, efn) ->
+Platter.EscapesHandle = (txt, tfn, efn) ->
 	# I would put this outside, but JS regexps alter propeties of the regexp object and so aren't reentrant.
-	escape = /\{\{(.*?)\}\}/g;
+	escape = /\{\{(.*?)\}\}/g
 	m = undefined
 	last = 0
 	ret = []
@@ -52,16 +52,9 @@ escapesHandle = (txt, tfn, efn) ->
 		if v? then ret.push v
 	ret
 
-# Turns an escapey string into "a"+Platter.Str(...)+"c"+Platter.Str(...), where ... comes from fn('b') and fn('d')
-# Intended to be used in string contexts, of course, where it's appropriate to turn everything into strings.
-Platter.EscapesString = (txt, fn) ->
-	ret = escapesHandle txt, Platter.Internal.ToSrc, (bit) ->
-		"Platter.Str(#{fn(bit)})"
-	ret.join '+'
-
 # Turns an escapey string into whatever fn returns, joined with join. Between escapes, only whitespace is allowed.
 Platter.EscapesNoString = (txt, join, fn) ->
-	ret = escapesHandle(
+	ret = Platter.EscapesHandle(
 		txt
 		(txt) ->
 			if (/\S/.exec(txt)) then throw new Error(txt+" not allowed here")
@@ -70,9 +63,6 @@ Platter.EscapesNoString = (txt, join, fn) ->
 	if ret.length>1 && !join
 		throw new Error("Only one escape allowed here")
 	ret.join join
-
-Platter.EscapesStringParse = (txt, jsDatas, fn) ->
-	Platter.EscapesString txt, jsParser(jsDatas, fn)
 
 Platter.EscapesNoStringParse = (txt, join, jsDatas, fn) ->
 	Platter.EscapesNoString txt, join, jsParser(jsDatas, fn)
@@ -87,7 +77,7 @@ chooseData = (txt, jsDatas) ->
 
 jsParser = (jsDatas, fn) ->
 	(v) ->
-		op = Platter.Internal.JSLikeParse v, (ex) ->
+		op = Platter.Internal.ParseJS v, (ex) ->
 			[jsData, ex2] = chooseData ex, jsDatas
 			""+fn(ex, ex2, jsData)
-		Platter.Internal.JSLikeUnparse op
+		Platter.Internal.UnparseJS op

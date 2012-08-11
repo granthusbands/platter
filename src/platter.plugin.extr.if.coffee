@@ -5,14 +5,14 @@
 Plain = Platter.Internal.PlainCompiler
 
 plainName = Plain::addUniqueMethod 'if', (ps, val, tmplname) ->
-	val = Platter.EscapesNoStringParse val, "&&", ps.jsDatas, @plainGet(ps.js)
-	ps.js.addExpr "if (#{val}) Platter.InsertNode(#{ps.parent.jsEl||'null'}, #{ps.jsPost}, this.#{tmplname}.run(#{ps.jsDatas.join ', '}, undo, false).docfrag)"
+	ps.js.forceVar ps.jsPost
+	@doBase ps, null, val, "if (#v#) Platter.InsertNode(#{ps.parent.jsEl||'null'}, #{ps.jsPost}, this.#{tmplname}.run(#{ps.jsDatas.join ', '}, undo, false).docfrag)", "&&"
 
 Plain::addExtractorPlugin 'if', 60, plainName, 0
 
 plainName = Plain::addUniqueMethod 'unless', (ps, val, tmplname) ->
-	val = Platter.EscapesNoStringParse val, "&&", ps.jsDatas, @plainGet(ps.js)
-	ps.js.addExpr "if (!(#{val})) Platter.InsertNode(#{ps.parent.jsEl||'null'}, #{ps.jsPost}, this.#{tmplname}.run(#{ps.jsDatas.join ', '}, undo, false).docfrag)"
+	ps.js.forceVar ps.jsPost
+	@doBase ps, null, val, "if (!(#v#)) Platter.InsertNode(#{ps.parent.jsEl||'null'}, #{ps.jsPost}, this.#{tmplname}.run(#{ps.jsDatas.join ', '}, undo, false).docfrag)", "&&"
 
 Plain::addExtractorPlugin 'unless', 60, plainName, 0
 

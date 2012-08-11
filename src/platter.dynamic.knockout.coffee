@@ -22,6 +22,16 @@ if window.ko
 		else
 			v
 
+	Platter.GetRPreKO = Platter.GetR
+	Platter.GetR = (undo, o, n) ->
+		v = Platter.GetRPreKO undo, o, n
+		if ko.isObservable(v) && !v.platter_watchcoll
+			sub = v.subscribe undo.repeat
+			undo.add -> sub.dispose()
+			v()
+		else
+			v
+
 	Platter.SetPreKO = Platter.Set
 	Platter.Set = (o, n, v) ->
 		oldv = Platter.GetPreKO o, n

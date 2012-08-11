@@ -360,6 +360,69 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				])
 		},
 
+		{
+			name:"Scopes",
+			tests: {
+				h1: ruleElText('h1', '1'),
+				h2: ruleElText('h2', '1'),
+				h31: ruleElText('h3', '1'),
+				h37: ruleElText('h3', '7'),
+				h4: ruleElText('h4', '2'),
+				h52: ruleElText('h5', '2'),
+				h58: ruleElText('h5', '8'),
+				h6: ruleElText('h6', '2'),
+				p2: ruleElText('p', '2'),
+				p8: ruleElText('p', '8')
+			},
+			testsstart: {h1:1, h2:1, h31:1, h4:1, h52:1, h6:1, p2:1},
+			init: function() {
+				var o = newObj();
+				doSet(o, 'a', 1);
+				o.aa = 1;
+				doSet(o, 'b', function(){return this.aa});
+				doSet(o, 'c', function(){return this.aa+6});
+				doSet(o, 'N', 'b');
+				var o2 = newObj();
+				doSet(o2, 'a', 2);
+				o2.aa = 2;
+				doSet(o2, 'b', function(){return this.aa});
+				doSet(o2, 'c', function(){return this.aa+6});
+				doSet(o2, 'N', 'b');
+				doSet(o, 'inner', o2);
+				o.o2 = o2;
+				return o;
+			},
+			template:
+				"<h1>{{a}}</h1>"+
+				"<h2>{{b()}}</h2>"+
+				"<h3>{{.[N]()}}</h3>"+
+				"<h4>{{inner.b()}}</h4>"+
+				"<h5>{{inner[N]()}}</h5>"+
+				"<h6 with='{{inner}}'>{{b()}}</h6>"+
+				"<p with='{{inner}}'>{{.[N]()}}",
+			actions: [
+				{
+					name: "Set N to c",
+					go: function(data){ doSet(data, 'N', 'c'); },
+					tests: {h31:0, h37:1, h52:0, h58:1}
+				},
+				{
+					name: "Set inner.N to c",
+					go: function(data){ doSet(data.o2, 'N', 'c'); },
+					tests: {p2:0, p8:1}
+				},
+				{
+					name: "Set N to b",
+					go: function(data){ doSet(data, 'N', 'b'); },
+					tests: {h31:1, h37:0, h52:1, h58:0}
+				},
+				{
+					name: "Set inner.N to b",
+					go: function(data){ doSet(data.o2, 'N', 'b'); },
+					tests: {p2:1, p8:0}
+				}
+			]
+		},
 
 		{
 			name:"Attribute: class",

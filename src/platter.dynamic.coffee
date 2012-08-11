@@ -1,70 +1,62 @@
 # The code in this file is probably useful for all dynamically-updating interfaces
 
-never_equal_to_anything = {}
+printer = Platter.Internal.JSPrinter()
+printer['dataGet'] = (op, ctx) ->
+	data = ctx.datas[(op.dots||1)-1]
+	if (op.ident)
+		"Platter.GetR(undo, #{data}, #{Platter.Internal.ToSrc(op.ident)})"
+	else
+		data
+printer['.'] = (op, ctx) ->
+	"Platter.GetR(undo, #{@go(op.left, ctx)}, #{Platter.Internal.ToSrc(op.ident)})"
+printer['['] = (op, ctx) ->
+	"Platter.GetR(undo, #{@go(op.left, ctx)}, #{@go(op.inner, ctx)})"
+printer['a()'] = (op, ctx) ->
+	lop = op.left
+	if lop.txt=='get' && lop.dots
+		t = ctx.js.addVar 't'
+		fn = "Platter.GetR(undo, #{t}=#{@go({txt: 'get', dots: lop.dots, ident: ''}, ctx)}, #{@go({txt: 'val', val: lop.ident}, ctx)})"
+	else if lop.txt=='.'
+		t = ctx.js.addVar 't'
+		fn = "Platter.GetR(undo, #{t}=#{@go(lop.left, ctx)}, #{@go({txt: 'val', val: lop.ident}, ctx)})"
+	else if lop.txt=='['
+		t = ctx.js.addVar 't'
+		fn = "Platter.GetR(undo, #{t}=#{@go(lop.left, ctx)}, #{@go(lop.inner, ctx)})"
+	else
+		t = ctx.datas[0]
+		fn = "(#{@go(lop, ctx)})"
+	if op.inner
+		"#{fn}.call(#{t}, #{@go(op.inner, ctx)})"
+	else
+		"#{fn}.call(#{t})"
+printer['a(b)'] = printer['a()']
 
 class Platter.Internal.DynamicRunner extends Platter.Internal.TemplateRunner
-	# Runtime: Fetches data.bit1.bit2.bit3..., calls fn with the result. Calls it again when the result changes.
-	runGetMulti: (undo, fn, data, [bit1, bits...]) ->
-		val = never_equal_to_anything
-		undoch = undo.child()
-		fn2 = =>
-			oval = val
-			val = Platter.Get data, bit1
-			if oval==val
-				return 
-			undoch.undo()
-			if bits.length==0
-				fn(val)
-			else
-				@runGetMulti undo, fn, val, bits
-		Platter.Watch undo, data, bit1, fn2
-		fn2()
 
 
 class Platter.Internal.DynamicCompiler extends Platter.Internal.TemplateCompiler
 	runner: Platter.Internal.DynamicRunner
 
 	# Compiler: Handle simple value-assignments with escapes.
-	# TODO: Rewrite this beastly method.
 	doBase: (ps, n, v, expr, sep) ->
-		if (sep==true)
-			parse = Platter.EscapesStringParse
+		if sep==true
+			op = Platter.Internal.ParseString v
 		else
-			parse = (txt, jsDatas, fn) -> Platter.EscapesNoStringParse txt, sep, jsDatas, fn
-		esc = {}
-		escCount = 0
-		last = null
-		parse v, ps.jsDatas, (id, t, jsData) ->
-			if t=='.'||esc[id] then return
-			++escCount
-			last = id
-			esc[id] = ps.js.addForcedVar "#{ps.jsEl||ps.jsPre}_#{t}", "null", [t, jsData]
+			op = Platter.Internal.ParseNonString v, sep
+
+		ctx = datas: ps.jsDatas, js:ps.js.child()
+		ctx.js.existingVar 'undo'
+
 		expr = expr
 			.replace(/#el#/g, "#{ps.jsEl}")
 			.replace(/#n#/g, ps.js.toSrc n)
-			.replace(/#v#/g, 
-				parse v, ps.jsDatas, (id, t, jsData) -> if t!='.' then esc[id] else jsData
-			)
-		jsChange = ps.js.addForcedVar "#{ps.jsEl||ps.jsPre}_change", if escCount>1 then "null" else """
-			function() {
-				#{expr};
-			}
+			.replace(/#v#/g, printer.go(op, ctx))
+
+		ps.js.addExpr """
+			undo.repeater(function(undo){
+				#{expr}
+			})
 		"""
-		for escn, escvar of esc
-			if escCount>1 && escn==last
-				ps.js.addExpr """
-					#{jsChange} = function() {
-						#{expr};
-					}
-				"""
-			ps.js.addExpr """
-				this.runGetMulti(undo, function(val){
-					#{escvar} = val;
-					#{if escn!=last then "if (#{jsChange}) " else ""}#{jsChange}();
-				}, #{escvar.v[1]}, #{ps.js.toSrc escvar.v[0].split '.'})
-			"""
-		if escCount==0
-			ps.js.addExpr "#{jsChange}()"
 
 	doSimple: (ps, n, v, expr) ->
 		@doBase ps, n, v, expr, true

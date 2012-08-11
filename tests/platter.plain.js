@@ -57,6 +57,24 @@ jQuery(function(){
 			textIs("<h1>{{one+two.too}}</h1>", data, "FirstSecond", "String addition");
 		});
 
+		test("Scope/access", function(){
+			var data = {
+				a: 1, 
+				b: function(){return this.a},
+				c: {
+					a: 2,
+					b: function(){return this.a}
+				},
+				B: 'b'
+			};
+			textIs("<h1>{{a}}</h1>", data, "1", "Precursor");
+			textIs("<h1>{{b()}}</h1>", data, "1", "Scope for plain identifiers");
+			textIs("<h1>{{.[B]()}}</h1>", data, "1", "Scope for indexing expression");
+			textIs("<h1>{{c.b()}}</h1>", data, "2", "Scope for nested identifier");
+			textIs("<h1>{{c[B]()}}</h1>", data, "2", "Scope for nested expression");
+			textIs("<h1 with='{{c}}'>{{b()}}</h1>", data, "2", "Scope for inner data");
+		});
+
 		// TODO: Test tokens inside comments
 
 		/* TODO: These tests will only work in an XML document, probably.

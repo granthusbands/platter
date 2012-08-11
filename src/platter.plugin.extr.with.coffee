@@ -5,8 +5,8 @@
 Plain = Platter.Internal.PlainCompiler
 
 plainName = Plain::addUniqueMethod 'with', (ps, val, tmplname) ->
-	val = Platter.EscapesNoStringParse val, null, ps.jsDatas, @plainGet(ps.js)
-	ps.js.addExpr "Platter.InsertNode(#{ps.parent.jsEl||'null'}, #{ps.jsPost}, this.#{tmplname}.run(#{val}, #{ps.jsDatas.join ', '}, undo, false).docfrag)"
+	ps.js.forceVar ps.jsPost
+	@doBase ps, null, val, "Platter.InsertNode(#{ps.parent.jsEl||'null'}, #{ps.jsPost}, this.#{tmplname}.run(#v#, #{ps.jsDatas.join ', '}, undo, false).docfrag)", null
 
 Plain::addExtractorPlugin 'with', 40, plainName, 1
 

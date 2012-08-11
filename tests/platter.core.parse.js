@@ -1,6 +1,9 @@
 jQuery(function(){
 	module("Parse");
 
+	var visit = Platter.Internal.JSPrinter();
+	visit.get = function(op){ return "#"+op.ident+"#"; };
+
 	function trim(s) {
 		s = s.replace(/^\s+/g, "");
 		s = s.replace(/\s+$/g, "");
@@ -30,7 +33,7 @@ jQuery(function(){
 		return o;
 	}
 	function parseSimple(txt) {
-		return Platter.Internal.JSLikeParse(txt, function(txt){return("#"+txt+"#");});
+		return Platter.Internal.ParseJS(txt);
 	}
 	function parseMatch(txt, patt) {
 		var parsed = parseSimple(txt);
@@ -42,7 +45,7 @@ jQuery(function(){
 	}
 	function roundTrip(txt1, txt2) {
 		var parsed = parseSimple(txt1);
-		var unparsed = Platter.Internal.JSLikeUnparse(parsed);
+		var unparsed = visit.go(parsed);
 		equal(unparsed, txt2, txt1);
 	}
 	function expectKaboom(txt, err) {
@@ -86,6 +89,10 @@ jQuery(function(){
 		roundTrip("a()", "#a#()");
 		roundTrip("a(b)", "#a#(#b#)");
 		roundTrip("a(b,c)", "#a#(#b#, #c#)");
+		roundTrip("a(b,c,d)", "#a#(#b#, #c#, #d#)");
+		roundTrip("a['b']", "#a#.b");
+		roundTrip("a.b", "#a#.b");
+		roundTrip("a['b c']", "#a#['b c']")
 	});
 	test("Bad ops", function(){
 		expectKaboom("--a", "-- operator not supported");
@@ -104,7 +111,10 @@ jQuery(function(){
 	});
 	test("Binop Precedence", function(){
 		module("Parser");
-		parseMatch("a", "#a#");
+		aish = {txt:'get', ident:'a'};
+		bish = {txt:'get', ident:'b'};
+		cish = {txt:'get', ident:'c'};
+		parseMatch("a", aish);
 
 		binops = ['*', '/', '%', null, '+', '-', null, '<<', '>>', '>>>', null, '<', '<=', '>', '>=', ' in ', ' instanceof ', null, '==', '!=', '===', '!==', null, '&', null, '^', null, '|', null, '&&', null, '||', null, ','];
 		preops = ['new ', null, '!', '~', '-', '+', 'typeof ', 'void '];
@@ -115,7 +125,7 @@ jQuery(function(){
 			}
 			var trimi = trim(binops[i]);
 			var spacei = space(trimi);
-			parseMatch("a"+binops[i]+"b", {left:"#a#", txt:trimi, right:"#b#"});
+			parseMatch("a"+binops[i]+"b", {left:aish, txt:trimi, right:bish});
 			roundTrip("a"+binops[i]+"b", "#a#"+spacei+"#b#");
 			for (var j=0, jpri=0; j<binops.length; ++j) {
 				if (!binops[j]) {
@@ -125,12 +135,12 @@ jQuery(function(){
 				var trimj = trim(binops[j]);
 				var spacej = space(trimj);
 
-				var leftop = {left:"#a#", txt:trimi, right:"#b#"};
-				var leftfirst = {left:leftop, txt:trimj, right:"#c#"};
-				var leftbracket = {left:{txt:'(', inner:leftop}, txt:trimj, right:"#c#"};
-				var rightop = {left:"#b#", txt:trimj, right:"#c#"};
-				var rightfirst = {left:"#a#", txt:trimi, right:rightop};
-				var rightbracket = {left:"#a#", txt:trimi, right:{txt:'(', inner:rightop}};
+				var leftop = {left:aish, txt:trimi, right:bish};
+				var leftfirst = {left:leftop, txt:trimj, right:cish};
+				var leftbracket = {left:{txt:'(', inner:leftop}, txt:trimj, right:cish};
+				var rightop = {left:bish, txt:trimj, right:cish};
+				var rightfirst = {left:aish, txt:trimi, right:rightop};
+				var rightbracket = {left:aish, txt:trimi, right:{txt:'(', inner:rightop}};
 				if (jpri>=ipri)
 					parseMatch("a"+binops[i]+"b"+binops[j]+"c", leftfirst);
 				else

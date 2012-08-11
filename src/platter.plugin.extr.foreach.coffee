@@ -3,14 +3,14 @@
 Plain = Platter.Internal.PlainCompiler
 
 plainName = Plain::addUniqueMethod 'foreach', (ps, val, tmplname) ->
-	val = Platter.EscapesNoStringParse val, null, ps.jsDatas, @plainGet(ps.js)
-	jsFor = ps.js.addVar "#{ps.jsPre}_for", val
+	jsFor = ps.js.addVar "#{ps.jsPre}_for"
 	ps.js.forceVar ps.jsPost
-	ps.js.addExpr """
+	@doBase ps, null, val, """
+		#{jsFor} = #v#;
 		if (#{jsFor})
-			for (var i=0;i<#{jsFor}.length; ++i)
+			for (var i=0; i<#{jsFor}.length; ++i)
 				Platter.InsertNode(#{ps.parent.jsEl||'null'}, #{ps.jsPost}, this.#{tmplname}.run(#{jsFor}[i], #{ps.jsDatas.join ','}, undo, false).docfrag)
-	"""
+	""", null
 
 Plain::addExtractorPlugin 'foreach', 100, plainName, 1
 

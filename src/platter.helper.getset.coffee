@@ -10,7 +10,16 @@ Platter.Get = (o, n) ->
 	if !o?
 		undefined
 	else if o.platter_get
-		o.platter_get(n)
+		o.platter_get n
+	else
+		o[n]
+
+Platter.GetR = (undo, o, n) ->
+	if !o?
+		undefined
+	else if o.platter_get
+		o.platter_watch undo, n, undo.repeat
+		o.platter_get n
 	else
 		o[n]
 

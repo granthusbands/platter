@@ -27,13 +27,21 @@ Platter.Internal.ToSrc = toSrc = (o) ->
 		return "[#{(toSrc(a) for a in o).join ','}]"
 	throw "Kaboom!"
 
+Platter.Internal.Index = index = (arr, entry) ->
+	if (!/^[a-z$_][a-z0-9$_]*$/i.exec(entry)||jskeywords[entry])
+		return "#{arr}[#{toSrc(entry)}]"
+	else
+		return "#{arr}.#{entry}"
+
 exprvar = /#(\w+)#/g
 jskeywords = {'break':1, 'else':1, 'new':1, 'var':1, 'case':1, 'finally':1, 'return':1, 'void':1, 'catch':1, 'for':1, 'switch':1, 'while':1, 'continue':1, 'function':1, 'this':1, 'with':1, 'default':1, 'if':1, 'throw':1, 'delete':1, 'in':1, 'try':1, 'do':1, 'instanceof':1, 'typeof':1, 'abstract':1, 'enum':1, 'int':1, 'short':1, 'boolean':1, 'export':1, 'interface':1, 'static':1, 'byte':1, 'extends':1, 'long':1, 'super':1, 'char':1, 'final':1, 'native':1, 'synchronized':1, 'class':1, 'float':1, 'package':1, 'throws':1, 'const':1, 'goto':1, 'private':1, 'transient':1, 'debugger':1, 'implements':1, 'protected':1, 'volatile':1, 'double':1, 'import':1, 'public':1, 'null':1, 'true':1, 'false':1}
 
 class Platter.Internal.CodeGen
-	constructor: () ->
+	constructor: (@parent) ->
 		@_code = []
 		@_vars = {}
+
+	child: -> new Platter.Internal.CodeGen @
 
 	# Since the codegen doesn't understand functions (it really should), we use existingVar for parameters.
 	existingVar: (name) ->
@@ -111,20 +119,20 @@ class Platter.Internal.CodeGen
 		s
 
 	_uniqName: (name) ->
-		if @_vars[name]
+		if @_varExists(name)
 			c = (@_vars[name]._lastNum||1)+1
-			++c while @_vars[name+c];
-			@_vars[name]._lastNum = c
+			++c while @_varExists(name+c);
+			if @_vars[name]
+				@_vars[name]._lastNum = c
 			name = name + c
 		name
 
+	_varExists: (name) ->
+		@_vars[name] || @parent?._varExists(name)
+
 	toSrc: toSrc
 
-	index: (arr, entry) ->
-		if (!/^[a-z$_][a-z0-9$_]*$/.exec(entry)||jskeywords[entry])
-			return "#{arr}[#{@toSrc(entry)}]"
-		else
-			return "#{arr}.#{entry}"
+	index: index
 
 	replaceExpr: (from, to) ->
 		for op in @_code
