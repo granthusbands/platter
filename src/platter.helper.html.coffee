@@ -18,10 +18,10 @@ Platter.Helper.HtmlToFrag = (html) ->
 	firsttag = /<(\w+)/.exec(html)[1].toLowerCase()
 	wrap = nodeWraps[firsttag]||nodeWraps['#other']
 	el = document.createElement "div"
-	el.innerHTML = wrap[1]+html+wrap[2];
+	el.innerHTML = "a"+wrap[1]+html+wrap[2];
 	depth = wrap[0]
 	while depth--
-		el = el.firstChild
+		el = el.lastChild
 	frag = document.createDocumentFragment()
 	while el.firstChild
 		frag.appendChild el.firstChild
