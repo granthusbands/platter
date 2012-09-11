@@ -31,7 +31,9 @@ if window.jQuery
 runEvent = Runner::addUniqueMethod 'runEvent', defaultRunEvent
 
 doEvent = Compiler::addUniqueMethod 'doEvent', (ps, realn, v) ->
-	ev = realn.substr(2)
+	m = /^on(after)?(.*)$/.exec(realn)
+	isAfter = m[1]
+	ev = m[2]
 	Platter.EscapesNoString v, "", (t) =>
 		orig = t
 		# TODO: Perhaps generalise this to arbitrary JS expressions. We'd need a parse-tree walker, which might be a bit code-heavy.
@@ -59,7 +61,7 @@ doEvent = Compiler::addUniqueMethod 'doEvent', (ps, realn, v) ->
 				m = /^\s*(\.+)$/.exec t
 				jsTarget = ps.jsDatas[(m[1].length||1)-1]
 		if op=='++' || op=='--'
-			ps.js.addExpr "this.#{runEvent}(undo, #{ps.jsEl}, #{ps.js.toSrc ev}, function(ev){ Platter.Modify(#{jsTarget}, #{ps.js.toSrc post}, function(v){return #{op}v})})";
+			handler = "Platter.Modify(#{jsTarget}, #{ps.js.toSrc post}, function(v){return #{op}v})"
 		else if op=='<>'
 			# TODO: Support radio buttons, select-boxes and maybe others
 			valGetter =
@@ -67,14 +69,20 @@ doEvent = Compiler::addUniqueMethod 'doEvent', (ps, realn, v) ->
 					ps.valGetter.replace("#el#", "#{ps.jsEl}")
 				else
 					ps.js.index ps.jsEl, if (ps.el.type=='checkbox') then 'checked' else 'value'
-			ps.js.addExpr "this.#{runEvent}(undo, #{ps.jsEl}, #{ps.js.toSrc ev}, function(ev){ Platter.Set(#{jsTarget}, #{ps.js.toSrc post}, #{valGetter}); })"
+			handler = "Platter.Set(#{jsTarget}, #{ps.js.toSrc post}, #{valGetter})"
 		else
 			if (post)
 				jsFn = ps.js.addForcedVar "#{ps.jsEl}_fn", "null"
 				@doBase ps, 'text', "{{#{t}}}", "#{jsFn} = #v#", null
 			else
 				jsFn = jsTarget
-			ps.js.addExpr "this.#{runEvent}(undo, #{ps.jsEl}, #{ps.js.toSrc ev}, function(ev){ #{jsFn}.call(#{jsTarget}, ev, #{ps.js.toSrc ev}, #{ps.jsEl}); })"
+			handler = "#{jsFn}.call(#{jsTarget}, ev, #{ps.js.toSrc ev}, #{ps.jsEl})"
+
+		if isAfter
+			ps.js.addExpr "this.#{runEvent}(undo, #{ps.jsEl}, #{ps.js.toSrc ev}, function(ev) {setTimeout(function(){ #{handler} }, 1)})"
+		else
+			ps.js.addExpr "this.#{runEvent}(undo, #{ps.jsEl}, #{ps.js.toSrc ev}, function(ev){ #{handler} })"
+
 
 Compiler::addAttrPlugin 'on.*', 0, (comp, ps) ->
 	for own realn, {n, realn, v} of ps.attrs()

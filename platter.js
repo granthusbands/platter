@@ -1056,7 +1056,7 @@
   Platter.Browser = {};
 
   (function() {
-    var att, div, div2, _i, _len, _ref;
+    var att, div, div2, txt, _i, _len, _ref;
     div = document.createElement('div');
     div.innerHTML = "<div> <span>a</span></div>";
     if (div.firstChild.firstChild === div.firstChild.lastChild) {
@@ -1079,7 +1079,20 @@
     div2 = div2.cloneNode(true);
     div2.setAttribute('id', 'b');
     if (div2.getAttributeNode('id') && div2.getAttributeNode('id').nodeValue !== 'b') {
-      return Platter.Browser.AttributeIterationBreaksClone = true;
+      Platter.Browser.AttributeIterationBreaksClone = true;
+    }
+    txt = document.createElement('input');
+    if (!("oninput" in txt)) {
+      txt.setAttribute("oninput", "return;");
+      if (typeof txt.oninput !== "function") {
+        Platter.Browser.LacksInputEvent = true;
+      }
+    }
+    if ("onpropertychange" in txt) {
+      Platter.Browser.SupportsPropertyChangeEvent = true;
+    }
+    if (navigator.userAgent.indexOf('MSIE 9') !== -1) {
+      return Platter.Browser.NoInputEventForDeletion = true;
     }
   })();
 
@@ -2548,11 +2561,13 @@
   runEvent = Runner.prototype.addUniqueMethod('runEvent', defaultRunEvent);
 
   doEvent = Compiler.prototype.addUniqueMethod('doEvent', function(ps, realn, v) {
-    var ev,
+    var ev, isAfter, m,
       _this = this;
-    ev = realn.substr(2);
+    m = /^on(after)?(.*)$/.exec(realn);
+    isAfter = m[1];
+    ev = m[2];
     return Platter.EscapesNoString(v, "", function(t) {
-      var jsFn, jsTarget, jsThis, m, op, orig, post, valGetter;
+      var handler, jsFn, jsTarget, jsThis, op, orig, post, valGetter;
       orig = t;
       m = /^(<>|\+\+|--)?(.*?)(\+\+|--)?$/.exec(t);
       if (!m || m[1] && m[3] && m[1] !== m[3]) {
@@ -2579,10 +2594,10 @@
         }
       }
       if (op === '++' || op === '--') {
-        return ps.js.addExpr("this." + runEvent + "(undo, " + ps.jsEl + ", " + (ps.js.toSrc(ev)) + ", function(ev){ Platter.Modify(" + jsTarget + ", " + (ps.js.toSrc(post)) + ", function(v){return " + op + "v})})");
+        handler = "Platter.Modify(" + jsTarget + ", " + (ps.js.toSrc(post)) + ", function(v){return " + op + "v})";
       } else if (op === '<>') {
         valGetter = ps.valGetter ? ps.valGetter.replace("#el#", "" + ps.jsEl) : ps.js.index(ps.jsEl, ps.el.type === 'checkbox' ? 'checked' : 'value');
-        return ps.js.addExpr("this." + runEvent + "(undo, " + ps.jsEl + ", " + (ps.js.toSrc(ev)) + ", function(ev){ Platter.Set(" + jsTarget + ", " + (ps.js.toSrc(post)) + ", " + valGetter + "); })");
+        handler = "Platter.Set(" + jsTarget + ", " + (ps.js.toSrc(post)) + ", " + valGetter + ")";
       } else {
         if (post) {
           jsFn = ps.js.addForcedVar("" + ps.jsEl + "_fn", "null");
@@ -2590,7 +2605,12 @@
         } else {
           jsFn = jsTarget;
         }
-        return ps.js.addExpr("this." + runEvent + "(undo, " + ps.jsEl + ", " + (ps.js.toSrc(ev)) + ", function(ev){ " + jsFn + ".call(" + jsTarget + ", ev, " + (ps.js.toSrc(ev)) + ", " + ps.jsEl + "); })");
+        handler = "" + jsFn + ".call(" + jsTarget + ", ev, " + (ps.js.toSrc(ev)) + ", " + ps.jsEl + ")";
+      }
+      if (isAfter) {
+        return ps.js.addExpr("this." + runEvent + "(undo, " + ps.jsEl + ", " + (ps.js.toSrc(ev)) + ", function(ev) {setTimeout(function(){ " + handler + " }, 1)})");
+      } else {
+        return ps.js.addExpr("this." + runEvent + "(undo, " + ps.jsEl + ", " + (ps.js.toSrc(ev)) + ", function(ev){ " + handler + " })");
       }
     });
   });
@@ -2616,7 +2636,34 @@
 
 (function() {
 
-  Platter.Internal.TemplateCompiler.prototype.addAttrAssigner('value', 0, "#el#.value = #v#", true);
+  if (Platter.Browser.LacksInputEvent || Platter.Browser.NoInputEventForDeletion) {
+    Platter.Internal.TemplateCompiler.prototype.addAttrPlugin('oninput', 199, function(comp, ps) {
+      var ev, v, _i, _len, _ref;
+      v = ps.getAttr('oninput');
+      if (Platter.Browser.LacksInputEvent) {
+        ps.remAttr('oninput');
+      }
+      if (Platter.Browser.SupportsPropertyChangeEvent) {
+        ps.setAttr('onpropertychange', v);
+      }
+      _ref = ['onafterdrop', 'onafterkeydown', 'onafterpaste', 'onaftercut', 'onaftertextInput', 'onafterdragend'];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        ev = _ref[_i];
+        ps.setAttr(ev, v + (ps.getAttr(ev) || ''));
+      }
+      return false;
+    });
+  }
+
+}).call(this);
+
+(function() {
+
+  if (Platter.Browser.SupportsPropertyChangeEvent) {
+    Platter.Internal.TemplateCompiler.prototype.addAttrAssigner('value', 0, "if (#el#.value !== #v#) #el#.value = #v#", true);
+  } else {
+    Platter.Internal.TemplateCompiler.prototype.addAttrAssigner('value', 0, "#el#.value = #v#", true);
+  }
 
   Platter.Internal.TemplateCompiler.prototype.addAttrPlugin('value|checked', 200, function(comp, ps) {
     var ev, m, n, type, v, _i, _len, _ref;

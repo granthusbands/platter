@@ -26,6 +26,7 @@ files = [
     'src/platter.plugin.attr.checked.coffee'
     'src/platter.plugin.attr.class.coffee'
     'src/platter.plugin.attr.on.coffee'
+    'src/platter.plugin.attr.oninput.coffee'
     'src/platter.plugin.attr.value.coffee'
     'src/platter.plugin.el.select.coffee'
     'src/platter.plugin.el.textarea.coffee'
