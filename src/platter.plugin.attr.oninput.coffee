@@ -1,7 +1,7 @@
 # Not all browsers support oninput, and jQuery doesn't polyfill it, so we'll replace it with lots of other things
 # TODO: Maybe make the onpropertychange more selective - it should only react to things that change the control's value
 
-if Platter.Browser.LacksInputEvent || Platter.Browser.NoInputEventForDeletion
+if Platter.Browser.LacksInputEvent || Platter.Browser.BrokenInputEvent
 	Platter.Internal.TemplateCompiler::addAttrPlugin 'oninput', 199, (comp, ps) ->
 		v = ps.getAttr 'oninput'
 		# TODO: Should this only affect attributes with escapes?

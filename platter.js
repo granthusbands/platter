@@ -1056,7 +1056,7 @@
   Platter.Browser = {};
 
   (function() {
-    var att, div, div2, txt, _i, _len, _ref;
+    var att, div, div2, isIE9, isOpera, isSafari, opera, txt, ua, ver, _i, _len, _ref;
     div = document.createElement('div');
     div.innerHTML = "<div> <span>a</span></div>";
     if (div.firstChild.firstChild === div.firstChild.lastChild) {
@@ -1091,8 +1091,16 @@
     if ("onpropertychange" in txt) {
       Platter.Browser.SupportsPropertyChangeEvent = true;
     }
-    if (navigator.userAgent.indexOf('MSIE 9') !== -1) {
-      return Platter.Browser.NoInputEventForDeletion = true;
+    if (!Platter.Browser.LacksInputEvent) {
+      ua = navigator.userAgent;
+      ver = /Version\/(\d+)/.exec(ua);
+      opera = /Opera (\d+)/.exec(ua);
+      isOpera = /Opera\//.exec(ua);
+      isSafari = /Safari\//.exec(ua);
+      isIE9 = /MSIE 9/.exec(ua);
+      if (isIE9 || isSafari && ver && ver[1] < 5 || isOpera && ver && ver[1] < 11 || opera && opera[1] < 11) {
+        return Platter.Browser.BrokenInputEvent = true;
+      }
     }
   })();
 
@@ -2636,7 +2644,7 @@
 
 (function() {
 
-  if (Platter.Browser.LacksInputEvent || Platter.Browser.NoInputEventForDeletion) {
+  if (Platter.Browser.LacksInputEvent || Platter.Browser.BrokenInputEvent) {
     Platter.Internal.TemplateCompiler.prototype.addAttrPlugin('oninput', 199, function(comp, ps) {
       var ev, v, _i, _len, _ref;
       v = ps.getAttr('oninput');
