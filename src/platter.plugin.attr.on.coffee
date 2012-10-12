@@ -1,4 +1,10 @@
-
+# Support for things like this:
+#   onclick="{{myfn}}" - runs myfn when the user clicks
+#   onafterkeydown="{{myfn}}" - runs myfn after the processing of the keydown event is finished (so you can see the resultant value)
+#   onclick="{{++mynum}}" - increments mynum when the user clicks
+#   onclick="{{<>myval}}" - Sets myval to be the field-value, when the user clicks
+# There are no particular limits on event names. onafter should work for all events.
+# (oninput has special handling in a separate plugin)
 
 Runner = Platter.Internal.TemplateRunner
 Compiler = Platter.Internal.TemplateCompiler
@@ -7,12 +13,6 @@ Compiler = Platter.Internal.TemplateCompiler
 isEventAttr = (name) -> !!/^on/.exec(name)
 
 runDOMEvent = (undo, el, ev, fn) ->
-	# TODO: Polyfill oninput:
-	# IE <=8: attachEvent onpropertychange, ev.propertyName=='value'
-	# IE9: Misses some input (as does onpropertychange).
-	#      Probably should also handle onkeydown+delay.
-	# Safari: Fires ontextinput for textarea, instead.
-	# All else: Use oninput
 	el.addEventListener ev, fn
 	undo.add ->
 		el.removeEventListener ev, fn
