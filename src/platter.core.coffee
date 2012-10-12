@@ -137,7 +137,13 @@ class Platter.Internal.CompilerState
 		@el.parentNode.insertBefore post, @el
 		@el.parentNode.removeChild @el
 		@pulled pre, post, frag
-
+	pullMark: ->
+		pre = document.createComment ""
+		post = document.createComment ""
+		@el.parentNode.insertBefore pre, @el
+		@el.parentNode.insertBefore post, @el
+		@el.parentNode.removeChild @el
+		@pulled pre, post, @el
 
 
 class Platter.Internal.TemplateRunner extends Platter.Internal.PluginBase
@@ -351,6 +357,16 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 			regTxt: regTxt,
 			reg: new RegExp(regTxt, "i")
 			pri: pri
+
+	addMarkPlugin: (n, fn) ->
+		regTxt = "^(?:#{n})$" #TODO: Escaping
+		fn2 = (comp, ps, val, n) ->
+			comp[fn] ps, "{{#{val}}}", ps.pullMark()
+		@addPluginBase 'block',
+			fn: fn2
+			regTxt: regTxt
+			reg: new RegExp(regTxt)
+			pri: 0
 
 	addAttrAssigner: (n, pri, str, sep) ->
 		fn = (comp, ps) ->

@@ -1334,6 +1334,20 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 		tplrun.undo();
 	}
 
+	test("Mark: element", function(){
+		var tpl = Platter.Dynamic.compile("<h1>bo{{#element boo}}b</h1>");
+		var o = newObj();
+		doSet(o, 'boo', undefined);
+		var df = tpl.run(o).docfrag;
+		equal($(df.firstChild).text(), "bob", "Initially bob");
+		doSet(o, 'boo', document.createTextNode("bom"));
+		equal($(df.firstChild).text(), "bobomb", "Then bobomb");
+		var span = document.createElement("span");
+		span.innerHTML="inner";
+		doSet(o, 'boo', span);
+		equal($(df.firstChild).html().toLowerCase(), "bo<span>inner</span>b", "Then boinnerb");
+	});
+
 	test("Event-handlers", function(){
 		var tpl = Platter.Dynamic.compile('<input type="text" value="bar" onfoo="{{a}}" onup="{{++b}}" ondown="{{--b}}" onup2="{{++c}}" ondown2="{{--c}}" onput="{{<>d}}"/>');
 		var o = newObj();

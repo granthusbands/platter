@@ -13,7 +13,9 @@ jQuery(function(){
 		'no': false,
 		'yes': true,
 		zero: 0,
-		empty: []
+		empty: [],
+		textnode: document.createTextNode("iamtext"),
+		divnode: document.createElement("div")
 	};
 	data.obj0 = data.objs[0];
 	data.obj1 = data.objs[1];
@@ -219,6 +221,11 @@ jQuery(function(){
 			// TODO: Maybe decide on and test what if="{{a}} {{b}}" should do
 			hasJQ("{{#if one<\"ZZZ\"}}<h1>Hey</h1>{{/if}}", data, "h1", "Comparison true");
 			hasNotJQ("{{#if one>=\"ZZZ\"}}<h1>Hey</h1>{{/if}}", data, "h1", "Comparison false");
+		});
+		test("Mark: element", function(){
+			textIs("<h1>{{#element nothingatall}}</h1>", data, "", "Correctly inserts nothing");
+			textIs("<h1>{{#element textnode}}</h1>", data, "iamtext", "Correctly inserts text node");
+			hasJQ("<h1>{{#element divnode}}</h1>", data, "h1 div", "Correctly inserts div");
 		});
 		test("Block: foreach", function(){
 			hasNotJQ("{{#foreach bo}}<h1>Hey</h1>{{/foreach}}", data, "h1", "Missing value");

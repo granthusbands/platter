@@ -296,6 +296,16 @@
       return this.pulled(pre, post, frag);
     };
 
+    CompilerState.prototype.pullMark = function() {
+      var post, pre;
+      pre = document.createComment("");
+      post = document.createComment("");
+      this.el.parentNode.insertBefore(pre, this.el);
+      this.el.parentNode.insertBefore(post, this.el);
+      this.el.parentNode.removeChild(this.el);
+      return this.pulled(pre, post, this.el);
+    };
+
     return CompilerState;
 
   })();
@@ -604,6 +614,20 @@
         regTxt: regTxt,
         reg: new RegExp(regTxt, "i"),
         pri: pri
+      });
+    };
+
+    TemplateCompiler.prototype.addMarkPlugin = function(n, fn) {
+      var fn2, regTxt;
+      regTxt = "^(?:" + n + ")$";
+      fn2 = function(comp, ps, val, n) {
+        return comp[fn](ps, "{{" + val + "}}", ps.pullMark());
+      };
+      return this.addPluginBase('block', {
+        fn: fn2,
+        regTxt: regTxt,
+        reg: new RegExp(regTxt),
+        pri: 0
       });
     };
 
@@ -2985,5 +3009,49 @@
   });
 
   Dynamic.prototype.addExtractorPlugin('with', 40, dynName, 1);
+
+}).call(this);
+
+(function() {
+  var Dynamic, DynamicRun, Plain, dynName, dynRunName, plainName;
+
+  Plain = Platter.Internal.PlainCompiler;
+
+  plainName = Plain.prototype.addUniqueMethod('element', function(ps, val) {
+    ps.js.forceVar(ps.jsPost);
+    return this.doBase(ps, null, val, "if (#v#) Platter.InsertNode(" + (ps.parent.jsEl || 'null') + ", " + ps.jsPost + ", #v#)", null);
+  });
+
+  Plain.prototype.addMarkPlugin('element', plainName);
+
+  Dynamic = Platter.Internal.DynamicCompiler;
+
+  DynamicRun = Platter.Internal.DynamicRunner;
+
+  dynRunName = DynamicRun.prototype.addUniqueMethod('element', function(undo, datas, par, start, end) {
+    var lastel,
+      _this = this;
+    lastel = null;
+    return function(el) {
+      if (el === lastel) {
+        return;
+      }
+      if (lastel) {
+        _this.removeBetween(start, end, par);
+      }
+      lastel = el;
+      if (el) {
+        return Platter.InsertNode(par, end, el);
+      }
+    };
+  });
+
+  dynName = Dynamic.prototype.addUniqueMethod('element', function(ps, val) {
+    var jsChange;
+    jsChange = ps.js.addForcedVar("" + ps.jsPre + "_elchange", "this." + dynRunName + "(undo, [" + (ps.jsDatas.join(', ')) + "], " + (ps.parent.jsEl || 'null') + ", " + ps.jsPre + ", " + ps.jsPost + ")");
+    return this.doBase(ps, null, val, "" + jsChange + "(#v#)", null);
+  });
+
+  Dynamic.prototype.addMarkPlugin('element', dynName);
 
 }).call(this);

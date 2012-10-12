@@ -33,6 +33,7 @@ files = [
     'src/platter.plugin.extr.foreach.coffee'
     'src/platter.plugin.extr.if.coffee'
     'src/platter.plugin.extr.with.coffee'
+    'src/platter.plugin.mark.element.coffee'
 ]
 
 
