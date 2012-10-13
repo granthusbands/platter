@@ -331,19 +331,17 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 			ps.optimiseAwayLastPost()
 
 	addExtractorPlugin: (n, pri, extradepth, fn) ->
-		fn2 = (comp, ps, val, frag, n) ->
-			ps.extraScopes = extradepth
-			tmplname = (ps.js.addVar "#{ps.jsPre}_tmpl").n
-			ps.ret[tmplname] = comp.compileFrag frag, ps.jsDatas.length+extradepth, ps
-			fn.call comp, ps, val, tmplname, n
-			true
-		@addBlockExtractorPlugin n, fn2
-		@addAttrExtractorPlugin n, pri, fn2
+		@addBlockExtractorPlugin n, extradepth, fn
+		@addAttrExtractorPlugin n, pri, extradepth, fn
 
-	addBlockExtractorPlugin: (n, fn) ->
+	addBlockExtractorPlugin: (n, extradepth, fn) ->
 		regTxt = "^(?:#{n})$" #TODO: Escaping
 		fn2 = (comp, ps, val, n) ->
-			fn comp, ps, "{{#{val}}}", ps.pullBlock(), n
+			ps.extraScopes = extradepth
+			frag = ps.pullBlock()
+			tmplname = (ps.js.addVar "#{ps.jsPre}_tmpl").n
+			ps.ret[tmplname] = comp.compileFrag frag, ps.jsDatas.length+extradepth, ps
+			fn.call comp, ps, "{{#{val}}}", tmplname, n
 		@addPluginBase 'block',
 			fn: fn2
 			regTxt: regTxt
@@ -387,12 +385,16 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 			reg: new RegExp(regTxt, "mg")
 			pri: pri
 
-	addAttrExtractorPlugin: (n, pri, fn) ->
+	addAttrExtractorPlugin: (n, pri, extradepth, fn) ->
 		@addAttrPlugin n, pri, (comp, ps, ignore, ignore2, ns) ->
 			ret = false
 			for n in ns
 				val = ps.getAttr(n)
 				if !Platter.HasEscape(val) then continue
 				ps.el.removeAttribute ps.getAttrName(n)
-				ret ||= fn comp, ps, val, ps.pullEl(), n
+				ps.extraScopes = extradepth
+				frag = ps.pullEl()
+				tmplname = (ps.js.addVar "#{ps.jsPre}_tmpl").n
+				ps.ret[tmplname] = comp.compileFrag frag, ps.jsDatas.length+extradepth, ps
+				ret ||= fn.call(comp, ps, val, tmplname, n)
 			ret

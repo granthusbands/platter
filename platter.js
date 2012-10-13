@@ -579,24 +579,20 @@
     };
 
     TemplateCompiler.prototype.addExtractorPlugin = function(n, pri, extradepth, fn) {
-      var fn2;
-      fn2 = function(comp, ps, val, frag, n) {
-        var tmplname;
-        ps.extraScopes = extradepth;
-        tmplname = (ps.js.addVar("" + ps.jsPre + "_tmpl")).n;
-        ps.ret[tmplname] = comp.compileFrag(frag, ps.jsDatas.length + extradepth, ps);
-        fn.call(comp, ps, val, tmplname, n);
-        return true;
-      };
-      this.addBlockExtractorPlugin(n, fn2);
-      return this.addAttrExtractorPlugin(n, pri, fn2);
+      this.addBlockExtractorPlugin(n, extradepth, fn);
+      return this.addAttrExtractorPlugin(n, pri, extradepth, fn);
     };
 
-    TemplateCompiler.prototype.addBlockExtractorPlugin = function(n, fn) {
+    TemplateCompiler.prototype.addBlockExtractorPlugin = function(n, extradepth, fn) {
       var fn2, regTxt;
       regTxt = "^(?:" + n + ")$";
       fn2 = function(comp, ps, val, n) {
-        return fn(comp, ps, "{{" + val + "}}", ps.pullBlock(), n);
+        var frag, tmplname;
+        ps.extraScopes = extradepth;
+        frag = ps.pullBlock();
+        tmplname = (ps.js.addVar("" + ps.jsPre + "_tmpl")).n;
+        ps.ret[tmplname] = comp.compileFrag(frag, ps.jsDatas.length + extradepth, ps);
+        return fn.call(comp, ps, "{{" + val + "}}", tmplname, n);
       };
       return this.addPluginBase('block', {
         fn: fn2,
@@ -659,9 +655,9 @@
       });
     };
 
-    TemplateCompiler.prototype.addAttrExtractorPlugin = function(n, pri, fn) {
+    TemplateCompiler.prototype.addAttrExtractorPlugin = function(n, pri, extradepth, fn) {
       return this.addAttrPlugin(n, pri, function(comp, ps, ignore, ignore2, ns) {
-        var ret, val, _i, _len;
+        var frag, ret, tmplname, val, _i, _len;
         ret = false;
         for (_i = 0, _len = ns.length; _i < _len; _i++) {
           n = ns[_i];
@@ -670,7 +666,11 @@
             continue;
           }
           ps.el.removeAttribute(ps.getAttrName(n));
-          ret || (ret = fn(comp, ps, val, ps.pullEl(), n));
+          ps.extraScopes = extradepth;
+          frag = ps.pullEl();
+          tmplname = (ps.js.addVar("" + ps.jsPre + "_tmpl")).n;
+          ps.ret[tmplname] = comp.compileFrag(frag, ps.jsDatas.length + extradepth, ps);
+          ret || (ret = fn.call(comp, ps, val, tmplname, n));
         }
         return ret;
       });
