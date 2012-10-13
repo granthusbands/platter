@@ -330,15 +330,15 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 				@doSimple ps, 'text', ps.el.nodeValue, "#el#.nodeValue = #v#"
 			ps.optimiseAwayLastPost()
 
-	addExtractorPlugin: (n, pri, method, extradepth) ->
-		fn = (comp, ps, val, frag, n) ->
+	addExtractorPlugin: (n, pri, extradepth, fn) ->
+		fn2 = (comp, ps, val, frag, n) ->
 			ps.extraScopes = extradepth
 			tmplname = (ps.js.addVar "#{ps.jsPre}_tmpl").n
 			ps.ret[tmplname] = comp.compileFrag frag, ps.jsDatas.length+extradepth, ps
-			comp[method] ps, val, tmplname, n
+			fn.call comp, ps, val, tmplname, n
 			true
-		@addBlockExtractorPlugin n, fn
-		@addAttrExtractorPlugin n, pri, fn
+		@addBlockExtractorPlugin n, fn2
+		@addAttrExtractorPlugin n, pri, fn2
 
 	addBlockExtractorPlugin: (n, fn) ->
 		regTxt = "^(?:#{n})$" #TODO: Escaping

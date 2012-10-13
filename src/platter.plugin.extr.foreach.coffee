@@ -1,8 +1,6 @@
 
 
-Plain = Platter.Internal.PlainCompiler
-
-plainName = Plain::addUniqueMethod 'foreach', (ps, val, tmplname) ->
+Platter.Internal.PlainCompiler::addExtractorPlugin 'foreach', 100, 1, (ps, val, tmplname) ->
 	jsFor = ps.js.addVar "#{ps.jsPre}_for"
 	ps.js.forceVar ps.jsPost
 	@doBase ps, null, val, """
@@ -12,11 +10,8 @@ plainName = Plain::addUniqueMethod 'foreach', (ps, val, tmplname) ->
 				Platter.InsertNode(#{ps.parent.jsEl||'null'}, #{ps.jsPost}, this.#{tmplname}.run(#{jsFor}[i], #{ps.jsDatas.join ','}, undo, false).docfrag)
 	""", null
 
-Plain::addExtractorPlugin 'foreach', 100, plainName, 1
-
 
 # The version for dynamic templates has to subscribe to relevant changes and rerun.
-Dynamic = Platter.Internal.DynamicCompiler
 DynamicRun = Platter.Internal.DynamicRunner
 
 
@@ -70,9 +65,6 @@ watchCollection = DynamicRun::addUniqueMethod 'foreach_watch', (undo, coll, add,
 
 
 
-doForEach = Dynamic::addUniqueMethod 'foreach', (ps, val, tmplname) ->
+Platter.Internal.DynamicCompiler::addExtractorPlugin 'foreach', 100, 1, (ps, val, tmplname) ->
 	jsChange = ps.js.addForcedVar "#{ps.jsPre}_forchange", "this.#{runForEach}(undo, this.#{tmplname}, [#{ps.jsDatas.join ', '}], #{ps.parent.jsEl||null}, #{ps.jsPre}, #{ps.jsPost})"
 	@doBase ps, null, val, "#{jsChange}(#v#)", null
-
-
-Dynamic::addExtractorPlugin 'foreach', 100, doForEach, 1
