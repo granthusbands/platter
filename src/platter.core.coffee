@@ -267,8 +267,9 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 	doPlugins: (plugs, n, ps, param) ->
 		for plug in plugs
 			thisn = (n[plug.type]||n)()
-			if thisn.match(plug.reg)
-				ps.isHandled = plug.fn @, ps, param, thisn
+			m = thisn.match(plug.reg)
+			if m
+				ps.isHandled = plug.fn @, ps, param, thisn, m
 				if ps.isHandled then return
 		null
 
@@ -330,11 +331,11 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 			ps.optimiseAwayLastPost()
 
 	addExtractorPlugin: (n, pri, method, extradepth) ->
-		fn = (comp, ps, val, frag) ->
+		fn = (comp, ps, val, frag, n) ->
 			ps.extraScopes = extradepth
 			tmplname = (ps.js.addVar "#{ps.jsPre}_tmpl").n
 			ps.ret[tmplname] = comp.compileFrag frag, ps.jsDatas.length+extradepth, ps
-			comp[method] ps, val, tmplname
+			comp[method] ps, val, tmplname, n
 			true
 		@addBlockExtractorPlugin n, fn
 		@addAttrExtractorPlugin n, pri, fn
@@ -342,7 +343,7 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 	addBlockExtractorPlugin: (n, fn) ->
 		regTxt = "^(?:#{n})$" #TODO: Escaping
 		fn2 = (comp, ps, val, n) ->
-			fn comp, ps, "{{#{val}}}", ps.pullBlock()
+			fn comp, ps, "{{#{val}}}", ps.pullBlock(), n
 		@addPluginBase 'block',
 			fn: fn2
 			regTxt: regTxt
@@ -387,8 +388,11 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 			pri: pri
 
 	addAttrExtractorPlugin: (n, pri, fn) ->
-		@addAttrPlugin n, pri, (comp, ps) ->
-			val = ps.getAttr(n)
-			if !Platter.HasEscape(val) then return
-			ps.el.removeAttribute ps.getAttrName(n)
-			fn comp, ps, val, ps.pullEl()
+		@addAttrPlugin n, pri, (comp, ps, ignore, ignore2, ns) ->
+			ret = false
+			for n in ns
+				val = ps.getAttr(n)
+				if !Platter.HasEscape(val) then continue
+				ps.el.removeAttribute ps.getAttrName(n)
+				ret ||= fn comp, ps, val, ps.pullEl(), n
+			ret

@@ -476,12 +476,13 @@
     };
 
     TemplateCompiler.prototype.doPlugins = function(plugs, n, ps, param) {
-      var plug, thisn, _i, _len;
+      var m, plug, thisn, _i, _len;
       for (_i = 0, _len = plugs.length; _i < _len; _i++) {
         plug = plugs[_i];
         thisn = (n[plug.type] || n)();
-        if (thisn.match(plug.reg)) {
-          ps.isHandled = plug.fn(this, ps, param, thisn);
+        m = thisn.match(plug.reg);
+        if (m) {
+          ps.isHandled = plug.fn(this, ps, param, thisn, m);
           if (ps.isHandled) {
             return;
           }
@@ -579,12 +580,12 @@
 
     TemplateCompiler.prototype.addExtractorPlugin = function(n, pri, method, extradepth) {
       var fn;
-      fn = function(comp, ps, val, frag) {
+      fn = function(comp, ps, val, frag, n) {
         var tmplname;
         ps.extraScopes = extradepth;
         tmplname = (ps.js.addVar("" + ps.jsPre + "_tmpl")).n;
         ps.ret[tmplname] = comp.compileFrag(frag, ps.jsDatas.length + extradepth, ps);
-        comp[method](ps, val, tmplname);
+        comp[method](ps, val, tmplname, n);
         return true;
       };
       this.addBlockExtractorPlugin(n, fn);
@@ -595,7 +596,7 @@
       var fn2, regTxt;
       regTxt = "^(?:" + n + ")$";
       fn2 = function(comp, ps, val, n) {
-        return fn(comp, ps, "{{" + val + "}}", ps.pullBlock());
+        return fn(comp, ps, "{{" + val + "}}", ps.pullBlock(), n);
       };
       return this.addPluginBase('block', {
         fn: fn2,
@@ -659,14 +660,19 @@
     };
 
     TemplateCompiler.prototype.addAttrExtractorPlugin = function(n, pri, fn) {
-      return this.addAttrPlugin(n, pri, function(comp, ps) {
-        var val;
-        val = ps.getAttr(n);
-        if (!Platter.HasEscape(val)) {
-          return;
+      return this.addAttrPlugin(n, pri, function(comp, ps, ignore, ignore2, ns) {
+        var ret, val, _i, _len;
+        ret = false;
+        for (_i = 0, _len = ns.length; _i < _len; _i++) {
+          n = ns[_i];
+          val = ps.getAttr(n);
+          if (!Platter.HasEscape(val)) {
+            continue;
+          }
+          ps.el.removeAttribute(ps.getAttrName(n));
+          ret || (ret = fn(comp, ps, val, ps.pullEl(), n));
         }
-        ps.el.removeAttribute(ps.getAttrName(n));
-        return fn(comp, ps, val, ps.pullEl());
+        return ret;
       });
     };
 
@@ -2918,19 +2924,17 @@
 
   Plain = Platter.Internal.PlainCompiler;
 
-  plainName = Plain.prototype.addUniqueMethod('if', function(ps, val, tmplname) {
+  plainName = Plain.prototype.addUniqueMethod('if', function(ps, val, tmplname, n) {
+    var v;
     ps.js.forceVar(ps.jsPost);
-    return this.doBase(ps, null, val, "if (#v#) Platter.InsertNode(" + (ps.parent.jsEl || 'null') + ", " + ps.jsPost + ", this." + tmplname + ".run(" + (ps.jsDatas.join(', ')) + ", undo, false).docfrag)", "&&");
+    if (n !== 'if' && n !== 'unless') {
+      debugger;
+    }
+    v = n === 'unless' ? '!(#v#)' : '#v#';
+    return this.doBase(ps, null, val, "if (" + v + ") Platter.InsertNode(" + (ps.parent.jsEl || 'null') + ", " + ps.jsPost + ", this." + tmplname + ".run(" + (ps.jsDatas.join(', ')) + ", undo, false).docfrag)", "&&");
   });
 
-  Plain.prototype.addExtractorPlugin('if', 60, plainName, 0);
-
-  plainName = Plain.prototype.addUniqueMethod('unless', function(ps, val, tmplname) {
-    ps.js.forceVar(ps.jsPost);
-    return this.doBase(ps, null, val, "if (!(#v#)) Platter.InsertNode(" + (ps.parent.jsEl || 'null') + ", " + ps.jsPost + ", this." + tmplname + ".run(" + (ps.jsDatas.join(', ')) + ", undo, false).docfrag)", "&&");
-  });
-
-  Plain.prototype.addExtractorPlugin('unless', 60, plainName, 0);
+  Plain.prototype.addExtractorPlugin('if|unless', 60, plainName, 0);
 
   Dynamic = Platter.Internal.DynamicCompiler;
 
@@ -2956,21 +2960,17 @@
     };
   });
 
-  dynName = Dynamic.prototype.addUniqueMethod('if', function(ps, val, tmplname) {
-    var jsChange;
+  dynName = Dynamic.prototype.addUniqueMethod('if', function(ps, val, tmplname, n) {
+    var jsChange, v;
+    if (n !== 'if' && n !== 'unless') {
+      debugger;
+    }
     jsChange = ps.js.addForcedVar("" + ps.jsPre + "_ifchange", "this." + dynRunName + "(undo, [" + (ps.jsDatas.join(', ')) + "], this." + tmplname + ", " + (ps.parent.jsEl || 'null') + ", " + ps.jsPre + ", " + ps.jsPost + ")");
-    return this.doBase(ps, null, val, "" + jsChange + "(#v#)", "&&");
+    v = n === 'unless' ? '!(#v#)' : '#v#';
+    return this.doBase(ps, null, val, "" + jsChange + "(" + v + ")", "&&");
   });
 
-  Dynamic.prototype.addExtractorPlugin('if', 60, dynName, 0);
-
-  dynName = Dynamic.prototype.addUniqueMethod('unless', function(ps, val, tmplname) {
-    var jsChange;
-    jsChange = ps.js.addForcedVar("" + ps.jsPre + "_ifchange", "this." + dynRunName + "(undo, [" + (ps.jsDatas.join(', ')) + "], this." + tmplname + ", " + (ps.parent.jsEl || 'null') + ", " + ps.jsPre + ", " + ps.jsPost + ")");
-    return this.doBase(ps, null, val, "" + jsChange + "(!(#v#))", "&&");
-  });
-
-  Dynamic.prototype.addExtractorPlugin('unless', 60, dynName, 0);
+  Dynamic.prototype.addExtractorPlugin('if|unless', 60, dynName, 0);
 
 }).call(this);
 
