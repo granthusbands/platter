@@ -31,35 +31,20 @@ printer['a()'] = (op, ctx) ->
 		"#{fn}.call(#{t})"
 printer['a(b)'] = printer['a()']
 
+
 class Platter.Internal.DynamicRunner extends Platter.Internal.TemplateRunner
 
 
 class Platter.Internal.DynamicCompiler extends Platter.Internal.TemplateCompiler
 	runner: Platter.Internal.DynamicRunner
+	printer: printer
 
-	# Compiler: Handle simple value-assignments with escapes.
-	doBase: (ps, n, v, expr, sep) ->
-		if sep==true
-			op = Platter.Internal.ParseString v
-		else
-			op = Platter.Internal.ParseNonString v, sep
-
-		ctx = datas: ps.jsDatas, js:ps.js.child()
-		ctx.js.existingVar 'undo'
-
-		expr = expr
-			.replace(/#el#/g, "#{ps.jsEl}")
-			.replace(/#n#/g, ps.js.toSrc n)
-			.replace(/#v#/g, printer.go(op, ctx))
-
+	doExpr: (ps, expr) ->
 		ps.js.addExpr """
 			undo.repeater(function(undo){
 				#{expr}
 			})
 		"""
-
-	doSimple: (ps, n, v, expr) ->
-		@doBase ps, n, v, expr, true
 
 	doRedo: (ps, n, v, expr, sep) ->
 		jsUndo2 = ps.js.addForcedVar "#{ps.jsPre}_undo", "undo.child()"

@@ -1,4 +1,4 @@
-
+# Plain templates only support a vanilla JS object as the root and don't automatically update.
 
 printer = Platter.Internal.JSPrinter()
 printer['dataGet'] = (op, ctx) ->
@@ -35,30 +35,10 @@ printer['a(b)'] = printer['a()']
 class Platter.Internal.PlainRunner extends Platter.Internal.TemplateRunner
 
 
-# TODO: This code is probably slowed down by not passing jsEl through (causing #{jsPost}.parentNode). Maybe bring it back?
 class Platter.Internal.PlainCompiler extends Platter.Internal.TemplateCompiler
 	runner: Platter.Internal.PlainRunner
-
-	doBase: (ps, n, v, expr, sep) ->
-		if sep==true
-			op = Platter.Internal.ParseString v
-		else
-			op = Platter.Internal.ParseNonString v, sep
-
-		ctx = datas: ps.jsDatas, js:ps.js.child()
-		ctx.js.existingVar 'undo'
-
-		expr = expr
-			.replace(/#el#/g, "#{ps.jsEl}")
-			.replace(/#n#/g, ps.js.toSrc n)
-			.replace(/#v#/g, printer.go(op, ctx))
-
-		ps.js.addExpr expr
-
+	printer: printer
 	@::doRedo = @::doBase
-
-	doSimple: (ps, n, v, expr) ->
-		@doBase ps, n, v, expr, true
 
 
 Platter.Plain = new Platter.Internal.PlainCompiler

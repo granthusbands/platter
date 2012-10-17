@@ -454,6 +454,26 @@
       return ps.ret;
     };
 
+    TemplateCompiler.prototype.doBase = function(ps, n, v, expr, sep) {
+      var ctx, op;
+      if (sep === true) {
+        op = Platter.Internal.ParseString(v);
+      } else {
+        op = Platter.Internal.ParseNonString(v, sep);
+      }
+      ctx = {
+        datas: ps.jsDatas,
+        js: ps.js.child()
+      };
+      ctx.js.existingVar('undo');
+      expr = expr.replace(/#el#/g, "" + ps.jsEl).replace(/#n#/g, ps.js.toSrc(n)).replace(/#v#/g, this.printer.go(op, ctx));
+      return this.doExpr(ps, expr);
+    };
+
+    TemplateCompiler.prototype.doExpr = function(ps, expr) {
+      return ps.js.addExpr(expr);
+    };
+
     TemplateCompiler.prototype.extractPlugins = function(ret, name, regflags) {
       var plugs, reg, x;
       plugs = this.getPlugins(name);
@@ -538,7 +558,7 @@
                 ps.el.setAttribute(realn, v);
               }
             } else {
-              this.doSimple(ps, realn, v, "#el#.setAttribute(#n#, #v#)");
+              this.doBase(ps, realn, v, "#el#.setAttribute(#n#, #v#)", true);
             }
           }
           if (ps.el.tagName.toLowerCase() !== 'textarea') {
@@ -572,7 +592,7 @@
       } else if (ps.el.nodeType === 3 || ps.el.nodeType === 4) {
         ps.el.nodeValue = Platter.UnhideAttr(ps.el.nodeValue);
         if (ps.el.nodeValue.indexOf('{{') !== -1) {
-          this.doSimple(ps, 'text', ps.el.nodeValue, "#el#.nodeValue = #v#");
+          this.doBase(ps, 'text', ps.el.nodeValue, "#el#.nodeValue = #v#", true);
         }
         return ps.optimiseAwayLastPost();
       }
@@ -1938,27 +1958,9 @@
 
     PlainCompiler.prototype.runner = Platter.Internal.PlainRunner;
 
-    PlainCompiler.prototype.doBase = function(ps, n, v, expr, sep) {
-      var ctx, op;
-      if (sep === true) {
-        op = Platter.Internal.ParseString(v);
-      } else {
-        op = Platter.Internal.ParseNonString(v, sep);
-      }
-      ctx = {
-        datas: ps.jsDatas,
-        js: ps.js.child()
-      };
-      ctx.js.existingVar('undo');
-      expr = expr.replace(/#el#/g, "" + ps.jsEl).replace(/#n#/g, ps.js.toSrc(n)).replace(/#v#/g, printer.go(op, ctx));
-      return ps.js.addExpr(expr);
-    };
+    PlainCompiler.prototype.printer = printer;
 
     PlainCompiler.prototype.doRedo = PlainCompiler.prototype.doBase;
-
-    PlainCompiler.prototype.doSimple = function(ps, n, v, expr) {
-      return this.doBase(ps, n, v, expr, true);
-    };
 
     return PlainCompiler;
 
@@ -2050,24 +2052,10 @@
 
     DynamicCompiler.prototype.runner = Platter.Internal.DynamicRunner;
 
-    DynamicCompiler.prototype.doBase = function(ps, n, v, expr, sep) {
-      var ctx, op;
-      if (sep === true) {
-        op = Platter.Internal.ParseString(v);
-      } else {
-        op = Platter.Internal.ParseNonString(v, sep);
-      }
-      ctx = {
-        datas: ps.jsDatas,
-        js: ps.js.child()
-      };
-      ctx.js.existingVar('undo');
-      expr = expr.replace(/#el#/g, "" + ps.jsEl).replace(/#n#/g, ps.js.toSrc(n)).replace(/#v#/g, printer.go(op, ctx));
-      return ps.js.addExpr("undo.repeater(function(undo){\n	" + expr + "\n})");
-    };
+    DynamicCompiler.prototype.printer = printer;
 
-    DynamicCompiler.prototype.doSimple = function(ps, n, v, expr) {
-      return this.doBase(ps, n, v, expr, true);
+    DynamicCompiler.prototype.doExpr = function(ps, expr) {
+      return ps.js.addExpr("undo.repeater(function(undo){\n	" + expr + "\n})");
     };
 
     DynamicCompiler.prototype.doRedo = function(ps, n, v, expr, sep) {

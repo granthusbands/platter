@@ -253,6 +253,26 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 			throw new Error("Internal error: Function compilation failed: #{e.message}\n\n#{ps.js}")
 		ps.ret
 
+	# Does the basic replacements all expressions need
+	doBase: (ps, n, v, expr, sep) ->
+		if sep==true
+			op = Platter.Internal.ParseString v
+		else
+			op = Platter.Internal.ParseNonString v, sep
+
+		ctx = datas: ps.jsDatas, js:ps.js.child()
+		ctx.js.existingVar 'undo'
+
+		expr = expr
+			.replace(/#el#/g, "#{ps.jsEl}")
+			.replace(/#n#/g, ps.js.toSrc n)
+			.replace(/#v#/g, @printer.go(op, ctx))
+
+		@doExpr ps, expr
+
+	doExpr: (ps, expr) ->
+		ps.js.addExpr expr
+
 	# We need to pull the plugins together from all prototypes, but order them by priority.
 	extractPlugins: (ret, name, regflags) ->
 		plugs = @getPlugins name
@@ -302,7 +322,7 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 						if realn!=n
 							ps.el.setAttribute realn, v
 					else
-						@doSimple ps, realn, v, "#el#.setAttribute(#n#, #v#)"
+						@doBase ps, realn, v, "#el#.setAttribute(#n#, #v#)", true
 				if ps.el.tagName.toLowerCase()!='textarea'
 					@compileChildren ps, ps.el, ps.jsEl
 					ps.optimiseAwayLastPost()
@@ -327,7 +347,7 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 		else if ps.el.nodeType==3 || ps.el.nodeType==4  # Text/CData
 			ps.el.nodeValue = Platter.UnhideAttr ps.el.nodeValue
 			if ps.el.nodeValue.indexOf('{{')!=-1
-				@doSimple ps, 'text', ps.el.nodeValue, "#el#.nodeValue = #v#"
+				@doBase ps, 'text', ps.el.nodeValue, "#el#.nodeValue = #v#", true
 			ps.optimiseAwayLastPost()
 
 	addExtractorPlugin: (n, pri, extradepth, fn) ->
