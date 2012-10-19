@@ -25,15 +25,3 @@ class Platter.Internal.PluginBase
 		@[name].push details
 	getPlugins: (type) ->
 		addArraysThroughProto [], @, "plugins_#{type}"
-	@UniqueName: (name) ->
-		name = "plugin_#{name}"
-		num = ''
-		if usedNames[name]
-			while usedNames[name+num]
-				num = (num||0) + 1
-		usedNames[name+num] = 1
-		name+num
-	addUniqueMethod: (name, fn) ->
-		name = Platter.Internal.PluginBase.UniqueName name
-		@[name] = fn
-		name

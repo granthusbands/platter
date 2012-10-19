@@ -2,13 +2,14 @@
 
 
 # The version for plain templates is trivial, of course, since it just needs to run the sub-template straight away.
-Platter.Internal.PlainCompiler::addExtractorPlugin 'if|unless', 60, 0, (ps, val, tmplname, n) ->
+Platter.Internal.PlainCompiler::addExtractorPlugin 'if|unless', 60, 0, (ps, val, tmpl, n) ->
 	ps.js.forceVar ps.jsPost
+	jsTmpl = ps.js.addContext "#{ps.jsPre}_tmpl", tmpl
 	v = if n=='unless' then '!(#v#)' else '#v#'
-	@doBase ps, null, val, "if (#{v}) Platter.InsertNode(#{ps.parent.jsEl||'null'}, #{ps.jsPost}, this.#{tmplname}.run(#{ps.jsDatas.join ', '}, undo, false).docfrag)", "&&"
+	@doBase ps, null, val, "if (#{v}) Platter.InsertNode(#{ps.parent.jsEl||'null'}, #{ps.jsPost}, #{jsTmpl}.run(#{ps.jsDatas.join ', '}, undo, false).docfrag)", "&&"
 
 # The version for dynamic templates has to subscribe to relevant changes and rerun.
-dynRunName = Platter.Internal.DynamicRunner::addUniqueMethod 'if', (undo, datas, tmpl, par, start, end) ->
+ifInner = (undo, datas, tmpl, par, start, end) ->
 	shown = false
 	undoch = undo.child()
 	(show) =>
@@ -22,7 +23,9 @@ dynRunName = Platter.Internal.DynamicRunner::addUniqueMethod 'if', (undo, datas,
 			@removeBetween start, end, par
 			undoch.undo()
 
-Platter.Internal.DynamicCompiler::addExtractorPlugin 'if|unless', 60, 0, (ps, val, tmplname, n) ->
-	jsChange = ps.js.addForcedVar "#{ps.jsPre}_ifchange", "this.#{dynRunName}(undo, [#{ps.jsDatas.join ', '}], this.#{tmplname}, #{ps.parent.jsEl||'null'}, #{ps.jsPre}, #{ps.jsPost})"
+Platter.Internal.DynamicCompiler::addExtractorPlugin 'if|unless', 60, 0, (ps, val, tmpl, n) ->
+	inner = ps.js.addContext "#{ps.jsPre}_inner", ifInner
+	jsTmpl = ps.js.addContext "#{ps.jsPre}_tmpl", tmpl
+	jsChange = ps.js.addForcedVar "#{ps.jsPre}_ifchange", "#{inner}.call(this, undo, [#{ps.jsDatas.join ', '}], #{jsTmpl}, #{ps.parent.jsEl||'null'}, #{ps.jsPre}, #{ps.jsPost})"
 	v = if n=='unless' then '!(#v#)' else '#v#'
 	@doBase ps, null, val, "#{jsChange}(#{v})", "&&"

@@ -1,13 +1,14 @@
 
 
-Platter.Internal.PlainCompiler::addExtractorPlugin 'foreach', 100, 1, (ps, val, tmplname) ->
+Platter.Internal.PlainCompiler::addExtractorPlugin 'foreach', 100, 1, (ps, val, tmpl) ->
 	jsFor = ps.js.addVar "#{ps.jsPre}_for"
 	ps.js.forceVar ps.jsPost
+	jsTmpl = ps.js.addContext "#{ps.jsPre}_tmpl", tmpl
 	@doBase ps, null, val, """
 		#{jsFor} = #v#;
 		if (#{jsFor})
 			for (var i=0; i<#{jsFor}.length; ++i)
-				Platter.InsertNode(#{ps.parent.jsEl||'null'}, #{ps.jsPost}, this.#{tmplname}.run(#{jsFor}[i], #{ps.jsDatas.join ','}, undo, false).docfrag)
+				Platter.InsertNode(#{ps.parent.jsEl||'null'}, #{ps.jsPost}, #{jsTmpl}.run(#{jsFor}[i], #{ps.jsDatas.join ','}, undo, false).docfrag)
 	""", null
 
 
@@ -15,7 +16,7 @@ Platter.Internal.PlainCompiler::addExtractorPlugin 'foreach', 100, 1, (ps, val, 
 DynamicRun = Platter.Internal.DynamicRunner
 
 
-runForEach = DynamicRun::addUniqueMethod 'foreach', (undo, tmpl, datas, par, start, end) ->
+forEachInner = (undo, tmpl, datas, par, start, end) ->
 	undoch = undo.child()
 	hasRun = false;
 	ret = (coll) =>
@@ -24,9 +25,9 @@ runForEach = DynamicRun::addUniqueMethod 'foreach', (undo, tmpl, datas, par, sta
 			@removeBetween start, end, par
 		else
 			hasRun = true
-		@[runForEachInner] undoch, coll, tmpl, datas, par, start, end, ret
+		forEachInnerInner.call @, undoch, coll, tmpl, datas, par, start, end, ret
 
-runForEachInner = DynamicRun::addUniqueMethod 'foreach_inner', (undo, coll, tmpl, datas, par, start, end, replaceMe) ->
+forEachInnerInner = (undo, coll, tmpl, datas, par, start, end, replaceMe) ->
 	pres = [start]
 	posts = [end]
 	undos = []
@@ -49,13 +50,11 @@ runForEachInner = DynamicRun::addUniqueMethod 'foreach_inner', (undo, coll, tmpl
 		posts.splice(at,1)
 		undos[at].undo()
 		spareUndos.push undos.splice(at, 1)[0]
-	@[watchCollection] undo, coll, add, rem, replaceMe
-
-
+	watchCollection.call @, undo, coll, add, rem, replaceMe
 
 # Runtime: Call add/rem appropriately for the collection (with change-watching, if possible)
 # It's actually more efficient for watchCollection to not undo the adds. The caller is expected to have their own undoer in the same context.
-watchCollection = DynamicRun::addUniqueMethod 'foreach_watch', (undo, coll, add, rem, replaceMe) ->
+watchCollection = (undo, coll, add, rem, replaceMe) ->
 	if coll instanceof Array 
 		for o,i in coll
 			add o, coll, {index:i}
@@ -65,6 +64,8 @@ watchCollection = DynamicRun::addUniqueMethod 'foreach_watch', (undo, coll, add,
 
 
 
-Platter.Internal.DynamicCompiler::addExtractorPlugin 'foreach', 100, 1, (ps, val, tmplname) ->
-	jsChange = ps.js.addForcedVar "#{ps.jsPre}_forchange", "this.#{runForEach}(undo, this.#{tmplname}, [#{ps.jsDatas.join ', '}], #{ps.parent.jsEl||null}, #{ps.jsPre}, #{ps.jsPost})"
+Platter.Internal.DynamicCompiler::addExtractorPlugin 'foreach', 100, 1, (ps, val, tmpl) ->
+	inner = ps.js.addContext "#{ps.jsPre}_inner", forEachInner
+	jsTmpl = ps.js.addContext "#{ps.jsPre}_tmpl", tmpl
+	jsChange = ps.js.addForcedVar "#{ps.jsPre}_forchange", "#{inner}.call(this, undo, #{jsTmpl}, [#{ps.jsDatas.join ', '}], #{ps.parent.jsEl||null}, #{ps.jsPre}, #{ps.jsPost})"
 	@doBase ps, null, val, "#{jsChange}(#v#)", null

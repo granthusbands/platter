@@ -51,25 +51,6 @@
       return addArraysThroughProto([], this, "plugins_" + type);
     };
 
-    PluginBase.UniqueName = function(name) {
-      var num;
-      name = "plugin_" + name;
-      num = '';
-      if (usedNames[name]) {
-        while (usedNames[name + num]) {
-          num = (num || 0) + 1;
-        }
-      }
-      usedNames[name + num] = 1;
-      return name + num;
-    };
-
-    PluginBase.prototype.addUniqueMethod = function(name, fn) {
-      name = Platter.Internal.PluginBase.UniqueName(name);
-      this[name] = fn;
-      return name;
-    };
-
     return PluginBase;
 
   })();
@@ -410,24 +391,24 @@
     };
 
     TemplateCompiler.prototype.compileFrag = function(frag, ctxCnt, parent) {
-      var d, i, jsAutoRemove, jsFirstChild, jsLastChild, jsRoot, ps, _i;
+      var i, jsAutoRemove, jsCloneNode, jsFirstChild, jsLastChild, jsRoot, ps, _i;
       ps = new Platter.Internal.CompilerState;
       ps.parent = parent;
-      ps.js = new Platter.Internal.CodeGen;
+      ps.js = (new Platter.Internal.FunctionGenContext).child();
       ps.ret = new this.runner;
-      ps.ret.node = frag;
       ps.plugins = {};
       this.extractPlugins(ps.plugins, 'block', '');
       this.extractPlugins(ps.plugins, 'el', 'img');
       ps.jsDatas = [];
       for (i = _i = 0; 0 <= ctxCnt ? _i < ctxCnt : _i > ctxCnt; i = 0 <= ctxCnt ? ++_i : --_i) {
-        ps.jsDatas.push(ps.js.existingVar('data' + i));
+        ps.jsDatas.push(ps.js.addParam('data' + i));
       }
-      ps.js.existingVar('undo');
-      jsAutoRemove = ps.js.existingVar('autoRemove');
+      ps.js.addParam('undo');
+      jsAutoRemove = ps.js.addParam('autoRemove');
       ps.jsSelf = ps.js.addForcedVar("self", "this");
       ps.js.addExpr('undo = undo ? undo.child() : new Platter.Undo()');
-      jsRoot = ps.js.addVar('el', 'this.node.cloneNode(true)');
+      jsCloneNode = ps.js.addContext('node', frag);
+      jsRoot = ps.js.addVar('el', "" + jsCloneNode + ".cloneNode(true)");
       this.compileChildren(ps, frag, jsRoot);
       jsFirstChild = ps.js.addForcedVar("firstChild", "" + jsRoot + ".firstChild");
       jsLastChild = ps.js.addForcedVar("lastChild", "" + jsRoot + ".lastChild");
@@ -437,20 +418,7 @@
       } else {
         ps.js.addExpr("return {docfrag: " + jsRoot + ", undo: function(){undo.undo()}};");
       }
-      try {
-        ps.ret.run = new Function(((function() {
-          var _j, _len, _ref, _results;
-          _ref = ps.jsDatas;
-          _results = [];
-          for (_j = 0, _len = _ref.length; _j < _len; _j++) {
-            d = _ref[_j];
-            _results.push(d.n);
-          }
-          return _results;
-        })()).join(', '), 'undo', 'autoRemove', "" + ps.js);
-      } catch (e) {
-        throw new Error("Internal error: Function compilation failed: " + e.message + "\n\n" + ps.js);
-      }
+      ps.ret.run = ps.js.compile();
       return ps.ret;
     };
 
@@ -465,7 +433,7 @@
         datas: ps.jsDatas,
         js: ps.js.child()
       };
-      ctx.js.existingVar('undo');
+      ctx.js.addParam('undo');
       expr = expr.replace(/#el#/g, "" + ps.jsEl).replace(/#n#/g, ps.js.toSrc(n)).replace(/#v#/g, this.printer.go(op, ctx));
       return this.doExpr(ps, expr);
     };
@@ -607,12 +575,11 @@
       var fn2, regTxt;
       regTxt = "^(?:" + n + ")$";
       fn2 = function(comp, ps, val, n) {
-        var frag, tmplname;
+        var frag, tmpl;
         ps.extraScopes = extradepth;
         frag = ps.pullBlock();
-        tmplname = (ps.js.addVar("" + ps.jsPre + "_tmpl")).n;
-        ps.ret[tmplname] = comp.compileFrag(frag, ps.jsDatas.length + extradepth, ps);
-        return fn.call(comp, ps, "{{" + val + "}}", tmplname, n);
+        tmpl = comp.compileFrag(frag, ps.jsDatas.length + extradepth, ps);
+        return fn.call(comp, ps, "{{" + val + "}}", tmpl, n);
       };
       return this.addPluginBase('block', {
         fn: fn2,
@@ -638,7 +605,7 @@
       var fn2, regTxt;
       regTxt = "^(?:" + n + ")$";
       fn2 = function(comp, ps, val, n) {
-        return comp[fn](ps, "{{" + val + "}}", ps.pullMark());
+        return fn.call(comp, ps, "{{" + val + "}}", ps.pullMark());
       };
       return this.addPluginBase('block', {
         fn: fn2,
@@ -677,7 +644,7 @@
 
     TemplateCompiler.prototype.addAttrExtractorPlugin = function(n, pri, extradepth, fn) {
       return this.addAttrPlugin(n, pri, function(comp, ps, ignore, ignore2, ns) {
-        var frag, ret, tmplname, val, _i, _len;
+        var frag, ret, tmpl, val, _i, _len;
         ret = false;
         for (_i = 0, _len = ns.length; _i < _len; _i++) {
           n = ns[_i];
@@ -688,9 +655,8 @@
           ps.el.removeAttribute(ps.getAttrName(n));
           ps.extraScopes = extradepth;
           frag = ps.pullEl();
-          tmplname = (ps.js.addVar("" + ps.jsPre + "_tmpl")).n;
-          ps.ret[tmplname] = comp.compileFrag(frag, ps.jsDatas.length + extradepth, ps);
-          ret || (ret = fn.call(comp, ps, val, tmplname, n));
+          tmpl = comp.compileFrag(frag, ps.jsDatas.length + extradepth, ps);
+          ret || (ret = fn.call(comp, ps, val, tmpl, n));
         }
         return ret;
       });
@@ -1592,7 +1558,8 @@
 }).call(this);
 
 (function() {
-  var clean, exprvar, index, jskeywords, singrep, toSrc;
+  var clean, exprvar, index, jskeywords, singrep, toSrc,
+    __hasProp = {}.hasOwnProperty;
 
   clean = function(n) {
     n = n.replace(/#/g, "");
@@ -1709,39 +1676,117 @@
     'false': 1
   };
 
-  Platter.Internal.CodeGen = (function() {
+  Platter.Internal.FunctionGenContext = (function() {
 
-    function CodeGen(parent) {
+    function FunctionGenContext() {
+      this._values = {};
+      this._usedNames = {};
+    }
+
+    FunctionGenContext.prototype.child = function() {
+      return new Platter.Internal.FunctionGen(this);
+    };
+
+    FunctionGenContext.prototype.addContext = function(name, value) {
+      name = clean(name);
+      name = this._uniqName(name);
+      this._addContext(name, value);
+      return {
+        n: name,
+        v: value,
+        toString: function() {
+          return "#" + this.n + "#";
+        }
+      };
+    };
+
+    FunctionGenContext.prototype.compile = function(child) {
+      var n, parnames, parvals, run, txt, v, _ref;
+      parnames = [];
+      parvals = [];
+      _ref = this._values;
+      for (n in _ref) {
+        if (!__hasProp.call(_ref, n)) continue;
+        v = _ref[n];
+        parnames.push(n);
+        parvals.push(v);
+      }
+      txt = "return function(" + (child._params.join(', ')) + ") {\n" + (child._toString()) + "};";
+      run = new Function(parnames.join(', '), txt);
+      return run.apply(null, parvals);
+    };
+
+    FunctionGenContext.prototype._addContext = function(name, value) {
+      this._values[name] = value;
+      return this._usedNames[name] = 1;
+    };
+
+    FunctionGenContext.prototype._varExists = function(name) {
+      return this._usedNames[name];
+    };
+
+    FunctionGenContext.prototype._uniqName = function(name) {
+      var c;
+      if (this._varExists(name)) {
+        c = (this._usedNames[name] || 1) + 1;
+        while (this._varExists(name + c)) {
+          ++c;
+        }
+        this._usedNames[name] = c;
+        name = name + c;
+      } else {
+        this._usedNames[name] = 1;
+      }
+      return name;
+    };
+
+    return FunctionGenContext;
+
+  })();
+
+  Platter.Internal.FunctionGen = (function() {
+
+    function FunctionGen(parent) {
       this.parent = parent;
+      this._params = [];
       this._code = [];
       this._vars = {};
     }
 
-    CodeGen.prototype.child = function() {
-      return new Platter.Internal.CodeGen(this);
+    FunctionGen.prototype.child = function() {
+      return new Platter.Internal.FunctionGen(this);
     };
 
-    CodeGen.prototype.existingVar = function(name) {
+    FunctionGen.prototype.addParam = function(name) {
       name = clean(name);
+      name = this._uniqName(name);
       this._vars[name] = {
         _name: name,
         _existing: true
       };
+      this._params.push(name);
       return this.getVar(name);
     };
 
-    CodeGen.prototype.forceVar = function(name) {
-      return this._vars[name.n || name]._forced = true;
+    FunctionGen.prototype.addContext = function(name, value) {
+      name = clean(name);
+      name = this._uniqName(name);
+      return this._addContext(name, value);
     };
 
-    CodeGen.prototype.addForcedVar = function(name, expr, compVal) {
-      var ret;
-      ret = this.addVar(name, expr, compVal);
-      this.forceVar(ret);
-      return ret;
+    FunctionGen.prototype._addContext = function(name, value) {
+      this._vars[name] = {
+        _name: name,
+        _compVal: value,
+        _existing: true
+      };
+      if (this.parent) {
+        this.parent._addContext(name, value);
+      }
+      return this.getVar(name);
     };
 
-    CodeGen.prototype.addVar = function(name, expr, compVal) {
+    FunctionGen.prototype.addVar = function(name, expr, compVal) {
       if (expr == null) {
         expr = 'null';
       }
@@ -1763,7 +1808,18 @@
       return this.getVar(name);
     };
 
-    CodeGen.prototype.getVar = function(name) {
+    FunctionGen.prototype.forceVar = function(name) {
+      return this._vars[name.n || name]._forced = true;
+    };
+
+    FunctionGen.prototype.addForcedVar = function(name, expr, compVal) {
+      var ret;
+      ret = this.addVar(name, expr, compVal);
+      this.forceVar(ret);
+      return ret;
+    };
+
+    FunctionGen.prototype.getVar = function(name) {
       var v;
       v = this._vars[name];
       return {
@@ -1775,13 +1831,24 @@
       };
     };
 
-    CodeGen.prototype.addExpr = function(expr) {
+    FunctionGen.prototype.addExpr = function(expr) {
       return this._code.push({
         _expr: expr
       });
     };
 
-    CodeGen.prototype.toString = function() {
+    FunctionGen.prototype.compile = function() {
+      if (this.parent instanceof Platter.Internal.FunctionGenContext) {
+        return this.parent.compile(this);
+      }
+      try {
+        return new Function(this._params.join(', '), this._toString());
+      } catch (e) {
+        throw new Error("Internal error: Function compilation failed: " + e.message + "\n\n" + ps.js);
+      }
+    };
+
+    FunctionGen.prototype._toString = function() {
       var add, code, i, op, rep, s, sub, varcnt, varreps, vr, _i, _j, _k, _len, _len1, _ref, _ref1;
       s = "";
       varcnt = {};
@@ -1835,31 +1902,20 @@
       return s;
     };
 
-    CodeGen.prototype._uniqName = function(name) {
-      var c;
-      if (this._varExists(name)) {
-        c = (this._vars[name]._lastNum || 1) + 1;
-        while (this._varExists(name + c)) {
-          ++c;
-        }
-        if (this._vars[name]) {
-          this._vars[name]._lastNum = c;
-        }
-        name = name + c;
-      }
-      return name;
+    FunctionGen.prototype._uniqName = function(name) {
+      return this.parent._uniqName(name);
     };
 
-    CodeGen.prototype._varExists = function(name) {
+    FunctionGen.prototype._varExists = function(name) {
       var _ref;
       return this._vars[name] || ((_ref = this.parent) != null ? _ref._varExists(name) : void 0);
     };
 
-    CodeGen.prototype.toSrc = toSrc;
+    FunctionGen.prototype.toSrc = toSrc;
 
-    CodeGen.prototype.index = index;
+    FunctionGen.prototype.index = index;
 
-    CodeGen.prototype.replaceExpr = function(from, to) {
+    FunctionGen.prototype.replaceExpr = function(from, to) {
       var op, _i, _len, _ref, _results;
       _ref = this._code;
       _results = [];
@@ -1870,7 +1926,7 @@
       return _results;
     };
 
-    return CodeGen;
+    return FunctionGen;
 
   })();
 
@@ -2553,7 +2609,7 @@
 }).call(this);
 
 (function() {
-  var Compiler, Runner, defaultRunEvent, doEvent, isEventAttr, runDOMEvent, runEvent, runJQueryEvent,
+  var Compiler, Runner, defaultRunEvent, doEvent, isEventAttr, runDOMEvent, runJQueryEvent,
     __hasProp = {}.hasOwnProperty;
 
   Runner = Platter.Internal.TemplateRunner;
@@ -2584,16 +2640,14 @@
     defaultRunEvent = runJQueryEvent;
   }
 
-  runEvent = Runner.prototype.addUniqueMethod('runEvent', defaultRunEvent);
-
-  doEvent = Compiler.prototype.addUniqueMethod('doEvent', function(ps, realn, v) {
+  doEvent = function(ps, realn, v) {
     var ev, isAfter, m,
       _this = this;
     m = /^on(after)?(.*)$/.exec(realn);
     isAfter = m[1];
     ev = m[2];
     return Platter.EscapesNoString(v, "", function(t) {
-      var handler, jsFn, jsTarget, jsThis, op, orig, post, valGetter;
+      var handler, jsFn, jsRunEvent, jsTarget, jsThis, op, orig, post, valGetter;
       orig = t;
       m = /^(<>|\+\+|--)?(.*?)(\+\+|--)?$/.exec(t);
       if (!m || m[1] && m[3] && m[1] !== m[3]) {
@@ -2633,13 +2687,14 @@
         }
         handler = "" + jsFn + ".call(" + jsTarget + ", ev, " + (ps.js.toSrc(ev)) + ", " + ps.jsEl + ")";
       }
+      jsRunEvent = ps.js.addContext("" + ps.jsEl + "_runEvent", defaultRunEvent);
       if (isAfter) {
-        return ps.js.addExpr("this." + runEvent + "(undo, " + ps.jsEl + ", " + (ps.js.toSrc(ev)) + ", function(ev) {setTimeout(function(){ " + handler + " }, 1)})");
+        return ps.js.addExpr("" + jsRunEvent + "(undo, " + ps.jsEl + ", " + (ps.js.toSrc(ev)) + ", function(ev) {setTimeout(function(){ " + handler + " }, 1)})");
       } else {
-        return ps.js.addExpr("this." + runEvent + "(undo, " + ps.jsEl + ", " + (ps.js.toSrc(ev)) + ", function(ev){ " + handler + " })");
+        return ps.js.addExpr("" + jsRunEvent + "(undo, " + ps.jsEl + ", " + (ps.js.toSrc(ev)) + ", function(ev){ " + handler + " })");
       }
     });
-  });
+  };
 
   Compiler.prototype.addAttrPlugin('on.*', 0, function(comp, ps) {
     var n, realn, v, _ref, _ref1;
@@ -2651,7 +2706,7 @@
         if (realn !== n) {
           ps.el.removeAttribute(n);
         }
-        comp[doEvent](ps, realn, v);
+        doEvent.call(comp, ps, realn, v);
         ps.remAttr(realn);
       }
     }
@@ -2723,54 +2778,56 @@
 (function() {
   var getOptVal, getSelVal, setSelVal;
 
-  getOptVal = Platter.Internal.TemplateRunner.prototype.addUniqueMethod('getOptVal', function(opt) {
+  getOptVal = function(tpl, opt) {
     var data;
-    data = this.getPlatterData(opt);
+    data = tpl.getPlatterData(opt);
     if (data && data.hasOwnProperty('value')) {
       return data.value;
     } else {
       return opt.value;
     }
-  });
+  };
 
-  getSelVal = Platter.Internal.TemplateRunner.prototype.addUniqueMethod('getSelVal', function(el) {
+  getSelVal = function(tpl, el) {
     var opt, _i, _len, _ref;
     _ref = el.options;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       opt = _ref[_i];
       if (opt.selected) {
-        return this[getOptVal](opt);
+        return getOptVal(tpl, opt);
       }
     }
     return null;
-  });
+  };
 
-  setSelVal = Platter.Internal.TemplateRunner.prototype.addUniqueMethod('setSelVal', function(el, val) {
+  setSelVal = function(tpl, el, val) {
     var opt, _i, _len, _ref, _results;
     _ref = el.options;
     _results = [];
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       opt = _ref[_i];
-      if (val === this[getOptVal](opt)) {
+      if (val === getOptVal(tpl, opt)) {
         _results.push(opt.selected = true);
       } else {
         _results.push(void 0);
       }
     }
     return _results;
-  });
+  };
 
   Platter.Internal.TemplateCompiler.prototype.addElPlugin('select', 1, function(comp, ps) {
-    var v;
+    var jsGetSelVal, jsSetSelVal, v;
     if (!Platter.HasEscape(ps.getAttr('value'))) {
       return;
     }
     ps.magicSelect = true;
+    jsGetSelVal = ps.js.addContext("" + ps.jsEl + "_getSelVal", getSelVal);
+    jsSetSelVal = ps.js.addContext("" + ps.jsEl + "_setSelVal", setSelVal);
     v = ps.getAttr('value');
     ps.remAttr('value');
-    ps.valGetter = "" + ps.jsSelf + "." + getSelVal + "(#el#)";
+    ps.valGetter = "" + jsGetSelVal + "(" + ps.jsSelf + ", #el#)";
     ps.doAfter(function() {
-      return comp.doBase(ps, 'value', v, "" + ps.jsSelf + "." + setSelVal + "(#el#, #v#)", null);
+      return comp.doBase(ps, 'value', v, "" + jsSetSelVal + "(" + ps.jsSelf + ", #el#, #v#)", null);
     });
     return false;
   });
@@ -2814,19 +2871,20 @@
 }).call(this);
 
 (function() {
-  var DynamicRun, runForEach, runForEachInner, watchCollection,
+  var DynamicRun, forEachInner, forEachInnerInner, watchCollection,
     __slice = [].slice;
 
-  Platter.Internal.PlainCompiler.prototype.addExtractorPlugin('foreach', 100, 1, function(ps, val, tmplname) {
-    var jsFor;
+  Platter.Internal.PlainCompiler.prototype.addExtractorPlugin('foreach', 100, 1, function(ps, val, tmpl) {
+    var jsFor, jsTmpl;
     jsFor = ps.js.addVar("" + ps.jsPre + "_for");
     ps.js.forceVar(ps.jsPost);
-    return this.doBase(ps, null, val, "" + jsFor + " = #v#;\nif (" + jsFor + ")\n	for (var i=0; i<" + jsFor + ".length; ++i)\n		Platter.InsertNode(" + (ps.parent.jsEl || 'null') + ", " + ps.jsPost + ", this." + tmplname + ".run(" + jsFor + "[i], " + (ps.jsDatas.join(',')) + ", undo, false).docfrag)", null);
+    jsTmpl = ps.js.addContext("" + ps.jsPre + "_tmpl", tmpl);
+    return this.doBase(ps, null, val, "" + jsFor + " = #v#;\nif (" + jsFor + ")\n	for (var i=0; i<" + jsFor + ".length; ++i)\n		Platter.InsertNode(" + (ps.parent.jsEl || 'null') + ", " + ps.jsPost + ", " + jsTmpl + ".run(" + jsFor + "[i], " + (ps.jsDatas.join(',')) + ", undo, false).docfrag)", null);
   });
 
   DynamicRun = Platter.Internal.DynamicRunner;
 
-  runForEach = DynamicRun.prototype.addUniqueMethod('foreach', function(undo, tmpl, datas, par, start, end) {
+  forEachInner = function(undo, tmpl, datas, par, start, end) {
     var hasRun, ret, undoch,
       _this = this;
     undoch = undo.child();
@@ -2838,11 +2896,11 @@
       } else {
         hasRun = true;
       }
-      return _this[runForEachInner](undoch, coll, tmpl, datas, par, start, end, ret);
+      return forEachInnerInner.call(_this, undoch, coll, tmpl, datas, par, start, end, ret);
     };
-  });
+  };
 
-  runForEachInner = DynamicRun.prototype.addUniqueMethod('foreach_inner', function(undo, coll, tmpl, datas, par, start, end, replaceMe) {
+  forEachInnerInner = function(undo, coll, tmpl, datas, par, start, end, replaceMe) {
     var add, posts, pres, rem, spareUndos, undos,
       _this = this;
     pres = [start];
@@ -2871,10 +2929,10 @@
       undos[at].undo();
       return spareUndos.push(undos.splice(at, 1)[0]);
     };
-    return this[watchCollection](undo, coll, add, rem, replaceMe);
-  });
+    return watchCollection.call(this, undo, coll, add, rem, replaceMe);
+  };
 
-  watchCollection = DynamicRun.prototype.addUniqueMethod('foreach_watch', function(undo, coll, add, rem, replaceMe) {
+  watchCollection = function(undo, coll, add, rem, replaceMe) {
     var i, o, _i, _len;
     if (coll instanceof Array) {
       for (i = _i = 0, _len = coll.length; _i < _len; i = ++_i) {
@@ -2888,28 +2946,31 @@
     if (coll && coll.platter_watchcoll) {
       return coll.platter_watchcoll(undo, add, rem, replaceMe);
     }
-  });
+  };
 
-  Platter.Internal.DynamicCompiler.prototype.addExtractorPlugin('foreach', 100, 1, function(ps, val, tmplname) {
-    var jsChange;
-    jsChange = ps.js.addForcedVar("" + ps.jsPre + "_forchange", "this." + runForEach + "(undo, this." + tmplname + ", [" + (ps.jsDatas.join(', ')) + "], " + (ps.parent.jsEl || null) + ", " + ps.jsPre + ", " + ps.jsPost + ")");
+  Platter.Internal.DynamicCompiler.prototype.addExtractorPlugin('foreach', 100, 1, function(ps, val, tmpl) {
+    var inner, jsChange, jsTmpl;
+    inner = ps.js.addContext("" + ps.jsPre + "_inner", forEachInner);
+    jsTmpl = ps.js.addContext("" + ps.jsPre + "_tmpl", tmpl);
+    jsChange = ps.js.addForcedVar("" + ps.jsPre + "_forchange", "" + inner + ".call(this, undo, " + jsTmpl + ", [" + (ps.jsDatas.join(', ')) + "], " + (ps.parent.jsEl || null) + ", " + ps.jsPre + ", " + ps.jsPost + ")");
     return this.doBase(ps, null, val, "" + jsChange + "(#v#)", null);
   });
 
 }).call(this);
 
 (function() {
-  var dynRunName,
+  var ifInner,
     __slice = [].slice;
 
-  Platter.Internal.PlainCompiler.prototype.addExtractorPlugin('if|unless', 60, 0, function(ps, val, tmplname, n) {
-    var v;
+  Platter.Internal.PlainCompiler.prototype.addExtractorPlugin('if|unless', 60, 0, function(ps, val, tmpl, n) {
+    var jsTmpl, v;
     ps.js.forceVar(ps.jsPost);
+    jsTmpl = ps.js.addContext("" + ps.jsPre + "_tmpl", tmpl);
     v = n === 'unless' ? '!(#v#)' : '#v#';
-    return this.doBase(ps, null, val, "if (" + v + ") Platter.InsertNode(" + (ps.parent.jsEl || 'null') + ", " + ps.jsPost + ", this." + tmplname + ".run(" + (ps.jsDatas.join(', ')) + ", undo, false).docfrag)", "&&");
+    return this.doBase(ps, null, val, "if (" + v + ") Platter.InsertNode(" + (ps.parent.jsEl || 'null') + ", " + ps.jsPost + ", " + jsTmpl + ".run(" + (ps.jsDatas.join(', ')) + ", undo, false).docfrag)", "&&");
   });
 
-  dynRunName = Platter.Internal.DynamicRunner.prototype.addUniqueMethod('if', function(undo, datas, tmpl, par, start, end) {
+  ifInner = function(undo, datas, tmpl, par, start, end) {
     var shown, undoch,
       _this = this;
     shown = false;
@@ -2927,11 +2988,13 @@
         return undoch.undo();
       }
     };
-  });
+  };
 
-  Platter.Internal.DynamicCompiler.prototype.addExtractorPlugin('if|unless', 60, 0, function(ps, val, tmplname, n) {
-    var jsChange, v;
-    jsChange = ps.js.addForcedVar("" + ps.jsPre + "_ifchange", "this." + dynRunName + "(undo, [" + (ps.jsDatas.join(', ')) + "], this." + tmplname + ", " + (ps.parent.jsEl || 'null') + ", " + ps.jsPre + ", " + ps.jsPost + ")");
+  Platter.Internal.DynamicCompiler.prototype.addExtractorPlugin('if|unless', 60, 0, function(ps, val, tmpl, n) {
+    var inner, jsChange, jsTmpl, v;
+    inner = ps.js.addContext("" + ps.jsPre + "_inner", ifInner);
+    jsTmpl = ps.js.addContext("" + ps.jsPre + "_tmpl", tmpl);
+    jsChange = ps.js.addForcedVar("" + ps.jsPre + "_ifchange", "" + inner + ".call(this, undo, [" + (ps.jsDatas.join(', ')) + "], " + jsTmpl + ", " + (ps.parent.jsEl || 'null') + ", " + ps.jsPre + ", " + ps.jsPost + ")");
     v = n === 'unless' ? '!(#v#)' : '#v#';
     return this.doBase(ps, null, val, "" + jsChange + "(" + v + ")", "&&");
   });
@@ -2939,15 +3002,17 @@
 }).call(this);
 
 (function() {
-  var dynRunName,
+  var withInner,
     __slice = [].slice;
 
-  Platter.Internal.PlainCompiler.prototype.addExtractorPlugin('with', 40, 1, function(ps, val, tmplname) {
+  Platter.Internal.PlainCompiler.prototype.addExtractorPlugin('with', 40, 1, function(ps, val, tmpl) {
+    var jsTmpl;
     ps.js.forceVar(ps.jsPost);
-    return this.doBase(ps, null, val, "Platter.InsertNode(" + (ps.parent.jsEl || 'null') + ", " + ps.jsPost + ", this." + tmplname + ".run(#v#, " + (ps.jsDatas.join(', ')) + ", undo, false).docfrag)", null);
+    jsTmpl = ps.js.addContext("" + ps.jsPre + "_tmpl", tmpl);
+    return this.doBase(ps, null, val, "Platter.InsertNode(" + (ps.parent.jsEl || 'null') + ", " + ps.jsPost + ", " + jsTmpl + ".run(#v#, " + (ps.jsDatas.join(', ')) + ", undo, false).docfrag)", null);
   });
 
-  dynRunName = Platter.Internal.DynamicRunner.prototype.addUniqueMethod('with', function(undo, datas, tmpl, par, start, end) {
+  withInner = function(undo, datas, tmpl, par, start, end) {
     var undoch,
       _this = this;
     undoch = undo.child();
@@ -2956,33 +3021,27 @@
       undoch.undo();
       return Platter.InsertNode(par, end, tmpl.run.apply(tmpl, [val].concat(__slice.call(datas), [undoch], [false])).docfrag);
     };
-  });
+  };
 
-  Platter.Internal.DynamicCompiler.prototype.addExtractorPlugin('with', 40, 1, function(ps, val, tmplname) {
-    var jsChange;
-    jsChange = ps.js.addForcedVar("" + ps.jsPre + "_withchange", "this." + dynRunName + "(undo, [" + (ps.jsDatas.join(', ')) + "], this." + tmplname + ", " + (ps.parent.jsEl || 'null') + ", " + ps.jsPre + ", " + ps.jsPost + ")");
+  Platter.Internal.DynamicCompiler.prototype.addExtractorPlugin('with', 40, 1, function(ps, val, tmpl) {
+    var inner, jsChange, jsTmpl;
+    inner = ps.js.addContext("" + ps.jsPre + "_inner", withInner);
+    jsTmpl = ps.js.addContext("" + ps.jsPre + "_tmpl", tmpl);
+    jsChange = ps.js.addForcedVar("" + ps.jsPre + "_withchange", "" + inner + ".call(this, undo, [" + (ps.jsDatas.join(', ')) + "], " + jsTmpl + ", " + (ps.parent.jsEl || 'null') + ", " + ps.jsPre + ", " + ps.jsPost + ")");
     return this.doBase(ps, null, val, "" + jsChange + "(#v#)", null);
   });
 
 }).call(this);
 
 (function() {
-  var Dynamic, DynamicRun, Plain, dynName, dynRunName, plainName;
+  var insertElement;
 
-  Plain = Platter.Internal.PlainCompiler;
-
-  plainName = Plain.prototype.addUniqueMethod('element', function(ps, val) {
+  Platter.Internal.PlainCompiler.prototype.addMarkPlugin('element', function(ps, val) {
     ps.js.forceVar(ps.jsPost);
     return this.doBase(ps, null, val, "if (#v#) Platter.InsertNode(" + (ps.parent.jsEl || 'null') + ", " + ps.jsPost + ", #v#)", null);
   });
 
-  Plain.prototype.addMarkPlugin('element', plainName);
-
-  Dynamic = Platter.Internal.DynamicCompiler;
-
-  DynamicRun = Platter.Internal.DynamicRunner;
-
-  dynRunName = DynamicRun.prototype.addUniqueMethod('element', function(undo, datas, par, start, end) {
+  insertElement = function(undo, datas, par, start, end) {
     var lastel,
       _this = this;
     lastel = null;
@@ -2998,14 +3057,13 @@
         return Platter.InsertNode(par, end, el);
       }
     };
-  });
+  };
 
-  dynName = Dynamic.prototype.addUniqueMethod('element', function(ps, val) {
-    var jsChange;
-    jsChange = ps.js.addForcedVar("" + ps.jsPre + "_elchange", "this." + dynRunName + "(undo, [" + (ps.jsDatas.join(', ')) + "], " + (ps.parent.jsEl || 'null') + ", " + ps.jsPre + ", " + ps.jsPost + ")");
+  Platter.Internal.DynamicCompiler.prototype.addMarkPlugin('element', function(ps, val) {
+    var insEl, jsChange;
+    insEl = ps.js.addContext('#{ps.jsPre}_inner', insertElement);
+    jsChange = ps.js.addForcedVar("" + ps.jsPre + "_elchange", "" + insEl + ".call(this, undo, [" + (ps.jsDatas.join(', ')) + "], " + (ps.parent.jsEl || 'null') + ", " + ps.jsPre + ", " + ps.jsPost + ")");
     return this.doBase(ps, null, val, "" + jsChange + "(#v#)", null);
   });
-
-  Dynamic.prototype.addMarkPlugin('element', dynName);
 
 }).call(this);

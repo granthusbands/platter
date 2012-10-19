@@ -36,20 +36,92 @@ Platter.Internal.Index = index = (arr, entry) ->
 exprvar = /#(\w+)#/g
 jskeywords = {'break':1, 'else':1, 'new':1, 'var':1, 'case':1, 'finally':1, 'return':1, 'void':1, 'catch':1, 'for':1, 'switch':1, 'while':1, 'continue':1, 'function':1, 'this':1, 'with':1, 'default':1, 'if':1, 'throw':1, 'delete':1, 'in':1, 'try':1, 'do':1, 'instanceof':1, 'typeof':1, 'abstract':1, 'enum':1, 'int':1, 'short':1, 'boolean':1, 'export':1, 'interface':1, 'static':1, 'byte':1, 'extends':1, 'long':1, 'super':1, 'char':1, 'final':1, 'native':1, 'synchronized':1, 'class':1, 'float':1, 'package':1, 'throws':1, 'const':1, 'goto':1, 'private':1, 'transient':1, 'debugger':1, 'implements':1, 'protected':1, 'volatile':1, 'double':1, 'import':1, 'public':1, 'null':1, 'true':1, 'false':1}
 
-class Platter.Internal.CodeGen
+
+
+# This is for making state available to a generated function, by wrapping the function in an outer function that receives the context values and then returns the inner function (which hence has those values in scope).
+class Platter.Internal.FunctionGenContext
+	constructor: () ->
+		@_values = {}
+		@_usedNames = {}
+
+	child: -> new Platter.Internal.FunctionGen @
+
+	addContext: (name, value) ->
+		name = clean(name)
+		name = @_uniqName(name)
+		@_addContext name, value
+		{
+			n: name
+			v: value
+			toString: ->"##{@n}#"
+		}
+
+	compile: (child) ->
+		parnames = []
+		parvals = []
+		for own n,v of @_values
+			parnames.push n
+			parvals.push v
+		txt = "return function(#{child._params.join(', ')}) {\n#{child._toString()}};"
+		run = new Function(parnames.join(', '), txt)
+		run.apply(null, parvals)
+
+	_addContext: (name, value) ->
+		@_values[name] = value
+		@_usedNames[name] = 1
+
+	_varExists: (name) ->
+		@_usedNames[name]
+
+	_uniqName: (name) ->
+		if @_varExists(name)
+			c = (@_usedNames[name]||1)+1
+			++c while @_varExists(name+c);
+			@_usedNames[name] = c
+			name = name + c
+		else
+			@_usedNames[name] = 1
+		name
+
+
+class Platter.Internal.FunctionGen
 	constructor: (@parent) ->
+		@_params = []
 		@_code = []
 		@_vars = {}
 
-	child: -> new Platter.Internal.CodeGen @
+	child: -> new Platter.Internal.FunctionGen @
 
-	# Since the codegen doesn't understand functions (it really should), we use existingVar for parameters.
-	existingVar: (name) ->
+	# Add a parameter for the generated function
+	addParam: (name) ->
 		name = clean name
+		name = @_uniqName name
 		@_vars[name] = {_name: name, _existing:true}
+		@_params.push name
 		@getVar name
 
-	# Claim a variable is used one extra time, so that it can't get folded into use-sites. Can be used to optimise loops or just for variables that don't want moving. If the variable is unused, it will still get removed.
+	# Add a value for the function to use directly
+	addContext: (name, value) ->
+		name = clean(name)
+		name = @_uniqName(name)
+		@_addContext name, value
+
+	_addContext: (name, value) ->
+		@_vars[name] = {_name:name, _compVal: value, _existing:true}
+		if @parent then @parent._addContext name, value
+		@getVar name
+
+	# Add a variable/value. Might appear as a 'var blah = blah' statement or may be folded into singular use-site.
+	addVar: (name, expr = 'null', compVal = null) ->
+		name = clean name
+		name = @_uniqName name
+		@_vars[name] = {_name: name, _expr: expr, _compVal:compVal}
+		@_code.push {_expr:expr, _type:'var', _name:name}
+		@getVar name
+
+	# Ensure a variable won't get folded into use-sites.
+	# Can be used to optimise loops or just for variables that don't want moving.
+	# If the variable is unused, it will still get removed.
 	forceVar: (name) ->
 		@_vars[name.n||name]._forced = true
 
@@ -57,13 +129,6 @@ class Platter.Internal.CodeGen
 		ret = @addVar name, expr, compVal
 		@forceVar ret
 		ret
-
-	addVar: (name, expr = 'null', compVal = null) ->
-		name = clean name
-		name = @_uniqName name
-		@_vars[name] = {_name: name, _expr: expr, _compVal:compVal}
-		@_code.push {_expr:expr, _type:'var', _name:name}
-		@getVar name
 
 	getVar: (name) ->
 		v = @_vars[name]
@@ -75,9 +140,17 @@ class Platter.Internal.CodeGen
 	
 	addExpr: (expr) ->
 		@_code.push {_expr:expr}
+
+	compile: () ->
+		if (@parent instanceof Platter.Internal.FunctionGenContext)
+			return @parent.compile(@)
+		try
+			new Function(@_params.join(', '), @_toString())
+		catch e
+			throw new Error("Internal error: Function compilation failed: #{e.message}\n\n#{ps.js}")
 	
 	# Though this does brain-dead optimisations, it's non-mutating.
-	toString: () ->
+	_toString: () ->
 		s = ""
 		varcnt = {}
 		varreps = {}
@@ -119,13 +192,7 @@ class Platter.Internal.CodeGen
 		s
 
 	_uniqName: (name) ->
-		if @_varExists(name)
-			c = (@_vars[name]._lastNum||1)+1
-			++c while @_varExists(name+c);
-			if @_vars[name]
-				@_vars[name]._lastNum = c
-			name = name + c
-		name
+		@parent._uniqName(name)
 
 	_varExists: (name) ->
 		@_vars[name] || @parent?._varExists(name)

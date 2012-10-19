@@ -28,9 +28,7 @@ if window.jQuery
 # TODO: Maybe support ext, Prototype and other event libraries
 
 
-runEvent = Runner::addUniqueMethod 'runEvent', defaultRunEvent
-
-doEvent = Compiler::addUniqueMethod 'doEvent', (ps, realn, v) ->
+doEvent = (ps, realn, v) ->
 	m = /^on(after)?(.*)$/.exec(realn)
 	isAfter = m[1]
 	ev = m[2]
@@ -78,10 +76,11 @@ doEvent = Compiler::addUniqueMethod 'doEvent', (ps, realn, v) ->
 				jsFn = jsTarget
 			handler = "#{jsFn}.call(#{jsTarget}, ev, #{ps.js.toSrc ev}, #{ps.jsEl})"
 
+		jsRunEvent = ps.js.addContext "#{ps.jsEl}_runEvent", defaultRunEvent
 		if isAfter
-			ps.js.addExpr "this.#{runEvent}(undo, #{ps.jsEl}, #{ps.js.toSrc ev}, function(ev) {setTimeout(function(){ #{handler} }, 1)})"
+			ps.js.addExpr "#{jsRunEvent}(undo, #{ps.jsEl}, #{ps.js.toSrc ev}, function(ev) {setTimeout(function(){ #{handler} }, 1)})"
 		else
-			ps.js.addExpr "this.#{runEvent}(undo, #{ps.jsEl}, #{ps.js.toSrc ev}, function(ev){ #{handler} })"
+			ps.js.addExpr "#{jsRunEvent}(undo, #{ps.jsEl}, #{ps.js.toSrc ev}, function(ev){ #{handler} })"
 
 
 Compiler::addAttrPlugin 'on.*', 0, (comp, ps) ->
@@ -89,6 +88,6 @@ Compiler::addAttrPlugin 'on.*', 0, (comp, ps) ->
 		if isEventAttr realn
 			if (realn!=n)
 				ps.el.removeAttribute n
-			comp[doEvent] ps, realn, v
+			doEvent.call comp, ps, realn, v
 			ps.remAttr(realn)
 	false

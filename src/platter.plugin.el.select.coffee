@@ -15,34 +15,38 @@
 # This has the side-effect that the value of <option> elements inside of one of these selects do not behave as the normally would.
 
 
-getOptVal = Platter.Internal.TemplateRunner::addUniqueMethod 'getOptVal', (opt) ->
-	data = @getPlatterData opt
+getOptVal = (tpl, opt) ->
+	data = tpl.getPlatterData opt
 	if data && data.hasOwnProperty('value')
 		data.value
 	else
 		opt.value
 
-getSelVal = Platter.Internal.TemplateRunner::addUniqueMethod 'getSelVal', (el) ->
+# TODO: Support multi-select. Note the trickiness around the output array being useful to library users.
+getSelVal = (tpl, el) ->
 	for opt in el.options
 		if opt.selected
-			return @[getOptVal] opt
+			return getOptVal(tpl, opt)
 	null
 
-setSelVal = Platter.Internal.TemplateRunner::addUniqueMethod 'setSelVal', (el, val) ->
+setSelVal = (tpl, el, val) ->
 	for opt in el.options
-		if val == @[getOptVal] opt
+		if val == getOptVal(tpl, opt)
 			opt.selected = true
 
 Platter.Internal.TemplateCompiler::addElPlugin 'select', 1, (comp, ps) ->
 	if !Platter.HasEscape ps.getAttr 'value' then return
 	ps.magicSelect = true
 
+	jsGetSelVal = ps.js.addContext "#{ps.jsEl}_getSelVal", getSelVal
+	jsSetSelVal = ps.js.addContext "#{ps.jsEl}_setSelVal", setSelVal
+
 	v = ps.getAttr 'value'
 	ps.remAttr 'value'
-	ps.valGetter = "#{ps.jsSelf}.#{getSelVal}(#el#)"
+	ps.valGetter = "#{jsGetSelVal}(#{ps.jsSelf}, #el#)"
 
 	ps.doAfter ->
-		comp.doBase ps, 'value', v, "#{ps.jsSelf}.#{setSelVal}(#el#, #v#)", null
+		comp.doBase ps, 'value', v, "#{jsSetSelVal}(#{ps.jsSelf}, #el#, #v#)", null
 
 	false
 

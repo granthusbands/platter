@@ -215,9 +215,8 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 		ps = new Platter.Internal.CompilerState
 		ps.parent = parent
 
-		ps.js = new Platter.Internal.CodeGen
+		ps.js = (new Platter.Internal.FunctionGenContext).child()
 		ps.ret = new @runner
-		ps.ret.node = frag
 
 		ps.plugins = {}
 		@extractPlugins ps.plugins, 'block', ''
@@ -226,13 +225,14 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 		# Parameters for the generated function
 		ps.jsDatas = []
 		for i in [0...ctxCnt]
-			ps.jsDatas.push ps.js.existingVar 'data'+i
-		ps.js.existingVar 'undo'
-		jsAutoRemove = ps.js.existingVar 'autoRemove'
+			ps.jsDatas.push ps.js.addParam 'data'+i
+		ps.js.addParam 'undo'
+		jsAutoRemove = ps.js.addParam 'autoRemove'
 
 		ps.jsSelf = ps.js.addForcedVar "self", "this"
 		ps.js.addExpr 'undo = undo ? undo.child() : new Platter.Undo()'
-		jsRoot = ps.js.addVar 'el', 'this.node.cloneNode(true)'
+		jsCloneNode = ps.js.addContext 'node', frag
+		jsRoot = ps.js.addVar 'el', "#{jsCloneNode}.cloneNode(true)"
 		@compileChildren ps, frag, jsRoot
 		jsFirstChild = ps.js.addForcedVar "firstChild", "#{jsRoot}.firstChild"
 		jsLastChild = ps.js.addForcedVar "lastChild", "#{jsRoot}.lastChild"
@@ -246,11 +246,7 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 			ps.js.addExpr "return {el: #{jsFirstChild}, docfrag: #{jsRoot}, undo: function(){undo.undo()}};"
 		else
 			ps.js.addExpr "return {docfrag: #{jsRoot}, undo: function(){undo.undo()}};"
-		#alert "function(#{(d.n for d in jsDatas).join ', '}, autoRemove) {\n#{js}\n}"
-		try
-			ps.ret.run = new Function((d.n for d in ps.jsDatas).join(', '), 'undo', 'autoRemove', ""+ps.js)
-		catch e
-			throw new Error("Internal error: Function compilation failed: #{e.message}\n\n#{ps.js}")
+		ps.ret.run = ps.js.compile()
 		ps.ret
 
 	# Does the basic replacements all expressions need
@@ -261,7 +257,7 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 			op = Platter.Internal.ParseNonString v, sep
 
 		ctx = datas: ps.jsDatas, js:ps.js.child()
-		ctx.js.existingVar 'undo'
+		ctx.js.addParam 'undo'
 
 		expr = expr
 			.replace(/#el#/g, "#{ps.jsEl}")
@@ -359,9 +355,8 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 		fn2 = (comp, ps, val, n) ->
 			ps.extraScopes = extradepth
 			frag = ps.pullBlock()
-			tmplname = (ps.js.addVar "#{ps.jsPre}_tmpl").n
-			ps.ret[tmplname] = comp.compileFrag frag, ps.jsDatas.length+extradepth, ps
-			fn.call comp, ps, "{{#{val}}}", tmplname, n
+			tmpl = comp.compileFrag frag, ps.jsDatas.length+extradepth, ps
+			fn.call comp, ps, "{{#{val}}}", tmpl, n
 		@addPluginBase 'block',
 			fn: fn2
 			regTxt: regTxt
@@ -380,7 +375,7 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 	addMarkPlugin: (n, fn) ->
 		regTxt = "^(?:#{n})$" #TODO: Escaping
 		fn2 = (comp, ps, val, n) ->
-			comp[fn] ps, "{{#{val}}}", ps.pullMark()
+			fn.call comp, ps, "{{#{val}}}", ps.pullMark()
 		@addPluginBase 'block',
 			fn: fn2
 			regTxt: regTxt
@@ -414,7 +409,6 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 				ps.el.removeAttribute ps.getAttrName(n)
 				ps.extraScopes = extradepth
 				frag = ps.pullEl()
-				tmplname = (ps.js.addVar "#{ps.jsPre}_tmpl").n
-				ps.ret[tmplname] = comp.compileFrag frag, ps.jsDatas.length+extradepth, ps
-				ret ||= fn.call(comp, ps, val, tmplname, n)
+				tmpl = comp.compileFrag frag, ps.jsDatas.length+extradepth, ps
+				ret ||= fn.call(comp, ps, val, tmpl, n)
 			ret
