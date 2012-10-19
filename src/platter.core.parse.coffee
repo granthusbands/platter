@@ -327,7 +327,7 @@ defaultPrint =
 				return ret
 		@dataGet op, ctx
 	'val': (op, ctx) -> JSON.stringify(op.val)
-	'tostr': (op, ctx) -> "Platter.Str(#{@go(op.inner, ctx)})"
+	'tostr': (op, ctx) -> "#{ctx.jsPlatter}.Str(#{@go(op.inner, ctx)})"
 	go: (op, ctx) ->
 		if @[op.txt]
 			@[op.txt](op, ctx)

@@ -55,7 +55,9 @@ compileFiles = (files, watch) ->
 
     maybeDone = ->
         if (x for x in conv when !x).length == 0
-            fs.writeFile 'platter.js', conv.join('\n'), (err) ->
+            txt = conv.join('\n')
+            txt = txt.replace(/\}\)\.call\(this\);\s*\(function\(\) \{/g, "")
+            fs.writeFile 'platter.js', txt, (err) ->
                 if err
                     console.log "Could not save platter.js: #{err.message}"
                 else

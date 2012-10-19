@@ -8,7 +8,7 @@ Platter.Internal.PlainCompiler::addExtractorPlugin 'foreach', 100, 1, (ps, val, 
 		#{jsFor} = #v#;
 		if (#{jsFor})
 			for (var i=0; i<#{jsFor}.length; ++i)
-				Platter.InsertNode(#{ps.parent.jsEl||'null'}, #{ps.jsPost}, #{jsTmpl}.run(#{jsFor}[i], #{ps.jsDatas.join ','}, undo, false).docfrag)
+				#{ps.jsPlatter}.InsertNode(#{ps.parent.jsEl||'null'}, #{ps.jsPost}, #{jsTmpl}.run(#{jsFor}[i], #{ps.jsDatas.join ','}, undo, false).docfrag)
 	""", null
 
 

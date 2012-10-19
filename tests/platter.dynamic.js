@@ -1,8 +1,8 @@
 // Slows things down, but monitors subscriptions, so we can test for cleanup.
-Platter.Internal.BigDebug();
+PlatterTest.Internal.BigDebug();
 
-if (!Platter.Tests) Platter.Tests = {};
-Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSet){
+if (!PlatterTest.Tests) PlatterTest.Tests = {};
+PlatterTest.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSet){
 	// First, we rerun the plain-template tests against the dynamic compiler, since the dynamic compiler should support all of the plain results.
 	var testdiv = document.getElementById('plattertest');
 
@@ -22,7 +22,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 
 	function runDynamicDiv(undo, tmpl, data) {
 		if (typeof tmpl == 'string')
-			tmpl = Platter.Dynamic.compile(tmpl);
+			tmpl = PlatterTest.Dynamic.compile(tmpl);
 		testdiv.appendChild(tmpl.run(data, undo).docfrag);
 		return testdiv;
 	}
@@ -30,7 +30,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 	function testwrap(fn) {
 		return function(tmpl, data, txt, msg){
 			testdiv.innerHTML = "";
-			var undo = new Platter.Undo();
+			var undo = new PlatterTest.Undo();
 			var div = runDynamicDiv(undo, tmpl, data);
 			fn(tmpl, data, txt, msg, div);
 			undo.undo();
@@ -64,7 +64,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 	});
 
 	module(name+'+plain templates');
-	Platter.Tests.Trivial(Platter.Dynamic, quickHas, quickHasNot, quickHasJQ, quickHasNotJQ, quickHasValue, quickTextIs);
+	PlatterTest.Tests.Trivial(PlatterTest.Dynamic, quickHas, quickHasNot, quickHasJQ, quickHasNotJQ, quickHasValue, quickTextIs);
 	module(name+' dynamic');
 
 
@@ -686,7 +686,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Insert empty model into objs",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
+						var coll = PlatterTest.Get(data, 'objs');
 						var obj = newObj();
 						doSet(obj, 'txt', undefined);
 						collAdd(coll, obj);
@@ -696,7 +696,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Insert empty model into objs",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
+						var coll = PlatterTest.Get(data, 'objs');
 						var obj = newObj();
 						doSet(obj, 'txt', undefined);
 						collAdd(coll, obj);
@@ -706,7 +706,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Insert empty model into objs",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
+						var coll = PlatterTest.Get(data, 'objs');
 						var obj = newObj();
 						doSet(obj, 'txt', undefined);
 						collAdd(coll, obj);
@@ -716,8 +716,8 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Alter objs[0] to contain A",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
-						var el = Platter.Get(coll, 0);
+						var coll = PlatterTest.Get(data, 'objs');
+						var el = PlatterTest.Get(coll, 0);
 						doSet(el, 'txt', 'A');
 					},
 					tests: {h2A:1}
@@ -725,8 +725,8 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Alter objs[2] to contain C",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
-						var el = Platter.Get(coll, 2);
+						var coll = PlatterTest.Get(data, 'objs');
+						var el = PlatterTest.Get(coll, 2);
 						doSet(el, 'txt', 'C');
 					},
 					tests: {h2A:0, h2AC:1}
@@ -734,8 +734,8 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Alter objs[1] to contain B",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
-						var el = Platter.Get(coll, 1);
+						var coll = PlatterTest.Get(data, 'objs');
+						var el = PlatterTest.Get(coll, 1);
 						doSet(el, 'txt', 'B');
 					},
 					tests: {h2AC:0, h2ABC:1}
@@ -743,8 +743,8 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Remove objs[1]",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
-						var el = Platter.Get(coll, 1);
+						var coll = PlatterTest.Get(data, 'objs');
+						var el = PlatterTest.Get(coll, 1);
 						coll.remove(el);
 					},
 					tests: {h2ABC:0, h2AC:1, h23:0, h22:1}
@@ -752,8 +752,8 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Alter objs[1] to contain BC",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
-						var el = Platter.Get(coll, 1);
+						var coll = PlatterTest.Get(data, 'objs');
+						var el = PlatterTest.Get(coll, 1);
 						doSet(el, 'txt', 'BC');
 					},
 					tests: {h2AC:0, h2ABC:1}
@@ -765,7 +765,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 						doSet(el1, 'txt', 'A');
 						var el2 = newObj();
 						doSet(el2, 'txt', 'C');
-						var coll = Platter.Get(data, 'objs');
+						var coll = PlatterTest.Get(data, 'objs');
 						collReset(coll, [el1, el2]);
 					},
 					tests: {h2ABC:0, h2AC:1}
@@ -828,7 +828,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Insert empty model into objs",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
+						var coll = PlatterTest.Get(data, 'objs');
 						var obj = newObj();
 						doSet(obj, 'txt', undefined);
 						collAdd(coll, obj);
@@ -838,7 +838,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Insert empty model into objs",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
+						var coll = PlatterTest.Get(data, 'objs');
 						var obj = newObj();
 						doSet(obj, 'txt', undefined);
 						collAdd(coll, obj);
@@ -848,7 +848,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Insert empty model into objs",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
+						var coll = PlatterTest.Get(data, 'objs');
 						var obj = newObj();
 						doSet(obj, 'txt', undefined);
 						collAdd(coll, obj);
@@ -858,8 +858,8 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Alter objs[0] to contain A",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
-						var el = Platter.Get(coll, 0);
+						var coll = PlatterTest.Get(data, 'objs');
+						var el = PlatterTest.Get(coll, 0);
 						doSet(el, 'txt', 'A');
 					},
 					tests: {h2A:1}
@@ -867,8 +867,8 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Alter objs[2] to contain C",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
-						var el = Platter.Get(coll, 2);
+						var coll = PlatterTest.Get(data, 'objs');
+						var el = PlatterTest.Get(coll, 2);
 						doSet(el, 'txt', 'C');
 					},
 					tests: {h2A:0, h2AC:1}
@@ -876,8 +876,8 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Alter objs[1] to contain B",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
-						var el = Platter.Get(coll, 1);
+						var coll = PlatterTest.Get(data, 'objs');
+						var el = PlatterTest.Get(coll, 1);
 						doSet(el, 'txt', 'B');
 					},
 					tests: {h2AC:0, h2ABC:1}
@@ -885,8 +885,8 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Remove objs[1]",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
-						var el = Platter.Get(coll, 1);
+						var coll = PlatterTest.Get(data, 'objs');
+						var el = PlatterTest.Get(coll, 1);
 						coll.remove(el);
 					},
 					tests: {h2ABC:0, h2AC:1, h23:0, h22:1, h33:0, h32:1}
@@ -894,8 +894,8 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Alter objs[1] to contain BC",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
-						var el = Platter.Get(coll, 1);
+						var coll = PlatterTest.Get(data, 'objs');
+						var el = PlatterTest.Get(coll, 1);
 						doSet(el, 'txt', 'BC');
 					},
 					tests: {h2AC:0, h2ABC:1}
@@ -907,7 +907,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 						doSet(el1, 'txt', 'A');
 						var el2 = newObj();
 						doSet(el2, 'txt', 'C');
-						var coll = Platter.Get(data, 'objs');
+						var coll = PlatterTest.Get(data, 'objs');
 						collReset(coll, [el1, el2]);
 					},
 					tests: {h2ABC:0, h2AC:1}
@@ -962,7 +962,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Insert empty model into objs",
 					go: function(data){
-						var coll = Platter.Get(data, 'a').b.objs;
+						var coll = PlatterTest.Get(data, 'a').b.objs;
 						var obj = newObj();
 						doSet(obj, 'txt', undefined);
 						collAdd(coll, obj);
@@ -972,7 +972,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Insert empty model into objs",
 					go: function(data){
-						var coll = Platter.Get(data, 'a').b.objs;
+						var coll = PlatterTest.Get(data, 'a').b.objs;
 						var obj = newObj();
 						doSet(obj, 'txt', undefined);
 						collAdd(coll, obj);
@@ -982,7 +982,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Insert empty model into objs",
 					go: function(data){
-						var coll = Platter.Get(data, 'a').b.objs;
+						var coll = PlatterTest.Get(data, 'a').b.objs;
 						var obj = newObj();
 						doSet(obj, 'txt', undefined);
 						collAdd(coll, obj);
@@ -992,8 +992,8 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Alter objs[0] to contain A",
 					go: function(data){
-						var coll = Platter.Get(data, 'a').b.objs;
-						var el = Platter.Get(coll, 0);
+						var coll = PlatterTest.Get(data, 'a').b.objs;
+						var el = PlatterTest.Get(coll, 0);
 						doSet(el, 'txt', 'A');
 					},
 					tests: {h2A:1}
@@ -1001,8 +1001,8 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Alter objs[2] to contain C",
 					go: function(data){
-						var coll = Platter.Get(data, 'a').b.objs;
-						var el = Platter.Get(coll, 2);
+						var coll = PlatterTest.Get(data, 'a').b.objs;
+						var el = PlatterTest.Get(coll, 2);
 						doSet(el, 'txt', 'C');
 					},
 					tests: {h2A:0, h2AC:1}
@@ -1010,8 +1010,8 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Alter objs[1] to contain B",
 					go: function(data){
-						var coll = Platter.Get(data, 'a').b.objs;
-						var el = Platter.Get(coll, 1);
+						var coll = PlatterTest.Get(data, 'a').b.objs;
+						var el = PlatterTest.Get(coll, 1);
 						doSet(el, 'txt', 'B');
 					},
 					tests: {h2AC:0, h2ABC:1}
@@ -1019,8 +1019,8 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Remove objs[1]",
 					go: function(data){
-						var coll = Platter.Get(data, 'a').b.objs;
-						var el = Platter.Get(coll, 1);
+						var coll = PlatterTest.Get(data, 'a').b.objs;
+						var el = PlatterTest.Get(coll, 1);
 						coll.remove(el);
 					},
 					tests: {h2ABC:0, h2AC:1, h23:0, h22:1}
@@ -1028,8 +1028,8 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Alter objs[1] to contain BC",
 					go: function(data){
-						var coll = Platter.Get(data, 'a').b.objs;
-						var el = Platter.Get(coll, 1);
+						var coll = PlatterTest.Get(data, 'a').b.objs;
+						var el = PlatterTest.Get(coll, 1);
 						doSet(el, 'txt', 'BC');
 					},
 					tests: {h2AC:0, h2ABC:1}
@@ -1041,7 +1041,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 						doSet(el1, 'txt', 'A');
 						var el2 = newObj();
 						doSet(el2, 'txt', 'C');
-						var coll = Platter.Get(data, 'a').b.objs;
+						var coll = PlatterTest.Get(data, 'a').b.objs;
 						collReset(coll, [el1, el2]);
 					},
 					tests: {h2ABC:0, h2AC:1}
@@ -1109,7 +1109,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Insert empty model into objs",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
+						var coll = PlatterTest.Get(data, 'objs');
 						var obj = newObj();
 						doSet(obj, 'txt', undefined);
 						collAdd(coll, obj);
@@ -1119,7 +1119,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Insert empty model into objs",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
+						var coll = PlatterTest.Get(data, 'objs');
 						var obj = newObj();
 						doSet(obj, 'txt', undefined);
 						collAdd(coll, obj);
@@ -1129,7 +1129,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Insert empty model into objs",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
+						var coll = PlatterTest.Get(data, 'objs');
 						var obj = newObj();
 						doSet(obj, 'txt', undefined);
 						collAdd(coll, obj);
@@ -1139,8 +1139,8 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Alter objs[0] to contain A",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
-						var el = Platter.Get(coll, 0);
+						var coll = PlatterTest.Get(data, 'objs');
+						var el = PlatterTest.Get(coll, 0);
 						doSet(el, 'txt', 'A');
 					},
 					tests: {selA:1}
@@ -1148,8 +1148,8 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Alter objs[2] to contain C",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
-						var el = Platter.Get(coll, 2);
+						var coll = PlatterTest.Get(data, 'objs');
+						var el = PlatterTest.Get(coll, 2);
 						doSet(el, 'txt', 'C');
 					},
 					tests: {selA:0, selAC:1}
@@ -1157,8 +1157,8 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Alter objs[1] to contain B",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
-						var el = Platter.Get(coll, 1);
+						var coll = PlatterTest.Get(data, 'objs');
+						var el = PlatterTest.Get(coll, 1);
 						doSet(el, 'txt', 'B');
 					},
 					tests: {selAC:0, selABC:1}
@@ -1166,8 +1166,8 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Choose B",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
-						var el = Platter.Get(coll, 1);
+						var coll = PlatterTest.Get(data, 'objs');
+						var el = PlatterTest.Get(coll, 1);
 						doSet(data, 'magselval', el);
 					},
 					tests: {h1:1, h1B:1, valNone:0, valB:1}
@@ -1175,8 +1175,8 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Choose A",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
-						var el = Platter.Get(coll, 0);
+						var coll = PlatterTest.Get(data, 'objs');
+						var el = PlatterTest.Get(coll, 0);
 						doSet(data, 'magselval', el);
 					},
 					tests: {h1B:0, h1A:1, valB:0, valA:1}
@@ -1184,8 +1184,8 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Choose C",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
-						var el = Platter.Get(coll, 2);
+						var coll = PlatterTest.Get(data, 'objs');
+						var el = PlatterTest.Get(coll, 2);
 						doSet(data, 'magselval', el);
 					},
 					tests: {h1A:0, h1C:1, valA:0, valC:1}
@@ -1193,8 +1193,8 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Choose nothing",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
-						var el = Platter.Get(coll, 1);
+						var coll = PlatterTest.Get(data, 'objs');
+						var el = PlatterTest.Get(coll, 1);
 						doSet(data, 'magselval', void 0);
 					},
 					tests: {h1:0, h1C:0, valC:0, valNone:1}
@@ -1202,8 +1202,8 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Remove objs[1]",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
-						var el = Platter.Get(coll, 1);
+						var coll = PlatterTest.Get(data, 'objs');
+						var el = PlatterTest.Get(coll, 1);
 						coll.remove(el);
 					},
 					tests: {selABC:0, selAC:1, option4:0, option3:1}
@@ -1211,8 +1211,8 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 				{
 					name: "Alter objs[1] to contain BC",
 					go: function(data){
-						var coll = Platter.Get(data, 'objs');
-						var el = Platter.Get(coll, 1);
+						var coll = PlatterTest.Get(data, 'objs');
+						var el = PlatterTest.Get(coll, 1);
 						doSet(el, 'txt', 'BC');
 					},
 					tests: {selAC:0, selABC:1}
@@ -1224,7 +1224,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 						doSet(el1, 'txt', 'A');
 						var el2 = newObj();
 						doSet(el2, 'txt', 'C');
-						var coll = Platter.Get(data, 'objs');
+						var coll = PlatterTest.Get(data, 'objs');
 						collReset(coll,[el1, el2]);
 					},
 					tests: {selABC:0, selAC:1}
@@ -1250,12 +1250,12 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 
 	function dotest(def) {
 		test(def.name, function(){
-			startsubs = Platter.Internal.SubsCount
+			startsubs = PlatterTest.Internal.SubsCount
 			ok(testdiv.innerHTML=='', 'test div is empty');
-			var undo = new Platter.Undo();
+			var undo = new PlatterTest.Undo();
 			var totest = copyFrom(def.testsstart);
 			var model = def.init?def.init():newObj();
-			var tmpl = Platter.Dynamic.compile(def.template);
+			var tmpl = PlatterTest.Dynamic.compile(def.template);
 			var divs = [];
 			var addDiv = function(){
 				var div = document.createElement('div');
@@ -1283,7 +1283,7 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 
 			undo.undo();
 			testdiv.innerHTML = '';
-			equal(Platter.Internal.SubsCount, startsubs, "Events all gone");
+			equal(PlatterTest.Internal.SubsCount, startsubs, "Events all gone");
 		});
 	}
 
@@ -1302,40 +1302,40 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 		var div = tplrun.el;
 		ok(!runthis, "Event not yet run");
 		ok(!runev, "Event not yet run");
-		equal(Platter.Get(o, 'b'), 20, "Correct initial b");
-		equal(Platter.Get(o, 'c'), 30, "Correct initial c");
-		equal(Platter.Get(o, 'd'), '', "Correct initial d");
+		equal(PlatterTest.Get(o, 'b'), 20, "Correct initial b");
+		equal(PlatterTest.Get(o, 'c'), 30, "Correct initial c");
+		equal(PlatterTest.Get(o, 'd'), '', "Correct initial d");
 
 		$(div).trigger('foo');
 		equal(runthis, o, "Correct this for event");
 		ok(runev, "There was an event object");
 
 		$(div).trigger('up');
-		equal(Platter.Get(o, 'b'), 21, "Increment b worked");
+		equal(PlatterTest.Get(o, 'b'), 21, "Increment b worked");
 		$(div).trigger('up');
-		equal(Platter.Get(o, 'b'), 22, "Increment b worked again");
+		equal(PlatterTest.Get(o, 'b'), 22, "Increment b worked again");
 		$(div).trigger('down');
-		equal(Platter.Get(o, 'b'), 21, "Decrement b worked");
+		equal(PlatterTest.Get(o, 'b'), 21, "Decrement b worked");
 		$(div).trigger('down');
-		equal(Platter.Get(o, 'b'), 20, "Decrement b worked again");
+		equal(PlatterTest.Get(o, 'b'), 20, "Decrement b worked again");
 
 		$(div).trigger('up2');
-		equal(Platter.Get(o, 'c'), 31, "Increment c worked");
+		equal(PlatterTest.Get(o, 'c'), 31, "Increment c worked");
 		$(div).trigger('up2');
-		equal(Platter.Get(o, 'c'), 32, "Increment c worked again");
+		equal(PlatterTest.Get(o, 'c'), 32, "Increment c worked again");
 		$(div).trigger('down2');
-		equal(Platter.Get(o, 'c'), 31, "Decrement c worked");
+		equal(PlatterTest.Get(o, 'c'), 31, "Decrement c worked");
 		$(div).trigger('down2');
-		equal(Platter.Get(o, 'c'), 30, "Decrement c worked again");
+		equal(PlatterTest.Get(o, 'c'), 30, "Decrement c worked again");
 
 		$(div).trigger('put');
-		equal(Platter.Get(o, 'd'), 'bar', "Value-grabbing worked");
+		equal(PlatterTest.Get(o, 'd'), 'bar', "Value-grabbing worked");
 
 		tplrun.undo();
 	}
 
 	test("Mark: element", function(){
-		var tpl = Platter.Dynamic.compile("<h1>bo{{#element boo}}b</h1>");
+		var tpl = PlatterTest.Dynamic.compile("<h1>bo{{#element boo}}b</h1>");
 		var o = newObj();
 		doSet(o, 'boo', undefined);
 		var df = tpl.run(o).docfrag;
@@ -1349,29 +1349,29 @@ Platter.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, doSe
 	});
 
 	test("Event-handlers", function(){
-		var tpl = Platter.Dynamic.compile('<input type="text" value="bar" onfoo="{{a}}" onup="{{++b}}" ondown="{{--b}}" onup2="{{++c}}" ondown2="{{--c}}" onput="{{<>d}}"/>');
+		var tpl = PlatterTest.Dynamic.compile('<input type="text" value="bar" onfoo="{{a}}" onup="{{++b}}" ondown="{{--b}}" onup2="{{++c}}" ondown2="{{--c}}" onput="{{<>d}}"/>');
 		var o = newObj();
 		commoneventbit(tpl, o, o);
 	});
 
 	test("Event-handlers nested props", function(){
-		var tpl = Platter.Dynamic.compile('<input type="text" value="bar" onfoo="{{z.a}}" onup="{{++z.b}}" ondown="{{--z.b}}" onup2="{{++z.c}}" ondown2="{{--z.c}}" onput="{{<>z.d}}"/>');
+		var tpl = PlatterTest.Dynamic.compile('<input type="text" value="bar" onfoo="{{z.a}}" onup="{{++z.b}}" ondown="{{--z.b}}" onup2="{{++z.c}}" ondown2="{{--z.c}}" onput="{{<>z.d}}"/>');
 		var o = newObj();
 		commoneventbit(tpl, {z:o}, o);
 	});
 
 	test("Subscriptions for collections", function(){
-		var tpl = Platter.Dynamic.compile('<div>{{#foreach .}}a{{/foreach}}</div>');
+		var tpl = PlatterTest.Dynamic.compile('<div>{{#foreach .}}a{{/foreach}}</div>');
 		var c = newColl();
 		collReset(c, [{}, {}]);
-		var sub1 = Platter.Internal.SubsCount;
+		var sub1 = PlatterTest.Internal.SubsCount;
 		var df = tpl.run(c).docfrag;
 		equal($(df.firstChild).text(), "aa", "Two elements work");
-		var sub2 = Platter.Internal.SubsCount;
+		var sub2 = PlatterTest.Internal.SubsCount;
 		notEqual(sub2, sub1, "Sub-count changed on template-run");
 		collReset(c, [{}, {}]);
 		equal($(df.firstChild).text(), "aa", "Two elements reset work");
-		var sub3 = Platter.Internal.SubsCount;
+		var sub3 = PlatterTest.Internal.SubsCount;
 		equal(sub3, sub2, "Sub-count unchanged on reset");
 	});
 }

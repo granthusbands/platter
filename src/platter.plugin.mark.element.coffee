@@ -4,7 +4,7 @@
 # The version for plain templates is trivial, of course, since it just needs to insert the element straight away.
 Platter.Internal.PlainCompiler::addMarkPlugin 'element', (ps, val) ->
 	ps.js.forceVar ps.jsPost
-	@doBase ps, null, val, "if (#v#) Platter.InsertNode(#{ps.parent.jsEl||'null'}, #{ps.jsPost}, #v#)", null
+	@doBase ps, null, val, "if (#v#) #{ps.jsPlatter}.InsertNode(#{ps.parent.jsEl||'null'}, #{ps.jsPost}, #v#)", null
 
 # The version for dynamic templates has to subscribe to relevant changes and rerun.
 insertElement = (undo, datas, par, start, end) ->

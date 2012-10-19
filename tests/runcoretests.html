@@ -9,9 +9,15 @@
 		<script type="text/javascript" src="http://documentcloud.github.com/underscore/underscore-min.js"></script>
 		<script type="text/javascript" src="http://documentcloud.github.com/backbone/backbone-min.js"></script>
 		<script type="text/javascript" src="https://raw.github.com/Shopify/batman/master/lib/batman.js"></script>
+		<!-- Even though we aren't using knockout, we include it because it causes Platter to include slightly more code for us to test -->
 		<script type="text/javascript" src="http://cloud.github.com/downloads/SteveSanderson/knockout/knockout-2.0.0.js"></script>
 		<script type="text/javascript" src="http://cloud.github.com/downloads/emberjs/ember.js/ember-0.9.7.1.min.js"></script>
 		<script type="text/javascript" src="../platter.js"></script>
+		<script type="text/javascript">
+			// We don't want a global Platter, so we can be sure we aren't using it.
+			PlatterTest = Platter;
+			Platter = null;
+		</script>
 		<script type="text/javascript" src="platter.core.js"></script>
 		<script type="text/javascript" src="platter.core.parse.js"></script>
 		<script type="text/javascript" src="platter.core.codegen.js"></script>

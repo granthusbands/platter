@@ -37,4 +37,4 @@ Platter.Modify = (o, n, fn) ->
 	if (o.platter_modify)
 		o.platter_modify n, fn
 	else
-		Platter.Set o, n, fn Platter.Get(o, n)
+		@Set o, n, fn @Get(o, n) # Use @ to avoid using global Platter

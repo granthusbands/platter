@@ -6,7 +6,7 @@ jQuery(function(){
 	test("DOM Helpers", function(){
 		equal(testdiv.innerHTML, "", "Test div empty");
 
-		var tmpl = Platter.Plain.compile("<div></div>");
+		var tmpl = PlatterTest.Plain.compile("<div></div>");
 		fiveparts="test<b>test2</b>test3<b>test4</b>test5";
 		testdiv.innerHTML = fiveparts;
 		tmpl.removeBetween(testdiv.firstChild, testdiv.lastChild);
@@ -19,21 +19,21 @@ jQuery(function(){
 		equal(testdiv.firstChild, testdiv.lastChild, "removeAll");
 
 		// IE8 doesn't have whitespace textnodes in its DOM
-		if (!Platter.Browser.BrokenWhitespace) {
-			var frag = Platter.Helper.HtmlToFrag(" <div>blah</div> ");
+		if (!PlatterTest.Browser.BrokenWhitespace) {
+			var frag = PlatterTest.Helper.HtmlToFrag(" <div>blah</div> ");
 			equal(frag.firstChild.nodeValue, " ", "htmlToFrag whitespace");
 			equal(frag.lastChild.nodeValue, " ", "htmlToFrag whitespace");
 			equal(frag.firstChild.nextSibling.innerHTML, "blah", "htmltoFrag div");
 		}
 
-		var frag = Platter.Helper.TmplToFrag(" <div>blah</div> ");
+		var frag = PlatterTest.Helper.TmplToFrag(" <div>blah</div> ");
 		equal(frag.firstChild.innerHTML, "blah", "tmpltoFrag trimmed pre");
 		equal(frag.lastChild.innerHTML, "blah", "tmpltoFrag trimmed post");
 
-		var frag = Platter.Helper.HtmlToFrag("<link rel='stylesheet' href='/missing.css' type='text/css' />");
+		var frag = PlatterTest.Helper.HtmlToFrag("<link rel='stylesheet' href='/missing.css' type='text/css' />");
 		equal(frag.firstChild.type, "text/css", "htmlToFrag link");
 
-		var frag = Platter.Helper.HtmlToFrag("<script type='text/javascript'>ok(false, 'script should not run')</script>");
+		var frag = PlatterTest.Helper.HtmlToFrag("<script type='text/javascript'>ok(false, 'script should not run')</script>");
 		equal(frag.firstChild.type, "text/javascript", "htmlToFrag script");
 		// TODO: Test whether script insertion into the doc runs the script.
 
@@ -43,7 +43,7 @@ jQuery(function(){
 	test("Array Transformer", function(){
 		// A couple of simple direct tests
 		var a = [1], b = [1,2];
-		Platter.Transformer(a, b, function(i,o){
+		PlatterTest.Transformer(a, b, function(i,o){
 			equal(i, 1, a+"->"+b+" index");
 			equal(o, 2, a+"->"+b+" value");
 		},function(i){
@@ -51,7 +51,7 @@ jQuery(function(){
 		})
 
 		var a = [2], b = [1,2];
-		Platter.Transformer(a, b, function(i,o){
+		PlatterTest.Transformer(a, b, function(i,o){
 			equal(i, 0, a+"->"+b+" index");
 			equal(o, 1, a+"->"+b+" value");
 		},function(i){
@@ -59,14 +59,14 @@ jQuery(function(){
 		})
 
 		a = [1,2]; b = [1];
-		Platter.Transformer(a, b, function(i,o){
+		PlatterTest.Transformer(a, b, function(i,o){
 			ok(false, a+"->"+b+" should not delete")
 		},function(i){
 			equal(i, 1, a+"->"+b+" index");
 		})
 
 		a = [1,2]; b = [2];
-		Platter.Transformer(a, b, function(i,o){
+		PlatterTest.Transformer(a, b, function(i,o){
 			ok(false, a+"->"+b+" should not delete")
 		},function(i){
 			equal(i, 0, a+"->"+b+" index");
@@ -74,7 +74,7 @@ jQuery(function(){
 
 
 		// TODO: Test to make sure the transform aren't too wasteful?
-		// For all possible arrays containing subsequences of 1..8, confirm that Platter.Transformer can turn one into the other.
+		// For all possible arrays containing subsequences of 1..8, confirm that PlatterTest.Transformer can turn one into the other.
 		var testlen = 8;
 		var arrs = [[]];
 		for (var i=1; i<=testlen; ++i)
@@ -93,7 +93,7 @@ jQuery(function(){
 					var a2 = a.slice();
 					add = function(i, o) { a2.splice(i, 0, o); };
 					rem = function(i) { a2.splice(i,1); };
-					Platter.Transformer(a, b, add, rem);
+					PlatterTest.Transformer(a, b, add, rem);
 					if (""+a2 != ""+b)
 						equal(a2, b, "Transform of "+a+" to "+b);
 					else

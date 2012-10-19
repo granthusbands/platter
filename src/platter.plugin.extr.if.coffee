@@ -6,7 +6,7 @@ Platter.Internal.PlainCompiler::addExtractorPlugin 'if|unless', 60, 0, (ps, val,
 	ps.js.forceVar ps.jsPost
 	jsTmpl = ps.js.addContext "#{ps.jsPre}_tmpl", tmpl
 	v = if n=='unless' then '!(#v#)' else '#v#'
-	@doBase ps, null, val, "if (#{v}) Platter.InsertNode(#{ps.parent.jsEl||'null'}, #{ps.jsPost}, #{jsTmpl}.run(#{ps.jsDatas.join ', '}, undo, false).docfrag)", "&&"
+	@doBase ps, null, val, "if (#{v}) #{ps.jsPlatter}.InsertNode(#{ps.parent.jsEl||'null'}, #{ps.jsPost}, #{jsTmpl}.run(#{ps.jsDatas.join ', '}, undo, false).docfrag)", "&&"
 
 # The version for dynamic templates has to subscribe to relevant changes and rerun.
 ifInner = (undo, datas, tmpl, par, start, end) ->

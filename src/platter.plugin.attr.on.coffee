@@ -59,7 +59,7 @@ doEvent = (ps, realn, v) ->
 				m = /^\s*(\.+)$/.exec t
 				jsTarget = ps.jsDatas[(m[1].length||1)-1]
 		if op=='++' || op=='--'
-			handler = "Platter.Modify(#{jsTarget}, #{ps.js.toSrc post}, function(v){return #{op}v})"
+			handler = "#{ps.jsPlatter}.Modify(#{jsTarget}, #{ps.js.toSrc post}, function(v){return #{op}v})"
 		else if op=='<>'
 			# TODO: Support radio buttons, select-boxes and maybe others
 			valGetter =
@@ -67,7 +67,7 @@ doEvent = (ps, realn, v) ->
 					ps.valGetter.replace("#el#", "#{ps.jsEl}")
 				else
 					ps.js.index ps.jsEl, if (ps.el.type=='checkbox') then 'checked' else 'value'
-			handler = "Platter.Set(#{jsTarget}, #{ps.js.toSrc post}, #{valGetter})"
+			handler = "#{ps.jsPlatter}.Set(#{jsTarget}, #{ps.js.toSrc post}, #{valGetter})"
 		else
 			if (post)
 				jsFn = ps.js.addForcedVar "#{ps.jsEl}_fn", "null"

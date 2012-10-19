@@ -8,20 +8,20 @@ printer['dataGet'] = (op, ctx) ->
 	else
 		data
 printer['.'] = (op, ctx) ->
-	"Platter.Get(#{@go(op.left, ctx)}, #{Platter.Internal.ToSrc(op.ident)})"
+	"#{ctx.jsPlatter}.Get(#{@go(op.left, ctx)}, #{Platter.Internal.ToSrc(op.ident)})"
 printer['['] = (op, ctx) ->
-	"Platter.Get(#{@go(op.left, ctx)}, #{@go(op.inner, ctx)})"
+	"#{ctx.jsPlatter}.Get(#{@go(op.left, ctx)}, #{@go(op.inner, ctx)})"
 printer['a()'] = (op, ctx) ->
 	lop = op.left
 	if lop.txt=='get' && lop.dots
 		t = ctx.js.addVar 't'
-		fn = "Platter.Get(#{t}=#{@go({txt: 'get', dots: lop.dots, ident: ''}, ctx)}, #{@go({txt: 'val', val: lop.ident}, ctx)})"
+		fn = "#{ctx.jsPlatter}.Get(#{t}=#{@go({txt: 'get', dots: lop.dots, ident: ''}, ctx)}, #{@go({txt: 'val', val: lop.ident}, ctx)})"
 	else if lop.txt=='.'
 		t = ctx.js.addVar 't'
-		fn = "Platter.Get(#{t}=#{@go(lop.left, ctx)}, #{@go({txt: 'val', val: lop.ident}, ctx)})"
+		fn = "#{ctx.jsPlatter}.Get(#{t}=#{@go(lop.left, ctx)}, #{@go({txt: 'val', val: lop.ident}, ctx)})"
 	else if lop.txt=='['
 		t = ctx.js.addVar 't'
-		fn = "Platter.Get(#{t}=#{@go(lop.left, ctx)}, #{@go(lop.inner, ctx)})"
+		fn = "#{ctx.jsPlatter}.Get(#{t}=#{@go(lop.left, ctx)}, #{@go(lop.inner, ctx)})"
 	else
 		t = ctx.datas[0]
 		fn = "(#{@go(lop, ctx)})"

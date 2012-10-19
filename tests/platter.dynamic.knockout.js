@@ -1,5 +1,5 @@
 jQuery(function(){
-	Platter.Tests.Dynamic(
+	PlatterTest.Tests.Dynamic(
 		'Knockout',
 		function(){ return {}; },
 		function(){ return ko.observableArray(); },

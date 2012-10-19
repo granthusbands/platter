@@ -8,15 +8,15 @@ if window.ko
 
 	Platter.WatchPreKO = Platter.Watch
 	Platter.Watch = (undo, o, n, fn) ->
-		v = Platter.GetPreKO o, n
+		v = @GetPreKO o, n
 		if v && ko.isSubscribable(v) && !v.platter_watchcoll
 			sub = v.subscribe fn
 			undo.add -> sub.dispose()
-		Platter.WatchPreKO undo, o, n, fn
+		@WatchPreKO undo, o, n, fn
 
 	Platter.GetPreKO = Platter.Get
 	Platter.Get = (o, n) ->
-		v = Platter.GetPreKO o, n
+		v = @GetPreKO o, n
 		if ko.isObservable(v) && !v.platter_watchcoll
 			v()
 		else
@@ -24,7 +24,7 @@ if window.ko
 
 	Platter.GetRPreKO = Platter.GetR
 	Platter.GetR = (undo, o, n) ->
-		v = Platter.GetRPreKO undo, o, n
+		v = @GetRPreKO undo, o, n
 		if ko.isObservable(v) && !v.platter_watchcoll
 			sub = v.subscribe undo.repeat
 			undo.add -> sub.dispose()
@@ -34,19 +34,19 @@ if window.ko
 
 	Platter.SetPreKO = Platter.Set
 	Platter.Set = (o, n, v) ->
-		oldv = Platter.GetPreKO o, n
+		oldv = @GetPreKO o, n
 		if ko.isObservable oldv
 			oldv(v)
 		else
-			Platter.SetPreKO o, n, v
+			@SetPreKO o, n, v
 
 	Platter.ModifyPreKO = Platter.Modify
 	Platter.Modify = (o, n, fn) ->
-		oldv = Platter.GetPreKO o, n
+		oldv = @GetPreKO o, n
 		if ko.isObservable oldv
 			oldv(fn oldv())
 		else
-			Platter.ModifyPreKO o, n, fn
+			@ModifyPreKO o, n, fn
 
 
 

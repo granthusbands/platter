@@ -5,7 +5,7 @@
 Platter.Internal.PlainCompiler::addExtractorPlugin 'with', 40, 1, (ps, val, tmpl) ->
 	ps.js.forceVar ps.jsPost
 	jsTmpl = ps.js.addContext "#{ps.jsPre}_tmpl", tmpl
-	@doBase ps, null, val, "Platter.InsertNode(#{ps.parent.jsEl||'null'}, #{ps.jsPost}, #{jsTmpl}.run(#v#, #{ps.jsDatas.join ', '}, undo, false).docfrag)", null
+	@doBase ps, null, val, "#{ps.jsPlatter}.InsertNode(#{ps.parent.jsEl||'null'}, #{ps.jsPost}, #{jsTmpl}.run(#v#, #{ps.jsDatas.join ', '}, undo, false).docfrag)", null
 
 
 # The version for dynamic templates has to subscribe to relevant changes and rerun.

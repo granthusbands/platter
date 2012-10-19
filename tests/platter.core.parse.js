@@ -1,7 +1,7 @@
 jQuery(function(){
 	module("Parse");
 
-	var visit = Platter.Internal.JSPrinter();
+	var visit = PlatterTest.Internal.JSPrinter();
 	visit.get = function(op){ return "#"+op.ident+"#"; };
 
 	function trim(s) {
@@ -33,7 +33,7 @@ jQuery(function(){
 		return o;
 	}
 	function parseSimple(txt) {
-		return Platter.Internal.ParseJS(txt);
+		return PlatterTest.Internal.ParseJS(txt);
 	}
 	function parseMatch(txt, patt) {
 		var parsed = parseSimple(txt);

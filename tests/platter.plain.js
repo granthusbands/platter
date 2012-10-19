@@ -21,8 +21,8 @@ jQuery(function(){
 	data.obj1 = data.objs[1];
 	data.obj2 = data.objs[2];
 
-	if (!Platter.Tests) Platter.Tests = {};
-	Platter.Tests.Trivial = function(comp, has, hasNot, hasJQ, hasNotJQ, hasValue, textIs){
+	if (!PlatterTest.Tests) PlatterTest.Tests = {};
+	PlatterTest.Tests.Trivial = function(comp, has, hasNot, hasJQ, hasNotJQ, hasValue, textIs){
 
 		test("No tokens", function(){
 			equal(testdiv.innerHTML, "", "Test div empty");
@@ -383,7 +383,7 @@ jQuery(function(){
 
 	function runPlainDiv(undo, tmpl, data) {
 		if (typeof tmpl == 'string') {
-			tmpl = Platter.Plain.compile(tmpl);
+			tmpl = PlatterTest.Plain.compile(tmpl);
 			if ((tmpl.run+"").indexOf('undefined_')!=-1)
 				ok(false, "Template should not contain undefined_");
 		}
@@ -394,7 +394,7 @@ jQuery(function(){
 	function testwrap(fn) {
 		return function(tmpl, data, txt, msg){
 			testdiv.innerHTML = "";
-			var undo = new Platter.Undo();
+			var undo = new PlatterTest.Undo();
 			var div = runPlainDiv(undo, tmpl, data);
 			fn(tmpl, data, txt, msg, div);
 			undo.undo();
@@ -427,5 +427,5 @@ jQuery(function(){
 		equal(jQuery(div).text(), txt, msg);
 	});
 
-	Platter.Tests.Trivial(Platter.Plain, has, hasNot, hasJQ, hasNotJQ, hasValue, textIs);
+	PlatterTest.Tests.Trivial(PlatterTest.Plain, has, hasNot, hasJQ, hasNotJQ, hasValue, textIs);
 });

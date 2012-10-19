@@ -18,7 +18,7 @@ blockbits = /^\{\{([#\/])([^\s\}]*)(.*?)\}\}$/
 class Platter.Internal.CompilerState
 	constructor: (clone, @parent) ->
 		if clone
-			{@ret, @plugins, @js, @jsDatas, @el, @jsEl, @jsSelf} = clone
+			{@ret, @plugins, @js, @jsDatas, @el, @jsEl, @jsSelf, @jsPlatter} = clone
 			@parent ||= clone
 		@afters = []
 		@children = []
@@ -230,7 +230,8 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 		jsAutoRemove = ps.js.addParam 'autoRemove'
 
 		ps.jsSelf = ps.js.addForcedVar "self", "this"
-		ps.js.addExpr 'undo = undo ? undo.child() : new Platter.Undo()'
+		ps.jsPlatter = ps.js.addContext 'Platter', Platter
+		ps.js.addExpr "undo = undo ? undo.child() : new #{ps.jsPlatter}.Undo()"
 		jsCloneNode = ps.js.addContext 'node', frag
 		jsRoot = ps.js.addVar 'el', "#{jsCloneNode}.cloneNode(true)"
 		@compileChildren ps, frag, jsRoot
@@ -256,7 +257,7 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 		else
 			op = Platter.Internal.ParseNonString v, sep
 
-		ctx = datas: ps.jsDatas, js:ps.js.child()
+		ctx = datas: ps.jsDatas, js:ps.js.child(), jsPlatter:ps.jsPlatter
 		ctx.js.addParam 'undo'
 
 		expr = expr
@@ -337,7 +338,7 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 				if !ps.isHandled
 					throw new Error("Unhandled block "+ct);
 			else if m=/^\{\{>(.*?)\}\}$/.exec(ct)
-				@doRedo ps, null, "{{#{m[1]}}}", "if (#v#) Platter.InsertNode(#{ps.parent.jsEl||'null'}, #{ps.jsPost}, (#v#).run(#{ps.jsDatas[0]}, undo).docfrag)", null
+				@doRedo ps, null, "{{#{m[1]}}}", "if (#v#) #{ps.jsPlatter}.InsertNode(#{ps.parent.jsEl||'null'}, #{ps.jsPost}, (#v#).run(#{ps.jsDatas[0]}, undo).docfrag)", null
 			else
 				ps.optimiseAwayLastPost()
 		else if ps.el.nodeType==3 || ps.el.nodeType==4  # Text/CData
