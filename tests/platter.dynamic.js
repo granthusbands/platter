@@ -589,6 +589,79 @@ PlatterTest.Tests.Dynamic = function(name, newObj, newColl, collReset, collAdd, 
 
 
 		{
+			name:"Block: else",
+			tests: { // TODO: Should empty array be false and tested? Probably not.
+				h11: ruleElText('h1', 1),
+				h12: ruleElText('h1', 2),
+				h13: ruleElText('h1', 3),
+				h21: ruleElText('h2', 1),
+				h22: ruleElText('h2', 2),
+				h23: ruleElText('h2', 3),
+				h31: ruleElText('h3', 1),
+				h32: ruleElText('h3', 2),
+				h33: ruleElText('h3', 3),
+				h41: ruleElText('h4', 1),
+				h42: ruleElText('h4', 2),
+				h43: ruleElText('h4', 3)
+			},
+			testsstart: {h13:1, h23:1, h33:1, h43:1},
+			init: function() {
+				var o = newObj();
+				doSet(o, 'bool1', undefined);
+				doSet(o, 'bool2', undefined);
+				return o;
+			},
+			template:
+				"<h1>{{#if bool1}}1{{#else if bool2}}2{{#else}}3{{/if}}</h1>"+
+				"<h2>{{#if bool1}}1{{#else unless !bool2}}2{{#else}}3{{/if}}</h2>"+
+				"<h3>{{#unless !bool1}}1{{#else if bool2}}2{{#else}}3{{/unless}}</h3>"+
+				"<h4>{{#unless !bool1}}1{{#else unless !bool2}}2{{#else}}3{{/unless}}</h4>",
+			actions: [
+				{
+					name: "Set bool2 to false",
+					go: function(data){ doSet(data, 'bool2', false); },
+					tests: {}
+				},
+				{
+					name: "Set bool2 to true",
+					go: function(data){ doSet(data, 'bool2', true); },
+					tests: {h12:1, h22:1, h32:1, h42:1, h13:0, h23:0, h33:0, h43:0}
+				},
+				{
+					name: "Set bool1 to false",
+					go: function(data){ doSet(data, 'bool1', false); },
+					tests: {}
+				},
+				{
+					name: "Set bool1 to true",
+					go: function(data){ doSet(data, 'bool1', true); },
+					tests: {h11:1, h21:1, h31:1, h41:1, h12:0, h22:0, h32:0, h42:0}
+				},
+				{
+					name: "Set bool1 to false",
+					go: function(data){ doSet(data, 'bool1', false); },
+					tests: {h12:1, h22:1, h32:1, h42:1, h11:0, h21:0, h31:0, h41:0}
+				},
+				{
+					name: "Set bool1 to true",
+					go: function(data){ doSet(data, 'bool1', true); },
+					tests: {h11:1, h21:1, h31:1, h41:1, h12:0, h22:0, h32:0, h42:0}
+				},
+				{
+					name: "Set bool2 to false",
+					go: function(data){ doSet(data, 'bool2', false); },
+					tests: {}
+				},
+				{
+					name: "Set bool1 to false",
+					go: function(data){ doSet(data, 'bool1', false); },
+					tests: {h13:1, h23:1, h33:1, h43:1, h11:0, h21:0, h31:0, h41:0}
+				}
+			]
+		},
+
+
+		{
 			name:"Attribute: unless",
 			tests: { // TODO: Should empty array be false and tested? Probably not.
 				h1: ruleElExists('h1[if]'),

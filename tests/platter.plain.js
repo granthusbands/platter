@@ -222,6 +222,20 @@ jQuery(function(){
 			hasJQ("{{#if one<\"ZZZ\"}}<h1>Hey</h1>{{/if}}", data, "h1", "Comparison true");
 			hasNotJQ("{{#if one>=\"ZZZ\"}}<h1>Hey</h1>{{/if}}", data, "h1", "Comparison false");
 		});
+		test("Block: else", function(){
+			textIs("<h1>{{#if two.too}}1{{#else if two.bo}}2{{#else}}3</h1>", data, "1", "First true 1");
+			textIs("<h1>{{#if two.too}}1{{#else unless !two.bo}}2{{#else}}3</h1>", data, "1", "First true 2");
+			textIs("<h1>{{#unless !two.too}}1{{#else if two.bo}}2{{#else}}3</h1>", data, "1", "First true 3");
+			textIs("<h1>{{#unless !two.too}}1{{#else unless !two.bo}}2{{#else}}3</h1>", data, "1", "First true 4");
+			textIs("<h1>{{#if bo}}1{{#else if two.too}}2{{#else}}3</h1>", data, "2", "Second true 1");
+			textIs("<h1>{{#if bo}}1{{#else unless !two.too}}2{{#else}}3</h1>", data, "2", "Second true 2");
+			textIs("<h1>{{#unless !bo}}1{{#else if two.too}}2{{#else}}3</h1>", data, "2", "Second true 3");
+			textIs("<h1>{{#unless !bo}}1{{#else unless !two.too}}2{{#else}}3</h1>", data, "2", "Second true 4");
+			textIs("<h1>{{#if bo}}1{{#else if two.bo}}2{{#else}}3</h1>", data, "3", "All false 1");
+			textIs("<h1>{{#if bo}}1{{#else unless !two.bo}}2{{#else}}3</h1>", data, "3", "All false 2");
+			textIs("<h1>{{#unless !bo}}1{{#else if two.bo}}2{{#else}}3</h1>", data, "3", "All false 3");
+			textIs("<h1>{{#unless !bo}}1{{#else unless !two.bo}}2{{#else}}3</h1>", data, "3", "All false 4");
+		});
 		test("Mark: element", function(){
 			textIs("<h1>{{#element nothingatall}}</h1>", data, "", "Correctly inserts nothing");
 			textIs("<h1>{{#element textnode}}</h1>", data, "iamtext", "Correctly inserts text node");

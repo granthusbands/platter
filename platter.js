@@ -265,6 +265,7 @@
       }
       if (matched) {
         end.parentNode.removeChild(end);
+        this.matchedEnd = true;
       }
       pre = document.createComment("");
       post = document.createComment("");
@@ -391,6 +392,7 @@
       var i, jsAutoRemove, jsCloneNode, jsFirstChild, jsLastChild, jsRoot, ps, _i;
       ps = new Platter.Internal.CompilerState;
       ps.parent = parent;
+      ps.type = 'root';
       ps.js = (new Platter.Internal.FunctionGenContext).child();
       ps.ret = new this.runner;
       ps.plugins = {};
@@ -420,20 +422,34 @@
       return ps.ret;
     };
 
-    TemplateCompiler.prototype.doBase = function(ps, n, v, expr, sep) {
-      var ctx, op;
-      if (sep === true) {
-        op = Platter.Internal.ParseString(v);
-      } else {
-        op = Platter.Internal.ParseNonString(v, sep);
+    TemplateCompiler.prototype.doBase = function(ps, n, vs, expr, sep) {
+      var ctx, v,
+        _this = this;
+      if (!(vs instanceof Array)) {
+        vs = [vs];
       }
+      vs = (function() {
+        var _i, _len, _results;
+        _results = [];
+        for (_i = 0, _len = vs.length; _i < _len; _i++) {
+          v = vs[_i];
+          if (sep === true) {
+            _results.push(Platter.Internal.ParseString(v));
+          } else {
+            _results.push(Platter.Internal.ParseNonString(v, sep));
+          }
+        }
+        return _results;
+      })();
       ctx = {
         datas: ps.jsDatas,
         js: ps.js.child(),
         jsPlatter: ps.jsPlatter
       };
       ctx.js.addParam('undo');
-      expr = expr.replace(/#el#/g, "" + ps.jsEl).replace(/#n#/g, ps.js.toSrc(n)).replace(/#v#/g, this.printer.go(op, ctx));
+      expr = expr.replace(/#el#/g, "" + ps.jsEl).replace(/#n#/g, ps.js.toSrc(n)).replace(/#v(\d*)#/g, function($0, $1) {
+        return _this.printer.go(vs[$1 || 0], ctx);
+      });
       return this.doExpr(ps, expr);
     };
 
@@ -576,6 +592,7 @@
       fn2 = function(comp, ps, val, n) {
         var frag, tmpl;
         ps.extraScopes = extradepth;
+        ps.type = "extr." + n;
         frag = ps.pullBlock();
         tmpl = comp.compileFrag(frag, ps.jsDatas.length + extradepth, ps);
         return fn.call(comp, ps, "{{" + val + "}}", tmpl, n);
@@ -653,6 +670,7 @@
           }
           ps.el.removeAttribute(ps.getAttrName(n));
           ps.extraScopes = extradepth;
+          ps.type = "extr." + n;
           frag = ps.pullEl();
           tmpl = comp.compileFrag(frag, ps.jsDatas.length + extradepth, ps);
           ret || (ret = fn.call(comp, ps, val, tmpl, n));
@@ -2914,40 +2932,124 @@
     __slice = [].slice;
 
   Platter.Internal.PlainCompiler.prototype.addExtractorPlugin('if|unless', 60, 0, function(ps, val, tmpl, n) {
-    var jsTmpl, v;
+    var bits, c, hasemptyelse, jsTmpl, ret, v, vs;
     ps.js.forceVar(ps.jsPost);
-    jsTmpl = ps.js.addContext("" + ps.jsPre + "_tmpl", tmpl);
-    v = n === 'unless' ? '!(#v#)' : '#v#';
-    return this.doBase(ps, null, val, "if (" + v + ") " + ps.jsPlatter + ".InsertNode(" + (ps.parent.jsEl || 'null') + ", " + ps.jsPost + ", " + jsTmpl + ".run(" + (ps.jsDatas.join(', ')) + ", undo, false).docfrag)", "&&");
+    val = /^\{\{(.*)\}\}$/.exec(val)[1];
+    bits = {
+      val: val,
+      tmpl: tmpl,
+      n: n,
+      "else": ps["else"]
+    };
+    ret = "";
+    c = 0;
+    vs = [];
+    hasemptyelse = false;
+    while (bits) {
+      if (ret) {
+        ret = "" + ret + "\n\telse ";
+      }
+      v = bits.n === 'unless' ? "!(#v" + c + "#)" : "#v" + c + "#";
+      vs.push("{{" + bits.val + "}}");
+      jsTmpl = ps.js.addContext("" + ps.jsPre + "_tmpl", bits.tmpl);
+      if (bits.n) {
+        ret = "" + ret + "if (" + v + ") ";
+      } else {
+        if (hasemptyelse) {
+          throw new Error("Can't have more than one conditionless {{#else}} in an {{#" + n + "}}");
+        }
+        hasemptyelse = true;
+      }
+      ret = "" + ret + ps.jsPlatter + ".InsertNode(" + (ps.parent.jsEl || 'null') + ", " + ps.jsPost + ", " + jsTmpl + ".run(" + (ps.jsDatas.join(', ')) + ", undo, false).docfrag)";
+      ++c;
+      bits = bits["else"];
+    }
+    return this.doBase(ps, null, vs, ret, "&&");
   });
 
-  ifInner = function(undo, datas, tmpl, par, start, end) {
+  ifInner = function(undo, datas, par, start, end) {
     var shown, undoch,
       _this = this;
     shown = false;
     undoch = undo.child();
     return function(show) {
-      show = !!show;
       if (shown === show) {
         return;
       }
+      if (shown) {
+        _this.removeBetween(start, end, par);
+        undoch.undo();
+      }
       shown = show;
       if (show) {
-        return Platter.InsertNode(par, end, tmpl.run.apply(tmpl, __slice.call(datas).concat([undoch], [false])).docfrag);
-      } else {
-        _this.removeBetween(start, end, par);
-        return undoch.undo();
+        return Platter.InsertNode(par, end, show.run.apply(show, __slice.call(datas).concat([undoch], [false])).docfrag);
       }
     };
   };
 
   Platter.Internal.DynamicCompiler.prototype.addExtractorPlugin('if|unless', 60, 0, function(ps, val, tmpl, n) {
-    var inner, jsChange, jsTmpl, v;
+    var bits, c, hasemptyelse, inner, jsChange, jsTmpl, ret, v, vs;
     inner = ps.js.addContext("" + ps.jsPre + "_inner", ifInner);
-    jsTmpl = ps.js.addContext("" + ps.jsPre + "_tmpl", tmpl);
-    jsChange = ps.js.addForcedVar("" + ps.jsPre + "_ifchange", "" + inner + ".call(this, undo, [" + (ps.jsDatas.join(', ')) + "], " + jsTmpl + ", " + (ps.parent.jsEl || 'null') + ", " + ps.jsPre + ", " + ps.jsPost + ")");
-    v = n === 'unless' ? '!(#v#)' : '#v#';
-    return this.doBase(ps, null, val, "" + jsChange + "(" + v + ")", "&&");
+    ps.js.forceVar(ps.jsPost);
+    jsChange = ps.js.addForcedVar("" + ps.jsPre + "_ifchange", "" + inner + ".call(this, undo, [" + (ps.jsDatas.join(', ')) + "], " + (ps.parent.jsEl || 'null') + ", " + ps.jsPre + ", " + ps.jsPost + ")");
+    val = /^\{\{(.*)\}\}$/.exec(val)[1];
+    bits = {
+      val: val,
+      tmpl: tmpl,
+      n: n,
+      "else": ps["else"]
+    };
+    ret = "";
+    c = 0;
+    vs = [];
+    hasemptyelse = false;
+    while (bits) {
+      if (ret) {
+        ret = "" + ret + "\n\telse ";
+      }
+      v = bits.n === 'unless' ? "!(#v" + c + "#)" : "#v" + c + "#";
+      vs.push("{{" + bits.val + "}}");
+      jsTmpl = ps.js.addContext("" + ps.jsPre + "_tmpl", bits.tmpl);
+      if (bits.n) {
+        ret = "" + ret + "if (" + v + ") ";
+      } else {
+        if (hasemptyelse) {
+          throw new Error("Can't have more than one conditionless {{#else}} in an {{#" + n + "}}");
+        }
+        hasemptyelse = true;
+      }
+      ret = "" + ret + jsChange + "(" + jsTmpl + ")";
+      ++c;
+      bits = bits["else"];
+    }
+    if (!hasemptyelse) {
+      ret = "" + ret + "\n\t else " + jsChange + "(null)";
+    }
+    return this.doBase(ps, null, vs, ret, "&&");
+  });
+
+  Platter.Internal.TemplateCompiler.prototype.addBlockExtractorPlugin('else', 0, function(ps, val, tmpl, n) {
+    var m, _ref;
+    if (ps.matchedEnd) {
+      throw new Error("{{/" + n + "}} not allowed");
+    }
+    if (ps.parent.type !== 'root' || !ps.parent.parent || ((_ref = ps.parent.parent.type) !== 'extr.if' && _ref !== 'extr.unless' && _ref !== 'extr.else')) {
+      return false;
+    }
+    val = /^\{\{(.*)\}\}$/.exec(val)[1];
+    m = /^(if|unless)(.*)$/.exec(val);
+    if (val && !m) {
+      throw new Error("{{#else}} expression must start with 'if' or 'unless'");
+    }
+    n = m && m[1] || null;
+    val = m && m[2] || '';
+    ps.parent.parent["else"] = {
+      val: val,
+      tmpl: tmpl,
+      n: n,
+      "else": ps["else"]
+    };
+    return true;
   });
 
 

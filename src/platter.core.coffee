@@ -131,6 +131,7 @@ class Platter.Internal.CompilerState
 			frag.appendChild @el.nextSibling
 		if matched
 			end.parentNode.removeChild end
+			@matchedEnd = true
 		pre = document.createComment ""
 		post = document.createComment ""
 		@el.parentNode.insertBefore pre, @el
@@ -214,6 +215,7 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 	compileFrag: (frag, ctxCnt, parent) ->
 		ps = new Platter.Internal.CompilerState
 		ps.parent = parent
+		ps.type = 'root'
 
 		ps.js = (new Platter.Internal.FunctionGenContext).child()
 		ps.ret = new @runner
@@ -251,11 +253,14 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 		ps.ret
 
 	# Does the basic replacements all expressions need
-	doBase: (ps, n, v, expr, sep) ->
-		if sep==true
-			op = Platter.Internal.ParseString v
-		else
-			op = Platter.Internal.ParseNonString v, sep
+	doBase: (ps, n, vs, expr, sep) ->
+		if vs not instanceof Array
+			vs = [vs]
+		vs = for v in vs
+			if sep==true
+				Platter.Internal.ParseString v
+			else
+				Platter.Internal.ParseNonString v, sep
 
 		ctx = datas: ps.jsDatas, js:ps.js.child(), jsPlatter:ps.jsPlatter
 		ctx.js.addParam 'undo'
@@ -263,7 +268,7 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 		expr = expr
 			.replace(/#el#/g, "#{ps.jsEl}")
 			.replace(/#n#/g, ps.js.toSrc n)
-			.replace(/#v#/g, @printer.go(op, ctx))
+			.replace(/#v(\d*)#/g, ($0, $1) => @printer.go(vs[$1||0], ctx))
 
 		@doExpr ps, expr
 
@@ -355,6 +360,7 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 		regTxt = "^(?:#{n})$" #TODO: Escaping
 		fn2 = (comp, ps, val, n) ->
 			ps.extraScopes = extradepth
+			ps.type = "extr.#{n}"
 			frag = ps.pullBlock()
 			tmpl = comp.compileFrag frag, ps.jsDatas.length+extradepth, ps
 			fn.call comp, ps, "{{#{val}}}", tmpl, n
@@ -409,6 +415,7 @@ class Platter.Internal.TemplateCompiler extends Platter.Internal.PluginBase
 				if !Platter.HasEscape(val) then continue
 				ps.el.removeAttribute ps.getAttrName(n)
 				ps.extraScopes = extradepth
+				ps.type = "extr.#{n}"
 				frag = ps.pullEl()
 				tmpl = comp.compileFrag frag, ps.jsDatas.length+extradepth, ps
 				ret ||= fn.call(comp, ps, val, tmpl, n)
