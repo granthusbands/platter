@@ -1700,19 +1700,18 @@
     };
 
     FunctionGenContext.prototype.compile = function(child) {
-      var n, parnames, parvals, run, txt, v, _ref;
-      parnames = [];
-      parvals = [];
+      var n, run, txt, v, vals, _ref;
+      vals = [];
       _ref = this._values;
       for (n in _ref) {
         if (!__hasProp.call(_ref, n)) continue;
         v = _ref[n];
-        parnames.push(n);
-        parvals.push(v);
+        vals.push("" + n + " = " + (index('values', n)));
       }
-      txt = "return function(" + (child._params.join(', ')) + ") {\n" + (child._toString()) + "};";
-      run = new Function(parnames.join(', '), txt);
-      return run.apply(null, parvals);
+      txt = vals.length ? "var " + (vals.join(', ')) + ";\n" : "";
+      txt = "" + txt + "return function(" + (child._params.join(', ')) + ") {\n" + (child._toString()) + "};";
+      run = new Function('values', txt);
+      return run(this._values);
     };
 
     FunctionGenContext.prototype._addContext = function(name, value) {

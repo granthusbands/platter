@@ -57,14 +57,13 @@ class Platter.Internal.FunctionGenContext
 		}
 
 	compile: (child) ->
-		parnames = []
-		parvals = []
+		vals = []
 		for own n,v of @_values
-			parnames.push n
-			parvals.push v
-		txt = "return function(#{child._params.join(', ')}) {\n#{child._toString()}};"
-		run = new Function(parnames.join(', '), txt)
-		run.apply(null, parvals)
+			vals.push "#{n} = #{index('values', n)}"
+		txt = if vals.length then "var #{vals.join(', ')};\n" else ""
+		txt = "#{txt}return function(#{child._params.join(', ')}) {\n#{child._toString()}};"
+		run = new Function('values', txt)
+		run(@_values)
 
 	_addContext: (name, value) ->
 		@_values[name] = value
