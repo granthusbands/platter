@@ -2160,11 +2160,15 @@
       }
     };
     collprot = Backbone.Collection.prototype;
-    collprot.platter_watchcoll = function(undo, add, remove, replaceMe) {
-      var doRep, i, _i, _ref,
+    collprot.platter_watchcoll = function(undo, origadd, remove, replaceMe) {
+      var add, doRep, i, _i, _ref,
         _this = this;
       doRep = function() {
         return replaceMe(this);
+      };
+      add = function(el, coll, opts) {
+        opts.index = coll.indexOf(el);
+        return origadd(el, coll, opts);
       };
       this.on('add', add);
       this.on('remove', remove);
@@ -2193,7 +2197,7 @@
         });
       } else if (isNat(n)) {
         add = function(el, coll, opts) {
-          if (opts.index <= n) {
+          if (coll.indexOf(el) <= n) {
             return fn();
           }
         };

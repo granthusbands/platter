@@ -37,8 +37,11 @@ if window.Backbone
 	# Extend collections, too.
 	collprot = Backbone.Collection.prototype
 	# Used by foreach and similar
-	collprot.platter_watchcoll = (undo, add, remove, replaceMe) ->
+	collprot.platter_watchcoll = (undo, origadd, remove, replaceMe) ->
 		doRep = -> replaceMe @
+		add = (el, coll, opts) ->
+			opts.index = coll.indexOf(el)
+			origadd el, coll, opts
 		@on 'add', add
 		@on 'remove', remove
 		@on 'reset', doRep
@@ -60,7 +63,7 @@ if window.Backbone
 			undo.add =>
 				@off 'add remove reset', fn
 		else if isNat n
-			add = (el, coll, opts) -> if opts.index<=n then fn()
+			add = (el, coll, opts) -> if coll.indexOf(el)<=n then fn()
 			rem = (el, coll, opts) -> if opts.index<=n then fn()
 			@on 'add', add
 			@on 'remove', rem
