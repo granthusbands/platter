@@ -34,21 +34,21 @@ Platter.Str = (o) ->
 	if o? then ''+o else ''
 
 # Given some text like "a{{b}}c{{d}}", call tfn('a'), efn('b'), tfn('c'), efn('d') and put the non-null results into an array, returning that.
+# Due to apparent illegalaccess bugs around regexps in v8 (spanning the last couple of years), this code avoids using the g modifier on the regexp and instead repeatedly culls the string. We shouldn't hit strings with enough escapes for this to cause a performance issue.
 Platter.EscapesHandle = (txt, tfn, efn) ->
 	# I would put this outside, but JS regexps alter propeties of the regexp object and so aren't reentrant.
-	escape = /\{\{(.*?)\}\}/g
+	escape = /\{\{(.*?)\}\}/
 	m = undefined
-	last = 0
 	ret = []
 	while m = escape.exec(txt)
-		if m.index>last
-			v = tfn txt.substring(last, m.index)
+		if m.index>0
+			v = tfn txt.substring(0, m.index)
 			if v? then ret.push v
 		v = efn m[1]
 		if v? then ret.push v
-		last = m.index+m[0].length
-	if (last<txt.length)
-		v = tfn txt.substring(last, txt.length)
+		txt = txt.substring(m.index+m[0].length)
+	if (txt.length)
+		v = tfn txt
 		if v? then ret.push v
 	ret
 

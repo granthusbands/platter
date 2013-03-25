@@ -729,14 +729,13 @@
   };
 
   Platter.EscapesHandle = function(txt, tfn, efn) {
-    var escape, last, m, ret, v;
-    escape = /\{\{(.*?)\}\}/g;
+    var escape, m, ret, v;
+    escape = /\{\{(.*?)\}\}/;
     m = void 0;
-    last = 0;
     ret = [];
     while (m = escape.exec(txt)) {
-      if (m.index > last) {
-        v = tfn(txt.substring(last, m.index));
+      if (m.index > 0) {
+        v = tfn(txt.substring(0, m.index));
         if (v != null) {
           ret.push(v);
         }
@@ -745,10 +744,10 @@
       if (v != null) {
         ret.push(v);
       }
-      last = m.index + m[0].length;
+      txt = txt.substring(m.index + m[0].length);
     }
-    if (last < txt.length) {
-      v = tfn(txt.substring(last, txt.length));
+    if (txt.length) {
+      v = tfn(txt);
       if (v != null) {
         ret.push(v);
       }
