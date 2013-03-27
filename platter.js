@@ -2719,11 +2719,7 @@
 
 
 
-  if (Platter.Browser.SupportsPropertyChangeEvent) {
-    Platter.Internal.TemplateCompiler.prototype.addAttrAssigner('value', 0, "if (#el#.value !== #v#) #el#.value = #v#", true);
-  } else {
-    Platter.Internal.TemplateCompiler.prototype.addAttrAssigner('value', 0, "#el#.value = #v#", true);
-  }
+  Platter.Internal.TemplateCompiler.prototype.addAttrAssigner('value', 0, "if (#el#.value !== #v#) #el#.value = #v#", true);
 
   Platter.Internal.TemplateCompiler.prototype.addAttrPlugin('value|checked', 200, function(comp, ps) {
     var ev, m, n, type, v, _i, _len, _ref;

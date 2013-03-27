@@ -1,10 +1,8 @@
 # Given value="{{<>blah}}" or checked="{{<>blah}}", generates value="{{blah}}"/checked="{{blah}}" and oninput="{{<>blah}}"
 
 # Property-change events don't fire for the first user-initiated value change after an assignment, so we'll reduce the number of unnecessary assignments.
-if Platter.Browser.SupportsPropertyChangeEvent
-	Platter.Internal.TemplateCompiler::addAttrAssigner 'value', 0, "if (#el#.value !== #v#) #el#.value = #v#", true
-else
-	Platter.Internal.TemplateCompiler::addAttrAssigner 'value', 0, "#el#.value = #v#", true
+# Also, now, apparently, Chrome sometimes moves the cursor to the end if one assigns the current value of an email field into the email field.
+Platter.Internal.TemplateCompiler::addAttrAssigner 'value', 0, "if (#el#.value !== #v#) #el#.value = #v#", true
 
 Platter.Internal.TemplateCompiler::addAttrPlugin 'value|checked', 200, (comp, ps) ->
 	for n in ['value', 'checked']
