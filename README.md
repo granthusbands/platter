@@ -1,3 +1,7 @@
+# Warning
+
+This repo is incomplete. It's suitable for the very few users it has, but requires more work for a wider release. There are so many templating solutions out there. If you want to use this one, get in touch; if there's enough demand, I'll do more on it.
+
 # Platter
 
 A compiled-template engine that supports backbone and should eventually support many reactive frameworks. It supports reactivity while still using natural HTML syntax.
